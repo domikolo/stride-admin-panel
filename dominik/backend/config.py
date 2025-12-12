@@ -35,7 +35,43 @@ APPOINTMENTS_TABLE = os.environ.get("APPOINTMENTS_TABLE", "appointments")
 
 # Google Calendar Integration
 GOOGLE_CALENDAR_ID = os.environ.get("GOOGLE_CALENDAR_ID", "")
-GOOGLE_SERVICE_ACCOUNT_KEY = os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY", "{}")
+
+# Secrets Manager Configuration
+USE_SECRETS_MANAGER = os.environ.get("USE_SECRETS_MANAGER", "false").lower() == "true"
+SECRETS_MANAGER_SECRET_NAME = os.environ.get("SECRETS_MANAGER_SECRET_NAME", "chatbot/google-calendar")
+
+# Google Service Account Key - with Secrets Manager support
+def _get_google_credentials():
+    """
+    Get Google service account credentials from Secrets Manager or environment variable.
+
+    Returns:
+        str: JSON string of Google service account credentials
+    """
+    if USE_SECRETS_MANAGER:
+        try:
+            logger.info("Loading Google credentials from Secrets Manager...")
+            from utils.secrets import get_secret_value
+
+            # Get credentials from Secrets Manager
+            credentials = get_secret_value(
+                secret_name=SECRETS_MANAGER_SECRET_NAME,
+                key="GOOGLE_SERVICE_ACCOUNT_KEY",
+                region_name=REGION,
+                fallback="{}"
+            )
+            logger.info("Successfully loaded credentials from Secrets Manager")
+            return credentials
+
+        except Exception as e:
+            logger.error(f"Failed to load from Secrets Manager: {e}")
+            logger.warning("Falling back to environment variable")
+            return os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY", "{}")
+    else:
+        # Use traditional environment variable
+        return os.environ.get("GOOGLE_SERVICE_ACCOUNT_KEY", "{}")
+
+GOOGLE_SERVICE_ACCOUNT_KEY = _get_google_credentials()
 
 # Notification Services
 SNS_TOPIC_ARN = os.environ.get("SNS_TOPIC_ARN", "")

@@ -62,27 +62,78 @@
 
 ## 🔜 DO ZROBIENIA (Opcjonalne)
 
+### **OPCJA D: SaaS Admin Platform** 🚀 (~50-150h)
+**Cel:** Multi-tenant dashboard dla klientów + admin panel z finansami
+
+📄 **Pełny plan:** [saas-platform-plan.md](./saas-platform-plan.md)
+
+**Quick Overview:**
+- Client View: Dashboard dla każdego klienta (ich rozmowy, stats, appointmenty)
+- Admin View: Super dashboard (wszyscy klienci, revenue, marża, billing)
+- Tech: Next.js 14 + DynamoDB multi-tenant + NextAuth
+- Hosting: Vercel (admin.stride-services.com)
+- Czas: MVP ~50-70h, Full ~100-150h
+- **Status:** 📋 Zaplanowane, do realizacji później
+
 ### **OPCJA C: Production Optimization** (~2h)
 
-#### 1. Secrets Manager (15 min)
+#### 1. Secrets Manager (15 min) 🔄 **W TRAKCIE**
 **Cel**: Bezpieczne przechowywanie Google credentials
 
+**Status (2025-12-12):**
+- ✅ Secret utworzony w AWS Secrets Manager (`chatbot/google-calendar`)
+- ✅ Kod zaktualizowany (`utils/secrets.py` + `config.py`)
+- ✅ Package wdrożony (`lambda-package-secrets.zip` - 27KB)
+- ✅ IAM permissions dodane
+- ✅ Environment variable `USE_SECRETS_MANAGER=true` dodana
+- ⏸️ **TODO: Testowanie i finalizacja**
+
+**KROK 1: IAM Permissions** ✅ **ZROBIONE**
 ```bash
-# 1. AWS Console → Secrets Manager → Store secret
-# 2. Secret name: chatbot/google-calendar
-# 3. Key: service_account_key, Value: {JSON z env var}
-# 4. IAM Role → Add policy:
+# AWS Lambda → Configuration → Permissions → Execution role → Add inline policy
 ```
 ```json
 {
-  "Effect": "Allow",
-  "Action": "secretsmanager:GetSecretValue",
-  "Resource": "arn:aws:secretsmanager:eu-central-1:*:secret:chatbot/google-calendar-*"
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": "secretsmanager:GetSecretValue",
+      "Resource": "arn:aws:secretsmanager:eu-central-1:*:secret:chatbot/google-calendar-*"
+    }
+  ]
 }
 ```
+Policy name: `ChatbotSecretsManagerAccess`
+
+**KROK 2: Environment Variable** ✅ **ZROBIONE**
 ```bash
-# 5. Lambda → Usuń env var GOOGLE_SERVICE_ACCOUNT_KEY
+# Lambda → Configuration → Environment variables → Edit
+# Dodaj:
+USE_SECRETS_MANAGER=true
 ```
+
+**KROK 3: Test** ⚠️ **TODO - DO PRZETESTOWANIA**
+```bash
+# 1. Lambda → Test (zakładka Test)
+# 2. CloudWatch Logs - sprawdź czy widzisz:
+#    ✅ "Loading Google credentials from Secrets Manager..."
+#    ✅ "Successfully loaded credentials from Secrets Manager"
+#
+# 3. Test appointment booking przez chatbot
+```
+
+**KROK 4: Cleanup (po sukcesie)**
+```bash
+# Lambda → Configuration → Environment variables
+# Usuń: GOOGLE_SERVICE_ACCOUNT_KEY (stara zmienna)
+```
+
+**Features:**
+- ✅ Fallback do env var jeśli Secrets Manager nie działa
+- ✅ Caching między Lambda warm starts
+- ✅ Szczegółowy error handling i logging
+- ✅ Zero downtime deployment
 
 #### 2. CloudWatch Metrics & Dashboard (20 min)
 **Cel**: Business metrics + performance monitoring
@@ -229,7 +280,15 @@ eu.anthropic.claude-haiku-4-5-20251001-v1:0
 
 ## 📅 HISTORIA WDROŻEŃ
 
-### 2025-12-12: Haiku 4.5 Migration
+### 2025-12-12 (PM): Secrets Manager Integration 🔄 W TRAKCIE
+- Added: `utils/secrets.py` - AWS Secrets Manager helper
+- Updated: `config.py` - Google credentials from Secrets Manager
+- Secret: `chatbot/google-calendar` created in AWS
+- Package: `lambda-package-secrets.zip` (27 KB)
+- Status: Code deployed, awaiting IAM permissions + testing
+- Features: Caching, fallback to env var, zero downtime
+
+### 2025-12-12 (AM): Haiku 4.5 Migration
 - Model: Claude Sonnet 3.5 → Haiku 4.5
 - Model ID: `eu.anthropic.claude-haiku-4-5-20251001-v1:0`
 - Koszt: 67% redukcja per request
@@ -261,7 +320,8 @@ eu.anthropic.claude-haiku-4-5-20251001-v1:0
 2. 🔄 Lub spróbuj Sonnet 4.5 (te same ceny co 3.5, nowszy)
 
 ### Backup packages:
-- `lambda-package-haiku45.zip` - Haiku 4.5 (obecny)
+- `lambda-package-secrets.zip` - Haiku 4.5 + Secrets Manager (27 KB) ⭐ **LATEST**
+- `lambda-package-haiku45.zip` - Haiku 4.5 (backup)
 - `lambda-package-final.zip` - Sonnet 3.5 (backup)
 - `lambda-package-two-stage.zip` - Nova+Claude (eksperyment)
 
@@ -275,7 +335,14 @@ eu.anthropic.claude-haiku-4-5-20251001-v1:0
 - [x] Appointment booking end-to-end ✅
 - [x] Frontend parsers working
 - [x] Haiku 4.5 deployed (67% cost savings)
-- [ ] Secrets Manager (optional - Opcja C)
+- [~] **Secrets Manager** (Opcja C) - 🔄 **Deployed, awaiting testing**
+  - [x] Secret created in AWS
+  - [x] Code updated (utils/secrets.py)
+  - [x] Package deployed (lambda-package-secrets.zip)
+  - [x] IAM permissions added (ChatbotSecretsManagerAccess)
+  - [x] Environment variable USE_SECRETS_MANAGER=true added
+  - [ ] **TODO: Test and verify** ⚠️
+  - [ ] Old env var removed (after successful test)
 - [ ] CloudWatch Dashboard (optional - Opcja C)
 - [ ] X-Ray tracing (optional - Opcja C)
 - [ ] CI/CD Pipeline (optional - Opcja C)
