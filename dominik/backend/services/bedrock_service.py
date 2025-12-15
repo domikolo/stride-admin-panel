@@ -180,7 +180,7 @@ def invoke_claude(
     history_messages: List[Dict[str, str]],
     session_id: str = "unknown",
     request_id: str = "unknown"
-) -> Tuple[str, float]:
+) -> Tuple[str, float, int, int, float]:
     """Invoke Claude model via Bedrock and return response with streaming.
 
     Args:
@@ -191,17 +191,17 @@ def invoke_claude(
         request_id: Request ID for logging
 
     Returns:
-        Tuple of (answer_text, bedrock_time_seconds)
+        Tuple of (answer_text, bedrock_time_seconds, tokens_input, tokens_output, cost_usd)
 
     Example:
-        >>> answer, duration = invoke_claude(
+        >>> answer, duration, tokens_in, tokens_out, cost = invoke_claude(
         >>>     "How much does it cost?",
         >>>     kb_text,
         >>>     [{"role": "user", "content": "Hello"}],
         >>>     "session123",
         >>>     "req456"
         >>> )
-        >>> print(f"Answer: {answer} (took {duration:.2f}s)")
+        >>> print(f"Answer: {answer} (took {duration:.2f}s, ${cost:.4f})")
     """
     # Build system prompt with KB context
     system_prompt = f"{SYSTEM_PROMPT_TEMPLATE}\n\nDokumenty (KB):\n{kb_text}\n"
@@ -217,6 +217,10 @@ def invoke_claude(
 
     bedrock_start = time.time()
     answer_parts = []
+
+    # Token usage tracking
+    tokens_input = 0
+    tokens_output = 0
 
     logger.info(
         "Invoking Bedrock",
@@ -257,6 +261,16 @@ def invoke_claude(
                     text_delta = data.get("delta", {}).get("text", "")
                     if text_delta:
                         answer_parts.append(text_delta)
+
+                # Handle message start (contains input tokens)
+                elif data.get("type") == "message_start":
+                    usage = data.get("message", {}).get("usage", {})
+                    tokens_input = usage.get("input_tokens", 0)
+
+                # Handle message delta (contains output tokens incrementally)
+                elif data.get("type") == "message_delta":
+                    usage = data.get("usage", {})
+                    tokens_output = usage.get("output_tokens", 0)
 
                 # Handle errors
                 elif data.get("type") == "error":
@@ -305,9 +319,19 @@ def invoke_claude(
         answer_parts.append(
             "Przepraszam, serwis AI jest chwilowo niedostępny. Spróbuj ponownie za chwilę."
         )
+        # Reset tokens on error
+        tokens_input = 0
+        tokens_output = 0
 
     bedrock_time = time.time() - bedrock_start
     answer = "".join(answer_parts).strip()
+
+    # Calculate cost (Claude Haiku 4.5 pricing - December 2024)
+    COST_PER_1K_INPUT = 0.00025   # USD per 1K input tokens
+    COST_PER_1K_OUTPUT = 0.00125  # USD per 1K output tokens
+
+    cost = (tokens_input / 1000 * COST_PER_1K_INPUT) + \
+           (tokens_output / 1000 * COST_PER_1K_OUTPUT)
 
     logger.info(
         "Bedrock response received",
@@ -315,11 +339,14 @@ def invoke_claude(
             "request_id": request_id,
             "session_id": session_id,
             "bedrock_time": bedrock_time,
-            "response_length": len(answer)
+            "response_length": len(answer),
+            "tokens_input": tokens_input,
+            "tokens_output": tokens_output,
+            "cost_usd": cost
         }
     )
 
-    return answer, bedrock_time
+    return answer, bedrock_time, tokens_input, tokens_output, cost
 
 
 # =============================================================================

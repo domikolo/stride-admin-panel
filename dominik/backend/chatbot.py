@@ -22,6 +22,15 @@ from config import (
     RATE_LIMIT_PER_MINUTE,
     SESSION_ID_MAX_LENGTH
 )
+from services.platform_analytics import (
+    track_conversation_start,
+    track_message_sent,
+    track_appointment_created,
+    track_appointment_verified
+)
+
+# Client ID for analytics tracking
+CLIENT_ID = "stride-services"
 from utils.validation import sanitize_query, validate_session_id
 from services.conversation_service import (
     save_conversation_turn,
@@ -183,6 +192,14 @@ def handle_appointment_booking(payload: Dict[str, Any], request_id: str) -> Opti
                 "body": json.dumps({"error": "Failed to create appointment"})
             }
 
+        # Track appointment created
+        track_appointment_created(
+            CLIENT_ID,
+            session_id,
+            result['appointment_id'],
+            datetime_str
+        )
+
         return {
             "statusCode": 200,
             "headers": {"Content-Type": "application/json"},
@@ -242,6 +259,9 @@ def handle_appointment_verification(payload: Dict[str, Any], request_id: str) ->
         verified = verify_appointment(appointment_id, verification_code, session_id)
 
         if verified:
+            # Track appointment verified
+            track_appointment_verified(CLIENT_ID, session_id, appointment_id)
+
             # Get appointment details for confirmation
             appointment = get_appointment_by_id(appointment_id, session_id)
 
@@ -358,6 +378,14 @@ def lambda_handler(event, context):
                         "body": json.dumps({"error": "Failed to create appointment"})
                     }
 
+                # Track appointment created
+                track_appointment_created(
+                    CLIENT_ID,
+                    session_id,
+                    result['appointment_id'],
+                    datetime_str
+                )
+
                 return {
                     "statusCode": 200,
                     "headers": {"Content-Type": "application/json"},
@@ -388,6 +416,9 @@ def lambda_handler(event, context):
                 verified = verify_appointment(appointment_id, verification_code, session_id)
 
                 if verified:
+                    # Track appointment verified
+                    track_appointment_verified(CLIENT_ID, session_id, appointment_id)
+
                     # Get appointment details for confirmation
                     appointment = get_appointment_by_id(appointment_id, session_id)
 
@@ -457,13 +488,28 @@ def lambda_handler(event, context):
     history_messages = get_recent_messages(session_id)
     history_load_time = time.time() - history_start
 
+    # Track conversation start (if first message)
+    if not history_messages:
+        track_conversation_start(CLIENT_ID, session_id)
+
     # Invoke Claude model
-    answer, bedrock_time = invoke_claude(
+    answer, bedrock_time, tokens_input, tokens_output, cost = invoke_claude(
         user_query,
         kb_text,
         history_messages,
         session_id,
         request_id
+    )
+
+    # Track message sent with tokens and cost
+    track_message_sent(
+        CLIENT_ID,
+        session_id,
+        tokens_input,
+        tokens_output,
+        cost,
+        int(bedrock_time * 1000),  # Convert to milliseconds
+        "claude-sonnet-4-5"  # Model ID
     )
 
     # Check for appointment intent

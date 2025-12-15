@@ -1296,46 +1296,75 @@ deployments/
 
 ### Immediate (Tydzień 1):
 1. ✅ **Review planu** - Potwierdź że MVP approach jest OK
-2. ⏭️ **Utwórz shared platform tables** (DynamoDB):
-   - `clients_registry` (PK: client_id, SK: SK)
-   - `platform_analytics_events` (PK: client_id, SK: event_timestamp)
-   - `platform_personality_variants` (PK: client_id, SK: variant_id)
+2. ✅ **Utwórz shared platform tables** (DynamoDB):
+   - ✅ `clients_registry` (PK: client_id, SK: SK)
+   - ✅ `platform_analytics_events` (PK: client_id, SK: event_timestamp) + GSI
+   - ✅ `platform_personality_variants` (PK: client_id, SK: variant_id)
 
-3. ⏭️ **Dodaj Platform Analytics SDK** (`/backend/services/platform_analytics.py`):
-   - Copy kod z planu (sekcja 2.2)
-   - Functions: `track_event()`, `track_message_sent()`, `track_appointment_created()`, etc.
+3. ✅ **Dodaj Platform Analytics SDK** (`/backend/services/platform_analytics.py`):
+   - ✅ Copy kod z planu (sekcja 2.2)
+   - ✅ Functions: `track_event()`, `track_message_sent()`, `track_appointment_created()`, etc.
 
-4. ⏭️ **Zarejestruj Stride Services** w `clients_registry`:
-   ```python
-   Item = {
-       "client_id": "stride-services",
-       "SK": "PROFILE",
-       "company_name": "Stride Services",
-       "lambda_function_name": "chatbot",
-       "status": "active",
-       "created_at": "2025-12-15T..."
-   }
-   ```
+4. ✅ **Zarejestruj Stride Services** w `clients_registry`:
+   - ✅ client_id: "stride-services"
+   - ✅ lambda_function_name: "stride"
+   - ✅ status: "active"
+   - ✅ Zapisano 2025-12-15
 
 ### Następnie (Tydzień 2):
-5. ⏭️ **Modyfikuj `/backend/chatbot.py`**:
-   - Import `track_*` functions
-   - Dodaj `CLIENT_ID = "stride-services"`
-   - Call `track_message_sent()` po invoke_claude
+5. ✅ **Modyfikuj `/backend/chatbot.py`**:
+   - ✅ Import `track_*` functions z platform_analytics
+   - ✅ Dodaj `CLIENT_ID = "stride-services"`
+   - ✅ Track conversation_start (jeśli first message)
+   - ✅ Track message_sent() po invoke_claude (z tokens/cost)
+   - ✅ Track appointment_created() w 2 miejscach
+   - ✅ Track appointment_verified() w 2 miejscach
 
-6. ⏭️ **Modyfikuj `/backend/services/bedrock_service.py`**:
-   - Extract tokens z response headers
-   - Calculate cost
-   - Return `(answer, time, tokens_in, tokens_out, cost)`
+6. ✅ **Modyfikuj `/backend/services/bedrock_service.py`**:
+   - ✅ Extract tokens z streaming events (message_start, message_delta)
+   - ✅ Calculate cost (Haiku 4.5: $0.00025/1K input, $0.00125/1K output)
+   - ✅ Return `(answer, bedrock_time, tokens_input, tokens_output, cost)`
+   - ✅ Log tokens i cost w response metadata
 
-7. ⏭️ **Test**: Wyślij message → sprawdź `platform_analytics_events` table
+7. ✅ **Fix platform_analytics.py**:
+   - ✅ Dodano convert_floats_to_decimal() helper
+   - ✅ Konwersja float → Decimal przed DynamoDB put_item
+   - ✅ Fix błędu "Float types are not supported"
+
+8. ✅ **Test**: Wszystkie eventy działają!
+   - ✅ conversation_start - zapisuje się przy pierwszej wiadomości
+   - ✅ message_sent - zapisuje tokens_input, tokens_output, cost, response_time_ms
+   - ✅ appointment_created - zapisuje appointment_id, datetime
+   - ✅ appointment_verified - zapisuje appointment_id
+   - ✅ Dane w platform_analytics_events gotowe do analytics dashboard
 
 ### W kolejnych tygodniach (Tydzień 3+):
-8. ⏭️ **AWS Cognito setup** (auth dla admin panel)
-9. ⏭️ **Admin API Lambda** (`/admin-panel-backend/`)
-10. ⏭️ **Frontend admin panel** (Next.js 14)
-11. ⏭️ **FAQ & Personality tournament**
+9. ⏭️ **AWS Cognito setup** (auth dla admin panel)
+10. ⏭️ **Admin API Lambda** (`/admin-panel-backend/`)
+11. ⏭️ **Frontend admin panel** (Next.js 14)
+12. ⏭️ **FAQ & Personality tournament**
 
-**Gotowy do rozpoczęcia MVP Fazy 1!**
+---
 
-Pierwszy krok: Utwórz 3 tabele DynamoDB (clients_registry, platform_analytics_events, platform_personality_variants)
+## PROGRESS UPDATE - 2025-12-15
+
+**✅ TYDZIEŃ 1-2 UKOŃCZONY (MVP Backend Infrastructure)**
+
+**Utworzone tabele DynamoDB:**
+- `clients_registry` - centralna rejestracja klientów (stride-services zarejestrowany)
+- `platform_analytics_events` - shared analytics table (z GSI)
+- `platform_personality_variants` - dla personality tournament (future)
+
+**Zmodyfikowane pliki backendu:**
+- `/backend/services/platform_analytics.py` - NOWY! Analytics SDK
+- `/backend/services/bedrock_service.py` - dodano tracking tokens/cost
+- `/backend/chatbot.py` - dodano wywołania track_*()
+
+**Co działa:**
+- ✅ Każda konwersacja trackowana (conversation_start, message_sent)
+- ✅ Każde appointment trackowane (appointment_created, appointment_verified)
+- ✅ Tokens i cost zapisywane w realtime do DynamoDB
+- ✅ Wszystkie eventy mają client_id = "stride-services"
+- ✅ Backend gotowy do analytics dashboard
+
+**Następny krok:** Tydzień 3 - AWS Cognito + Admin API Lambda
