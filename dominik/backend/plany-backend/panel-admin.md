@@ -1339,8 +1339,8 @@ deployments/
    - ✅ Dane w platform_analytics_events gotowe do analytics dashboard
 
 ### W kolejnych tygodniach (Tydzień 3+):
-9. ⏭️ **AWS Cognito setup** (auth dla admin panel)
-10. ⏭️ **Admin API Lambda** (`/admin-panel-backend/`)
+9. ✅ **AWS Cognito setup** (auth dla admin panel) - UKOŃCZONE 2025-12-16
+10. ✅ **Admin API Lambda** (`/admin-panel-backend/`) - UKOŃCZONE 2025-12-16
 11. ⏭️ **Frontend admin panel** (Next.js 14)
 12. ⏭️ **FAQ & Personality tournament**
 
@@ -1368,3 +1368,83 @@ deployments/
 - ✅ Backend gotowy do analytics dashboard
 
 **Następny krok:** Tydzień 3 - AWS Cognito + Admin API Lambda
+
+---
+
+## PROGRESS UPDATE - 2025-12-16
+
+**✅ TYDZIEŃ 3 UKOŃCZONY (Admin API & Authentication)**
+
+**Utworzona infrastruktura AWS:**
+- **AWS Cognito User Pool:** `stride-admin-panel-cognito`
+  - User Pool ID: `eu-central-1_foqQPqZsC`
+  - App Client ID: `2tkv1rheoufn1c19cf8mppdmus`
+  - Custom attributes: `custom:client_id`, `custom:role`
+  - Grupa: `owners` (dla platform adminów)
+  - Pierwszy user (owner) utworzony i skonfigurowany
+
+- **Lambda Function:** `admin-api`
+  - Runtime: Python 3.11
+  - Handler: `api.handler.lambda_handler`
+  - Memory: 256 MB, Timeout: 30s
+  - Lambda Layer: `admin-api-dependencies` (boto3, python-jose, etc.)
+
+- **API Gateway HTTP API:**
+  - Invoke URL: `https://whmpy9rli5.execute-api.eu-central-1.amazonaws.com/`
+  - Routes: `ANY /{proxy+}` (catch-all)
+  - Stage: `$default`
+
+**Utworzone pliki Admin API:**
+- `/backend/admin-panel-backend/api/handler.py` - główny API handler z endpointami
+- `/backend/admin-panel-backend/api/auth.py` - JWT verification (Cognito)
+- `/backend/admin-panel-backend/requirements.txt` - dependencies
+- `/backend/admin-panel-backend/faq/` - folder dla FAQ generator (future)
+- `/backend/admin-panel-backend/personality/` - folder dla tournament (future)
+
+**Zaimplementowane API Endpoints:**
+- ✅ `GET /` - Health check endpoint
+- ✅ `GET /health` - Health check endpoint
+- ✅ `GET /test-db` - Test DynamoDB connection (verified working!)
+- ✅ `GET /clients` - Lista wszystkich klientów (requires auth)
+- ✅ `GET /clients/{client_id}/stats` - Statystyki klienta (requires auth)
+- ✅ `GET /clients/{client_id}/conversations` - Konwersacje klienta (requires auth)
+- ✅ `GET /clients/{client_id}/appointments` - Spotkania klienta (requires auth)
+
+**Security & Authorization:**
+- ✅ JWT token verification z Cognito public keys (cached)
+- ✅ Role-based access control (owner vs client)
+- ✅ Data scoping (clients widzą tylko swoje dane, owners wszystko)
+- ✅ CORS headers skonfigurowane
+
+**Testy i weryfikacja:**
+- ✅ Lambda deployed i działa poprawnie
+- ✅ API Gateway routing działa
+- ✅ DynamoDB connection verified:
+  - Połączenie z `clients_registry` ✅ (znaleziono "stride-services")
+  - Połączenie z `platform_analytics_events` ✅ (znaleziono 5 eventów)
+- ✅ Health endpoints zwracają poprawne odpowiedzi
+- ✅ Auth endpoints wymagają JWT token (security verified)
+
+**Reorganizacja struktury projektu:**
+```
+/backend/
+├── chatbot-backend/          ← Chatbot files (chatbot.py, services/, utils/)
+├── admin-panel-backend/      ← Admin API files (api/, faq/, personality/)
+└── plany-backend/            ← Plan files (panel-admin.md, plan.md, etc.)
+```
+
+**Co działa (end-to-end):**
+1. ✅ Chatbot śle analytics events do `platform_analytics_events`
+2. ✅ Admin API może odczytać dane z DynamoDB (clients, analytics)
+3. ✅ JWT authentication działa (Cognito integration)
+4. ✅ API Gateway routuje requesty do Lambda
+5. ✅ Wszystkie komponenty backendu komunikują się poprawnie
+
+**Koszty infrastruktury:**
+- API Gateway HTTP API: **FREE** (1M requests/month free tier)
+- Lambda: **FREE** (1M requests + 400K GB-seconds free tier)
+- Cognito: **FREE** (50K MAU free tier)
+- DynamoDB: Istniejące tabele (bez dodatkowych kosztów)
+- **Całkowity koszt MVP: ~0 zł/miesiąc** (w ramach free tier)
+
+**Następny krok:** Frontend Admin Panel (Next.js 14 + Dashboard UI)
