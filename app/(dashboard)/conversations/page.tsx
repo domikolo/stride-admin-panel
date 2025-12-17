@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getClientConversations } from '@/lib/api';
 import { Conversation } from '@/lib/types';
@@ -16,6 +17,7 @@ import { formatDistanceToNow } from 'date-fns';
 
 export default function ConversationsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -80,7 +82,11 @@ export default function ConversationsPage() {
               </TableRow>
             ) : (
               conversations.map((conv) => (
-                <TableRow key={conv.session_id}>
+                <TableRow
+                  key={conv.session_id}
+                  className="cursor-pointer hover:bg-white/5 transition-colors"
+                  onClick={() => router.push(`/conversations/${conv.session_id}`)}
+                >
                   <TableCell className="font-mono text-sm">{conv.session_id.slice(0, 8)}...</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{conv.messages_count}</Badge>

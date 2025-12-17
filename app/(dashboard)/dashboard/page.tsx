@@ -6,29 +6,30 @@
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { getClientStats } from '@/lib/api';
-import { ClientStats } from '@/lib/types';
+import { getClientStats, getClientDailyStats } from '@/lib/api';
+import { ClientStats, DailyStat } from '@/lib/types';
 import StatsCard from '@/components/dashboard/StatsCard';
 import { MessageSquare, Calendar, TrendingUp, DollarSign } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
+import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
   const [stats, setStats] = useState<ClientStats | null>(null);
+  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (user) {
       loadStats();
+      loadDailyStats();
     }
   }, [user]);
 
   const loadStats = async () => {
     try {
-      // For owner: show stride-services stats (MVP)
-      // For client: show their own stats
       const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
       const data = await getClientStats(clientId, 'MONTHLY');
       setStats(data);
@@ -38,6 +39,16 @@ export default function DashboardPage() {
       setError('Failed to load stats. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadDailyStats = async () => {
+    try {
+      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+      const data = await getClientDailyStats(clientId, 30);
+      setDailyStats(data.daily_stats);
+    } catch (error) {
+      console.error('Failed to load daily stats:', error);
     }
   };
 
@@ -99,19 +110,80 @@ export default function DashboardPage() {
         />
       </div>
 
-      {/* Charts placeholder */}
+      {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Line Chart - Conversations Over Time */}
         <Card className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Conversations Over Time</h3>
-          <div className="h-64 flex items-center justify-center text-zinc-500">
-            Chart placeholder (Recharts LineChart)
-          </div>
+          <h3 className="text-lg font-semibold text-white mb-4">Activity Over Time</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dailyStats}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis
+                dataKey="date"
+                stroke="#71717a"
+                tick={{ fill: '#71717a' }}
+                tickFormatter={(value) => {
+                  const date = new Date(value);
+                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                }}
+              />
+              <YAxis stroke="#71717a" tick={{ fill: '#71717a' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#18181b',
+                  border: '1px solid #27272a',
+                  borderRadius: '8px',
+                  color: '#fff',
+                }}
+                labelStyle={{ color: '#a1a1aa' }}
+              />
+              <Legend wrapperStyle={{ color: '#a1a1aa' }} />
+              <Line
+                type="monotone"
+                dataKey="conversations"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                dot={{ fill: '#3b82f6' }}
+                name="Conversations"
+              />
+              <Line
+                type="monotone"
+                dataKey="appointments"
+                stroke="#8b5cf6"
+                strokeWidth={2}
+                dot={{ fill: '#8b5cf6' }}
+                name="Appointments"
+              />
+            </LineChart>
+          </ResponsiveContainer>
         </Card>
+
+        {/* Bar Chart - Conversion Funnel */}
         <Card className="glass-card p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Conversion Funnel</h3>
-          <div className="h-64 flex items-center justify-center text-zinc-500">
-            Chart placeholder (Recharts BarChart)
-          </div>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart
+              data={[
+                { name: 'Conversations', value: stats?.conversations_count || 0 },
+                { name: 'Appointments', value: stats?.appointments_created || 0 },
+                { name: 'Verified', value: stats?.appointments_verified || 0 },
+              ]}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+              <XAxis dataKey="name" stroke="#71717a" tick={{ fill: '#71717a' }} />
+              <YAxis stroke="#71717a" tick={{ fill: '#71717a' }} />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#18181b',
+                  border: '1px solid #27272a',
+                  borderRadius: '8px',
+                  color: '#fff',
+                }}
+                labelStyle={{ color: '#a1a1aa' }}
+              />
+              <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         </Card>
       </div>
     </div>

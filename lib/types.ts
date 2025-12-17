@@ -30,12 +30,25 @@ export interface ClientStats {
   };
 }
 
+export interface DailyStat {
+  date: string;
+  conversations: number;
+  appointments: number;
+  messages: number;
+}
+
 export interface Conversation {
   session_id: string;
   messages_count: number;
   first_message: string;
   last_message: string;
   preview: string;
+}
+
+export interface ConversationMessage {
+  timestamp: string;
+  role: 'user' | 'assistant';
+  text: string;
 }
 
 export interface Appointment {

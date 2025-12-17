@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, Conversation, Appointment } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -90,3 +90,19 @@ export const getClientAppointments = (clientId: string, status?: string) => {
     `/clients/${clientId}/appointments${query}`
   );
 };
+
+/**
+ * Get conversation details (all messages)
+ */
+export const getConversationDetails = (clientId: string, sessionId: string) =>
+  api.get<{ session_id: string; messages: ConversationMessage[]; count: number }>(
+    `/clients/${clientId}/conversations/${sessionId}`
+  );
+
+/**
+ * Get daily stats for charts
+ */
+export const getClientDailyStats = (clientId: string, days = 30) =>
+  api.get<{ client_id: string; daily_stats: DailyStat[]; count: number }>(
+    `/clients/${clientId}/stats/daily?days=${days}`
+  );
