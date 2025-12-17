@@ -13,7 +13,6 @@ import {
   MessageSquare,
   Calendar,
   Users,
-  BarChart3,
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -31,7 +30,7 @@ export default function Sidebar() {
   const ownerLinks = [
     ...clientLinks,
     { href: '/clients', icon: Users, label: 'Clients' },
-    { href: '/analytics', icon: BarChart3, label: 'Analytics' },
+    // { href: '/analytics', icon: BarChart3, label: 'Analytics' }, // TODO: Implement analytics page
   ];
 
   const links = user?.role === 'owner' ? ownerLinks : clientLinks;
