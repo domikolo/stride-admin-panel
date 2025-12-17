@@ -1448,3 +1448,1367 @@ deployments/
 - **Całkowity koszt MVP: ~0 zł/miesiąc** (w ramach free tier)
 
 **Następny krok:** Frontend Admin Panel (Next.js 14 + Dashboard UI)
+
+---
+
+## PROGRESS UPDATE - 2025-12-17
+
+**✅ FRONTEND ADMIN PANEL UKOŃCZONY (MVP)**
+
+**Utworzona aplikacja Next.js 14:**
+- **Repo GitHub:** https://github.com/domikolo/stride-admin-panel
+- **Deployment:** AWS Amplify
+  - URL: https://master.dwbypdlefsahq.amplifyapp.com
+  - Auto-deploy z GitHub master branch
+  - Environment variables skonfigurowane (API URL, Cognito credentials)
+
+**Stack technologiczny:**
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS (dark theme)
+- shadcn/ui components (button, card, table, badge, skeleton)
+- AWS Cognito authentication (amazon-cognito-identity-js)
+- Recharts (do wykresów)
+- date-fns (formatowanie dat)
+
+**Struktura projektu:**
+```
+/admin-panel/
+├── app/
+│   ├── layout.tsx                    # Root layout + AuthProvider
+│   ├── (auth)/
+│   │   └── login/page.tsx           # Login form (AWS Cognito)
+│   ├── (dashboard)/
+│   │   ├── layout.tsx               # Dashboard layout + Sidebar
+│   │   ├── dashboard/page.tsx       # Main dashboard z stats + charts
+│   │   ├── conversations/
+│   │   │   ├── page.tsx            # Lista konwersacji (klikalnych)
+│   │   │   └── [sessionId]/page.tsx # Szczegóły konwersacji (wszystkie wiadomości)
+│   │   ├── appointments/page.tsx    # Lista appointmentów
+│   │   └── (owner)/
+│   │       └── clients/page.tsx     # Lista klientów (owner only)
+├── components/
+│   ├── ui/                          # shadcn/ui components
+│   ├── dashboard/
+│   │   └── StatsCard.tsx           # Card z metryką
+│   └── layout/
+│       └── Sidebar.tsx             # Navigation sidebar
+├── lib/
+│   ├── auth.ts                      # AWS Cognito wrapper
+│   ├── api.ts                       # API client z JWT
+│   └── types.ts                     # TypeScript interfaces
+├── hooks/
+│   └── useAuth.tsx                  # Auth context + hook
+└── .env.local                       # Environment variables
+```
+
+**Zaimplementowane funkcjonalności:**
+
+1. **Authentication (AWS Cognito):**
+   - ✅ Login page z email/password
+   - ✅ Session management (localStorage)
+   - ✅ Auto-redirect na /dashboard po loginie
+   - ✅ Sign out functionality
+   - ✅ Protected routes (redirect do /login jeśli nie zalogowany)
+   - ✅ Role-based UI (owner widzi Clients, client nie widzi)
+
+2. **Dashboard Page:**
+   - ✅ 4 StatsCards:
+     - Conversations count
+     - Appointments count
+     - Conversion rate (%)
+     - Total cost ($)
+   - ✅ **LineChart (Recharts):** Activity Over Time
+     - Conversations i appointments przez ostatnie 30 dni
+     - Dane z endpoint `/clients/{id}/stats/daily`
+   - ✅ **BarChart (Recharts):** Conversion Funnel
+     - Conversations → Appointments → Verified
+     - Wizualizacja conversion rate
+
+3. **Conversations Page:**
+   - ✅ Lista wszystkich konwersacji
+   - ✅ Kolumny: Session ID, Messages count, Last Message, Preview
+   - ✅ Formatowanie daty (date-fns: "2 hours ago")
+   - ✅ **Klikalny row** → przekierowanie do szczegółów
+   - ✅ **Conversation Detail Page:**
+     - Wszystkie wiadomości chronologicznie
+     - User/Assistant avatary i role
+     - Timestamps dla każdej wiadomości
+     - Ładny UI z colored borders (blue dla user, purple dla assistant)
+     - Przycisk "Back" do powrotu
+
+4. **Appointments Page:**
+   - ✅ Lista wszystkich appointmentów
+   - ✅ Kolumny: ID, Date & Time, Contact, Status, Session
+   - ✅ Status badges (verified/pending/cancelled)
+   - ✅ Formatowanie daty (date-fns PPp format)
+
+5. **Clients Page (Owner only):**
+   - ✅ Lista wszystkich klientów z `clients_registry`
+   - ✅ Kolumny: Client ID, Company Name, Status, Conversations, Created
+   - ✅ Access control (tylko dla owners)
+   - ✅ Error message jeśli client próbuje wejść
+
+**Backend updates dla frontend:**
+
+6. **Nowe API endpoints:**
+   - ✅ `GET /clients/{client_id}/conversations/{session_id}` - szczegóły konwersacji
+   - ✅ `GET /clients/{client_id}/stats/daily?days=30` - daily breakdown dla wykresów
+
+7. **Bug fixes w API:**
+   - ✅ **CORS fix:** Dodano obsługę OPTIONS preflight requests
+   - ✅ **Authorization header fix:** HTTP API v2 używa lowercase `authorization` zamiast `Authorization`
+   - ✅ **Routing fix:** HTTP API v2 używa `rawPath` zamiast `path`
+   - ✅ **Timestamp conversion:** Unix timestamps (string) → ISO 8601 format
+   - ✅ **Table name fix:** `conversations` → `Conversations-stride`
+
+**Naprawione problemy podczas deploymentu:**
+
+1. **CORS błąd:** "No 'Access-Control-Allow-Origin' header"
+   - Rozwiązanie: Dodano obsługę OPTIONS method w Lambda + API Gateway CORS config
+
+2. **401 Unauthorized:** "Missing authorization token"
+   - Rozwiązanie: API Gateway normalizuje headers do lowercase, backend sprawdzał uppercase
+
+3. **404 Not Found:** Endpoints nie były znajdowane
+   - Rozwiązanie: HTTP API v2 używa `rawPath` zamiast `path` w event
+
+4. **Invalid time value:** Frontend nie mógł sparsować timestampów
+   - Rozwiązanie: Dodano `convert_timestamp_to_iso()` w backendie (Unix → ISO string)
+
+5. **ResourceNotFoundException:** Tabela conversations nie istniała
+   - Rozwiązanie: Zmiana nazwy z `conversations` → `Conversations-stride`
+
+**Deployment artifacts:**
+- **Frontend:** Deployed on AWS Amplify (auto-deploy z GitHub)
+- **Backend Lambda:** Zaktualizowany z wszystkimi fixami
+  - File: `/backend/admin-panel-backend/admin-api-code.zip`
+  - Nowe endpointy + wszystkie poprawki
+
+**Co działa (end-to-end):**
+1. ✅ Login przez AWS Cognito → JWT token
+2. ✅ Dashboard wyświetla statystyki z API
+3. ✅ Wykresy pokazują dane z ostatnich 30 dni
+4. ✅ Conversations lista klikalnych sesji
+5. ✅ Klik na konwersację → pełna historia wiadomości
+6. ✅ Appointments lista z formatowanymi datami
+7. ✅ Clients lista (owner) z wszystkimi klientami
+8. ✅ Sign out → powrót do login
+9. ✅ Role-based access (owner vs client)
+10. ✅ Responsive dark theme UI
+
+**Design:**
+- Konsystentny dark theme jak w `/frontend/nowa strona`
+- Glass card effects z backdrop-filter
+- Gradient text headings (white → white/60)
+- Smooth hover states i transitions
+- Loading skeletons dla lepszego UX
+- Error states z czerwonymi alertami
+
+**Koszty:**
+- AWS Amplify Hosting: ~$15/month (build minutes + hosting)
+- Lambda + API Gateway: **FREE** (w ramach free tier)
+- Cognito: **FREE** (50K MAU free tier)
+- **Total: ~$15/month** dla MVP
+
+**Następne kroki (Future enhancements):**
+- ⏭️ FAQ Generator page (Claude analysis ostatnich konwersacji)
+- ⏭️ Personality Tournament page (A vs B comparison UI)
+- ⏭️ Advanced filters (date range picker, search, pagination)
+- ⏭️ Real-time updates (WebSocket lub polling)
+- ⏭️ Email notifications (weekly reports)
+- ⏭️ Export data (CSV, PDF)
+- ⏭️ Custom domain (`panel.stride-services.pl`)
+- ⏭️ Mobile responsive improvements
+- ⏭️ Dodatkowe wykresy (cost over time, response times, etc.)
+
+**Status:** **MVP UKOŃCZONE** - Frontend + Backend działają w pełni!
+
+---
+
+## 12. ADVANCED FEATURES (Future Enhancements)
+
+### 12.1 A/B Testing Osobowości
+
+**Concept:**
+Klient może uruchomić test porównujący dwa style komunikacji chatbota. Połowa użytkowników rozmawia z wariantem A, druga połowa z wariantem B. Po określonym czasie klient widzi który styl lepiej konwertuje i może go ustawić jako domyślny.
+
+**Implementacja:**
+
+#### Backend Schema
+
+**Nowa tabela:** `platform_ab_tests`
+```python
+PK: client_id (String)
+SK: test_id (String)
+
+Atrybuty:
+- client_id: "stride-services"
+- test_id: "test_20251220_friendly_vs_professional"
+- created_at: ISO timestamp
+- status: "active" | "completed" | "paused"
+
+- variant_a_id: "variant_1"  # personality_variant FK
+- variant_b_id: "variant_5"  # personality_variant FK
+- variant_a_name: "Friendly & Casual"
+- variant_b_name: "Professional & Formal"
+
+- traffic_split: 50  # % dla A (reszta to B)
+- started_at: ISO timestamp
+- ends_at: ISO timestamp (optional - może być open-ended)
+- duration_days: 14
+
+# Results (aggregated z analytics)
+- variant_a_conversations: 234
+- variant_a_appointments: 45
+- variant_a_conversion_rate: 19.2
+- variant_a_avg_sentiment: 0.72  # -1 do 1
+- variant_a_avg_messages: 8.5
+
+- variant_b_conversations: 241
+- variant_b_appointments: 62
+- variant_b_conversion_rate: 25.7
+- variant_b_avg_sentiment: 0.68
+- variant_b_avg_messages: 7.2
+
+# Winner (auto-determined or manual)
+- winner_variant_id: "variant_5"  # jeśli test completed
+- winner_reason: "Higher conversion rate (+6.5pp)"
+```
+
+**Tracking w analytics:**
+```python
+# Modyfikacja platform_analytics_events
+metadata: {
+    # Dodaj dla każdego eventu:
+    "ab_test_id": "test_20251220_friendly_vs_professional",
+    "variant_assignment": "variant_b",  # Który wariant dostał ten user
+    ...
+}
+```
+
+#### Chatbot Logic (Traffic Split)
+
+**Modyfikacja `/backend/chatbot.py`:**
+```python
+import hashlib
+
+def get_ab_test_variant(client_id: str, session_id: str) -> str:
+    """
+    Deterministycznie przypisz session do wariantu A lub B.
+    Używamy hash session_id żeby ten sam user zawsze dostał ten sam wariant.
+    """
+    # Sprawdź czy jest aktywny A/B test
+    ab_test = get_active_ab_test(client_id)
+    if not ab_test:
+        return get_default_variant(client_id)  # Normal personality
+
+    # Hash session_id do deterministic split
+    hash_val = int(hashlib.md5(session_id.encode()).hexdigest(), 16)
+    bucket = hash_val % 100  # 0-99
+
+    if bucket < ab_test["traffic_split"]:
+        variant_id = ab_test["variant_a_id"]
+        variant_name = "A"
+    else:
+        variant_id = ab_test["variant_b_id"]
+        variant_name = "B"
+
+    return variant_id, ab_test["test_id"], variant_name
+
+# W lambda_handler:
+variant_id, ab_test_id, variant_assignment = get_ab_test_variant(CLIENT_ID, session_id)
+
+# Load personality prompt dla tego wariantu
+personality_prompt = load_personality_variant(CLIENT_ID, variant_id)
+
+# Invoke Claude z personality modifiers
+system_prompt = f"{BASE_SYSTEM_PROMPT}\n\n{personality_prompt}"
+
+# Track w analytics
+track_message_sent(CLIENT_ID, session_id, ..., metadata={
+    "ab_test_id": ab_test_id,
+    "variant_assignment": variant_assignment,
+    ...
+})
+```
+
+#### Admin API Endpoints
+
+```python
+# A/B Test Management
+POST   /clients/{client_id}/ab-tests/start
+  Body: {
+    "variant_a_id": "variant_1",
+    "variant_b_id": "variant_5",
+    "traffic_split": 50,
+    "duration_days": 14
+  }
+
+GET    /clients/{client_id}/ab-tests/active
+  # Zwraca aktywny test jeśli istnieje
+
+GET    /clients/{client_id}/ab-tests/{test_id}/results
+  # Real-time results z analytics aggregation
+
+POST   /clients/{client_id}/ab-tests/{test_id}/complete
+  Body: { "winner_variant_id": "variant_5" }
+  # Mark test as complete, optionally set winner as default
+
+GET    /clients/{client_id}/ab-tests/history
+  # Lista wszystkich testów (past + current)
+```
+
+**Results Calculation:**
+```python
+def calculate_ab_test_results(client_id: str, test_id: str):
+    # Query analytics events WHERE ab_test_id = test_id
+    events = query_analytics_by_metadata("ab_test_id", test_id)
+
+    # Group by variant_assignment
+    variant_a_events = [e for e in events if e["metadata"]["variant_assignment"] == "A"]
+    variant_b_events = [e for e in events if e["metadata"]["variant_assignment"] == "B"]
+
+    # Calculate stats
+    results = {
+        "variant_a": {
+            "conversations": count_unique_sessions(variant_a_events, "conversation_start"),
+            "appointments": count_events(variant_a_events, "appointment_created"),
+            "conversion_rate": calculate_conversion_rate(variant_a_events),
+            "avg_sentiment": calculate_avg_sentiment(variant_a_events),
+            "avg_messages": calculate_avg_messages(variant_a_events)
+        },
+        "variant_b": { ... }
+    }
+
+    # Statistical significance test (Chi-square)
+    results["is_significant"] = chi_square_test(
+        variant_a_conversions, variant_a_total,
+        variant_b_conversions, variant_b_total
+    )
+
+    return results
+```
+
+#### Frontend UI
+
+**A/B Test Page:** `/app/(dashboard)/ab-testing/page.tsx`
+```typescript
+// Start test form
+- Wybierz Variant A (dropdown z personality_variants)
+- Wybierz Variant B (dropdown)
+- Traffic split slider (0-100%)
+- Duration (dni)
+- Button: "Start Test"
+
+// Active test card
+- Variant A vs Variant B name
+- Progress bar (days elapsed / total)
+- Stats comparison table:
+  | Metric              | Variant A | Variant B | Winner |
+  |---------------------|-----------|-----------|--------|
+  | Conversations       | 234       | 241       | -      |
+  | Appointments        | 45        | 62        | 🏆 B   |
+  | Conversion Rate     | 19.2%     | 25.7%     | 🏆 B   |
+  | Avg Sentiment       | 😊 72%    | 😊 68%    | A      |
+  | Avg Messages/Conv   | 8.5       | 7.2       | 🏆 B   |
+
+- Statistical significance badge ("95% confident" lub "Not enough data")
+- Actions: "Declare Winner & Apply" | "End Test" | "Pause"
+
+// Past tests history
+- List of completed tests
+- Winner highlighted
+```
+
+**Visual Comparison:**
+```typescript
+// Side-by-side comparison cards
+<div className="grid grid-cols-2 gap-6">
+  <VariantCard variant="A" stats={...} />
+  <VariantCard variant="B" stats={...} winner={true} />
+</div>
+
+// Conversion funnel chart (recharts)
+<BarChart data={[
+  { stage: 'Conversations', A: 234, B: 241 },
+  { stage: 'Appointments', A: 45, B: 62 },
+  { stage: 'Verified', A: 38, B: 55 }
+]} />
+```
+
+**Benefits:**
+- Data-driven personality optimization
+- Eliminuje guesswork z personality selection
+- Continuous improvement cycle
+- Low risk (split traffic mitiguje bad variants)
+
+---
+
+### 12.2 Analiza Sentymentu
+
+**Concept:**
+Każda rozmowa jest automatycznie oznaczana jako pozytywna, neutralna lub negatywna na podstawie tonu użytkownika. Klient widzi w dashboardzie trend jak zmieniają się nastroje jego klientów w czasie. Pozwala to szybko wychwycić czy coś zaczyna irytować użytkowników.
+
+**Implementacja:**
+
+#### Backend - Sentiment Analysis
+
+**Lambda Function:** `/backend/sentiment/analyzer.py`
+```python
+import boto3
+from typing import Literal
+
+bedrock = boto3.client("bedrock-runtime")
+
+def analyze_sentiment(text: str) -> dict:
+    """
+    Używa Claude Haiku do fast sentiment analysis.
+
+    Returns:
+        {
+            "sentiment": "positive" | "neutral" | "negative",
+            "score": 0.85,  # -1 (very negative) to 1 (very positive)
+            "confidence": 0.92,  # 0-1
+            "keywords": ["happy", "satisfied", "thank you"]
+        }
+    """
+    prompt = f"""Analyze the sentiment of this customer message.
+
+Message: "{text}"
+
+Respond with ONLY a JSON object in this format:
+{{
+  "sentiment": "positive" | "neutral" | "negative",
+  "score": <float from -1 to 1>,
+  "confidence": <float from 0 to 1>,
+  "keywords": [<list of sentiment keywords>]
+}}"""
+
+    response = bedrock.invoke_model(
+        modelId="us.anthropic.claude-haiku-4.5:1:200k",
+        body=json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "max_tokens": 200,
+            "messages": [{"role": "user", "content": prompt}]
+        })
+    )
+
+    result = json.loads(response["body"].read())
+    sentiment_data = json.loads(result["content"][0]["text"])
+
+    return sentiment_data
+```
+
+**Real-time tracking w chatbot:**
+```python
+# W chatbot.py, po user message:
+user_message = payload.get("query", "")
+
+# Async sentiment analysis (nie blokuj response)
+sentiment = analyze_sentiment(user_message)
+
+# Track w analytics
+track_event(CLIENT_ID, session_id, "message_received", {
+    "user_message": user_message[:500],
+    "sentiment": sentiment["sentiment"],
+    "sentiment_score": sentiment["score"],
+    "sentiment_confidence": sentiment["confidence"],
+    "sentiment_keywords": sentiment["keywords"]
+})
+```
+
+**Conversation-level sentiment:**
+```python
+# EventBridge scheduled rule (co 5 min)
+def aggregate_conversation_sentiment(event, context):
+    """
+    Dla każdej konwersacji z ostatnich 5 min, oblicz overall sentiment.
+    """
+    recent_conversations = get_recent_conversations(minutes=5)
+
+    for session_id in recent_conversations:
+        # Pobierz wszystkie message_received events z tym session_id
+        messages = query_analytics_events(
+            client_id=CLIENT_ID,
+            event_type="message_received",
+            session_id=session_id
+        )
+
+        # Oblicz weighted average sentiment
+        sentiments = [m["metadata"]["sentiment_score"] for m in messages]
+        avg_sentiment = sum(sentiments) / len(sentiments)
+
+        # Kategoryzuj
+        if avg_sentiment > 0.3:
+            sentiment_label = "positive"
+        elif avg_sentiment < -0.3:
+            sentiment_label = "negative"
+        else:
+            sentiment_label = "neutral"
+
+        # Track conversation-level sentiment
+        track_event(CLIENT_ID, session_id, "conversation_sentiment_analyzed", {
+            "sentiment": sentiment_label,
+            "sentiment_score": avg_sentiment,
+            "message_count": len(sentiments)
+        })
+```
+
+#### Admin API Endpoints
+
+```python
+GET /clients/{client_id}/sentiment/overview?period=30d
+  Response: {
+    "positive": 65,    # % conversations
+    "neutral": 25,
+    "negative": 10,
+    "avg_score": 0.42,  # -1 to 1
+    "trend": "improving"  # "improving" | "declining" | "stable"
+  }
+
+GET /clients/{client_id}/sentiment/timeline?period=30d
+  Response: [
+    { "date": "2025-12-01", "positive": 70, "neutral": 20, "negative": 10, "avg_score": 0.5 },
+    { "date": "2025-12-02", "positive": 62, "neutral": 28, "negative": 10, "avg_score": 0.38 },
+    ...
+  ]
+
+GET /clients/{client_id}/sentiment/negative?limit=20
+  # Lista konwersacji z negative sentiment (do review)
+  Response: [
+    {
+      "session_id": "sess_123",
+      "sentiment_score": -0.72,
+      "timestamp": "2025-12-17T10:30:00Z",
+      "keywords": ["frustrated", "doesn't work", "angry"],
+      "preview": "This is ridiculous, I've been waiting..."
+    },
+    ...
+  ]
+```
+
+#### Frontend UI
+
+**Dashboard - Sentiment Widget:**
+```typescript
+// Donut chart (Recharts PieChart)
+<PieChart>
+  <Pie data={[
+    { name: 'Positive', value: 65, fill: '#22c55e' },
+    { name: 'Neutral', value: 25, fill: '#94a3b8' },
+    { name: 'Negative', value: 10, fill: '#ef4444' }
+  ]} />
+</PieChart>
+
+// Sentiment score gauge
+<div className="text-4xl font-bold">
+  {sentimentScore > 0 ? '😊' : sentimentScore < -0.3 ? '😞' : '😐'}
+  {(sentimentScore * 100).toFixed(0)}
+</div>
+```
+
+**Sentiment Timeline Page:** `/app/(dashboard)/sentiment/page.tsx`
+```typescript
+// Line chart - sentiment over time
+<LineChart data={sentimentTimeline}>
+  <Line dataKey="avg_score" stroke="#8b5cf6" />
+  <Area dataKey="positive" fill="#22c55e" opacity={0.3} />
+  <Area dataKey="negative" fill="#ef4444" opacity={0.3} />
+</LineChart>
+
+// Negative conversations list (action items)
+<div className="space-y-4">
+  <h3>🚨 Recent Negative Conversations</h3>
+  {negativeConversations.map(conv => (
+    <ConversationCard
+      sentiment="negative"
+      score={conv.sentiment_score}
+      keywords={conv.keywords}
+      preview={conv.preview}
+      onClick={() => router.push(`/conversations/${conv.session_id}`)}
+    />
+  ))}
+</div>
+```
+
+**Alerts:**
+```python
+# CloudWatch alarm: Negative sentiment spike
+if (negative_conversations_last_hour > threshold):
+    send_notification(
+        email=client_email,
+        subject="⚠️ Sentiment Alert: Increase in Negative Conversations",
+        body=f"Negative conversations increased by {increase}% in last hour. Review: {dashboard_link}"
+    )
+```
+
+**Benefits:**
+- Early warning system dla customer satisfaction issues
+- Prioritize negative conversations for review
+- Track impact of changes (KB updates, personality tweaks)
+- Quantify customer happiness
+
+---
+
+### 12.3 Gorące Tematy (Trending Topics)
+
+**Concept:**
+System wykrywa gdy nagle dużo użytkowników zaczyna pytać o ten sam temat. Klient dostaje powiadomienie że np. pytania o dostępność produktu wzrosły o 300% w ostatnich godzinach. Dzięki temu może szybko zareagować jeśli coś się dzieje z jego biznesem.
+
+**Implementacja:**
+
+#### Backend - Topic Extraction & Spike Detection
+
+**Lambda Function:** `/backend/topics/extractor.py`
+```python
+def extract_topics(text: str) -> list[str]:
+    """
+    Używa Claude do wyciągnięcia kluczowych tematów z user message.
+
+    Returns: ["product_availability", "pricing", "delivery_time"]
+    """
+    prompt = f"""Extract the main topics from this customer question.
+Return a JSON array of topic slugs (lowercase, underscore-separated).
+
+Common topics: product_availability, pricing, delivery_time, technical_support,
+              refund_policy, account_issues, payment_problems, hours_of_operation
+
+Question: "{text}"
+
+Respond with ONLY a JSON array: ["topic1", "topic2", ...]"""
+
+    response = invoke_claude_haiku(prompt)
+    topics = json.loads(response)
+    return topics
+```
+
+**Real-time tracking:**
+```python
+# W chatbot.py, po user message:
+topics = extract_topics(user_message)
+
+for topic in topics:
+    track_event(CLIENT_ID, session_id, "topic_mentioned", {
+        "topic": topic,
+        "user_message": user_message[:500]
+    })
+```
+
+**Scheduled aggregator:** `/backend/topics/spike_detector.py`
+```python
+# Runs every hour via EventBridge
+def detect_topic_spikes(event, context):
+    """
+    Porównaj topic mentions z ostatniej godziny vs poprzednia godzina.
+    Alert jeśli spike > 200%.
+    """
+    client_id = "stride-services"
+
+    # Count topics last hour
+    now = datetime.utcnow()
+    last_hour_start = now - timedelta(hours=1)
+    prev_hour_start = now - timedelta(hours=2)
+
+    last_hour_topics = count_topics(client_id, last_hour_start, now)
+    prev_hour_topics = count_topics(client_id, prev_hour_start, last_hour_start)
+
+    # Calculate spike %
+    spikes = []
+    for topic, count in last_hour_topics.items():
+        prev_count = prev_hour_topics.get(topic, 0)
+
+        # Ignore if too few mentions (noise)
+        if count < 5:
+            continue
+
+        # Calculate increase %
+        if prev_count == 0:
+            increase_pct = 999  # New topic
+        else:
+            increase_pct = ((count - prev_count) / prev_count) * 100
+
+        if increase_pct > 200:  # 200% threshold
+            spikes.append({
+                "topic": topic,
+                "count": count,
+                "prev_count": prev_count,
+                "increase_pct": increase_pct
+            })
+
+    # Track spike events
+    for spike in spikes:
+        track_event(client_id, "SYSTEM", "topic_spike_detected", {
+            "topic": spike["topic"],
+            "count": spike["count"],
+            "prev_count": spike["prev_count"],
+            "increase_pct": spike["increase_pct"]
+        })
+
+        # Send notification
+        send_topic_spike_notification(client_id, spike)
+
+def count_topics(client_id: str, start_time: datetime, end_time: datetime) -> dict:
+    """Query analytics events and count topic mentions."""
+    events = query_analytics_events(
+        client_id=client_id,
+        event_type="topic_mentioned",
+        start_time=start_time.isoformat(),
+        end_time=end_time.isoformat()
+    )
+
+    topic_counts = {}
+    for event in events:
+        topic = event["metadata"]["topic"]
+        topic_counts[topic] = topic_counts.get(topic, 0) + 1
+
+    return topic_counts
+```
+
+**Notification:**
+```python
+def send_topic_spike_notification(client_id: str, spike: dict):
+    # SNS topic or SES email
+    client = get_client_info(client_id)
+
+    sns.publish(
+        TopicArn=client["notification_topic_arn"],
+        Subject=f"🔥 Trending Topic Alert: {humanize_topic(spike['topic'])}",
+        Message=f"""
+        A topic is trending among your customers:
+
+        Topic: {humanize_topic(spike['topic'])}
+        Mentions (last hour): {spike['count']}
+        Previous hour: {spike['prev_count']}
+        Increase: +{spike['increase_pct']:.0f}%
+
+        This could indicate:
+        - Product issue or outage
+        - Popular new question
+        - Marketing campaign impact
+
+        Review conversations: {dashboard_url}/topics/{spike['topic']}
+        """
+    )
+```
+
+#### Admin API Endpoints
+
+```python
+GET /clients/{client_id}/topics/trending?period=24h
+  Response: [
+    {
+      "topic": "product_availability",
+      "count": 45,
+      "increase_pct": 320,
+      "sparkline": [2, 3, 5, 12, 23],  # Last 5 hours
+      "sample_questions": [
+        "When will X be back in stock?",
+        "Is Y available for delivery?"
+      ]
+    },
+    ...
+  ]
+
+GET /clients/{client_id}/topics/history?days=30
+  # All topics with counts over time
+  Response: [
+    { "date": "2025-12-01", "product_availability": 12, "pricing": 8, ... },
+    ...
+  ]
+
+GET /clients/{client_id}/topics/{topic}/conversations?limit=20
+  # Conversations mentioning this topic
+```
+
+#### Frontend UI
+
+**Dashboard - Trending Topics Widget:**
+```typescript
+<div className="space-y-3">
+  <h3 className="flex items-center gap-2">
+    🔥 Trending Topics
+    <Badge variant="destructive">3 spikes</Badge>
+  </h3>
+
+  {trendingTopics.map(topic => (
+    <div className="flex items-center justify-between p-3 border rounded">
+      <div>
+        <div className="font-medium">{humanize(topic.topic)}</div>
+        <div className="text-sm text-muted-foreground">
+          {topic.count} mentions
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <TrendSparkline data={topic.sparkline} />
+        <Badge variant="destructive">
+          +{topic.increase_pct}%
+        </Badge>
+      </div>
+    </div>
+  ))}
+</div>
+```
+
+**Topics Page:** `/app/(dashboard)/topics/page.tsx`
+```typescript
+// Heatmap calendar (like GitHub contributions)
+<TopicsHeatmap data={topicsHistory} />
+
+// Topic breakdown table
+<Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>Topic</TableHead>
+      <TableHead>Mentions (24h)</TableHead>
+      <TableHead>Trend</TableHead>
+      <TableHead>Sample Questions</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {topics.map(topic => (
+      <TableRow onClick={() => viewConversations(topic)}>
+        <TableCell>{humanize(topic.topic)}</TableCell>
+        <TableCell>{topic.count}</TableCell>
+        <TableCell>
+          {topic.increase_pct > 100 ? '📈' : '📉'} {topic.increase_pct}%
+        </TableCell>
+        <TableCell className="text-sm text-muted-foreground">
+          {topic.sample_questions.slice(0, 2).join(', ')}
+        </TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+```
+
+**Benefits:**
+- Real-time business intelligence
+- Early warning for product/service issues
+- Identify knowledge gaps in chatbot
+- Track marketing campaign impact
+
+---
+
+### 12.4 Skrzynka z Materiałami (Knowledge Base Upload)
+
+**Concept:**
+Miejsce gdzie klient wrzuca dokumenty, cenniki, opisy produktów i inne materiały które powinny trafić do bazy wiedzy chatbota. Zespół platformy przegląda te materiały i dodaje je do chatbota w odpowiedni sposób. Klient nie musi wysyłać maili z załącznikami ani tłumaczyć co gdzie ma trafić.
+
+**Implementacja:**
+
+#### Backend Schema
+
+**Nowa tabela:** `platform_kb_uploads`
+```python
+PK: client_id (String)
+SK: upload_id (String)
+
+Atrybuty:
+- client_id: "stride-services"
+- upload_id: "upload_20251217_abc123"
+- created_at: ISO timestamp
+- uploaded_by: user_id (z Cognito)
+
+# File info
+- file_name: "cennik_2025.pdf"
+- file_size: 245678  # bytes
+- file_type: "application/pdf"
+- s3_key: "stride-services/uploads/upload_20251217_abc123/cennik_2025.pdf"
+- s3_url: "https://s3.../..."
+
+# Processing status
+- status: "pending" | "processing" | "completed" | "rejected"
+- notes: "Client upload notes: This is our new pricing for 2025"
+- priority: "normal" | "high" | "low"
+
+# Review by platform team
+- reviewed_at: ISO timestamp
+- reviewed_by: "admin_user_id"
+- review_notes: "Added to KB section: pricing. Updated FAQ #5."
+- kb_section: "pricing"  # Where it was added
+
+# Actions taken
+- actions: [
+  "added_to_kb",
+  "created_faq_entries",
+  "updated_personality_context"
+]
+```
+
+**S3 Bucket Structure:**
+```
+{client_id}/
+  uploads/
+    upload_20251217_abc123/
+      cennik_2025.pdf
+    upload_20251217_xyz456/
+      product_catalog.docx
+  kb/
+    pricing/
+      cennik_2025_processed.txt
+    products/
+      product_catalog_processed.txt
+```
+
+#### Admin API Endpoints
+
+```python
+# Upload file
+POST /clients/{client_id}/kb/upload
+  Headers: Content-Type: multipart/form-data
+  Body: FormData with file + notes
+  Response: { "upload_id": "...", "status": "pending" }
+
+# List uploads
+GET /clients/{client_id}/kb/uploads?status=pending
+  Response: [
+    {
+      "upload_id": "upload_20251217_abc123",
+      "file_name": "cennik_2025.pdf",
+      "created_at": "2025-12-17T10:00:00Z",
+      "status": "pending",
+      "notes": "New 2025 pricing"
+    },
+    ...
+  ]
+
+# Get upload details
+GET /clients/{client_id}/kb/uploads/{upload_id}
+  Response: {
+    "upload_id": "...",
+    "file_name": "cennik_2025.pdf",
+    "s3_url": "https://...",  # Presigned URL for download
+    "status": "completed",
+    "review_notes": "Added to KB",
+    "actions": ["added_to_kb", "created_faq_entries"]
+  }
+
+# Owner endpoints (platform team)
+GET /admin/kb/uploads/pending
+  # All pending uploads across all clients
+
+POST /admin/kb/uploads/{upload_id}/review
+  Body: {
+    "status": "completed" | "rejected",
+    "review_notes": "Added to pricing section",
+    "kb_section": "pricing",
+    "actions": ["added_to_kb"]
+  }
+```
+
+**File processing:**
+```python
+# Lambda triggered on S3 upload
+def process_kb_upload(event, context):
+    s3_key = event["Records"][0]["s3"]["object"]["key"]
+    # Extract: stride-services/uploads/upload_123/file.pdf
+
+    client_id, upload_id, file_name = parse_s3_key(s3_key)
+
+    # Download file
+    file_content = s3.get_object(Bucket=KB_BUCKET, Key=s3_key)
+
+    # Extract text (depending on file type)
+    if file_name.endswith('.pdf'):
+        text = extract_text_from_pdf(file_content)
+    elif file_name.endswith('.docx'):
+        text = extract_text_from_docx(file_content)
+    else:
+        text = file_content.read().decode('utf-8')
+
+    # Save extracted text to processing bucket
+    processed_key = f"{client_id}/kb/pending/{upload_id}_extracted.txt"
+    s3.put_object(Bucket=KB_BUCKET, Key=processed_key, Body=text)
+
+    # Update status
+    kb_uploads_table.update_item(
+        Key={"client_id": client_id, "upload_id": upload_id},
+        UpdateExpression="SET #status = :status, processed_text_s3_key = :key",
+        ExpressionAttributeNames={"#status": "status"},
+        ExpressionAttributeValues={
+            ":status": "processing",
+            ":key": processed_key
+        }
+    )
+
+    # Notify platform team
+    send_notification(
+        topic="kb-review-queue",
+        message=f"New KB upload ready for review: {client_id}/{file_name}"
+    )
+```
+
+#### Frontend UI
+
+**KB Upload Page:** `/app/(dashboard)/knowledge-base/page.tsx`
+```typescript
+// Upload form
+<div className="border-2 border-dashed rounded-lg p-8 text-center">
+  <input type="file" onChange={handleFileSelect} accept=".pdf,.docx,.txt,.md" />
+  <p>Drag & drop files here or click to browse</p>
+  <p className="text-sm text-muted-foreground">
+    Supported: PDF, DOCX, TXT, MD (max 10MB)
+  </p>
+</div>
+
+<Textarea
+  placeholder="Add notes for the platform team (optional)
+Example: This is our new pricing for Q1 2025. Please update chatbot to use these prices."
+  value={notes}
+  onChange={(e) => setNotes(e.target.value)}
+/>
+
+<Button onClick={handleUpload}>Upload to Knowledge Base</Button>
+
+// Uploads history
+<Table>
+  <TableHeader>
+    <TableRow>
+      <TableHead>File Name</TableHead>
+      <TableHead>Uploaded</TableHead>
+      <TableHead>Status</TableHead>
+      <TableHead>Review Notes</TableHead>
+    </TableRow>
+  </TableHeader>
+  <TableBody>
+    {uploads.map(upload => (
+      <TableRow>
+        <TableCell>{upload.file_name}</TableCell>
+        <TableCell>{formatDate(upload.created_at)}</TableCell>
+        <TableCell>
+          <Badge variant={
+            upload.status === 'completed' ? 'success' :
+            upload.status === 'pending' ? 'warning' : 'default'
+          }>
+            {upload.status}
+          </Badge>
+        </TableCell>
+        <TableCell className="text-sm">
+          {upload.review_notes || 'Pending review...'}
+        </TableCell>
+      </TableRow>
+    ))}
+  </TableBody>
+</Table>
+```
+
+**Owner Review Panel:** `/app/(owner)/kb-review/page.tsx`
+```typescript
+// Pending uploads queue (for platform team)
+{pendingUploads.map(upload => (
+  <Card>
+    <CardHeader>
+      <div className="flex justify-between">
+        <div>
+          <h3>{upload.client_id}</h3>
+          <p className="text-sm">{upload.file_name}</p>
+        </div>
+        <Badge>Pending</Badge>
+      </div>
+      <p className="text-sm text-muted-foreground">{upload.notes}</p>
+    </CardHeader>
+    <CardContent>
+      <Button onClick={() => downloadFile(upload.s3_url)}>
+        Download File
+      </Button>
+      <Button onClick={() => viewExtractedText(upload.upload_id)}>
+        View Extracted Text
+      </Button>
+    </CardContent>
+    <CardFooter>
+      <Textarea
+        placeholder="Review notes (what did you do with this file?)"
+        value={reviewNotes}
+      />
+      <Select value={kbSection}>
+        <SelectItem value="pricing">Pricing</SelectItem>
+        <SelectItem value="products">Products</SelectItem>
+        <SelectItem value="policies">Policies</SelectItem>
+      </Select>
+      <div className="flex gap-2">
+        <Button onClick={() => approveUpload(upload, 'completed')}>
+          ✓ Mark as Completed
+        </Button>
+        <Button variant="destructive" onClick={() => rejectUpload(upload)}>
+          ✗ Reject
+        </Button>
+      </div>
+    </CardFooter>
+  </Card>
+))}
+```
+
+**Benefits:**
+- Streamlined KB update process
+- No more email attachments
+- Client visibility into processing status
+- Audit trail of all KB changes
+
+---
+
+### 12.5 Changelog (Update History)
+
+**Concept:**
+Lista wszystkich zmian wprowadzonych w chatbocie klienta w formie czytelnych wpisów z datami. Gdy klient prosi o modyfikację, po jej wdrożeniu widzi wpis potwierdzający co zostało zrobione. Daje to poczucie kontroli i transparentności nad tym co się dzieje z botem.
+
+**Implementacja:**
+
+#### Backend Schema
+
+**Nowa tabela:** `platform_changelog`
+```python
+PK: client_id (String)
+SK: change_id (String) - timestamp-based dla chronological sorting
+
+Atrybuty:
+- client_id: "stride-services"
+- change_id: "change_20251217_103045"
+- created_at: ISO timestamp
+- created_by: "admin_user_id" | "system"
+
+# Change details
+- change_type: "kb_update" | "personality_change" | "feature_enabled" |
+              "config_change" | "bug_fix" | "performance_improvement"
+- title: "Updated pricing information for 2025"
+- description: "Added new pricing document (cennik_2025.pdf) to knowledge base. Chatbot now uses updated Q1 2025 prices."
+
+# Metadata
+- severity: "major" | "minor" | "patch"
+- affected_areas: ["knowledge_base", "pricing"]
+- related_upload_id: "upload_20251217_abc123"  # Optional FK
+
+# Visual elements
+- emoji: "💰"  # For visual categorization
+- tags: ["pricing", "knowledge-base"]
+```
+
+#### Admin API Endpoints
+
+```python
+# Get changelog for client
+GET /clients/{client_id}/changelog?limit=50
+  Response: [
+    {
+      "change_id": "change_20251217_103045",
+      "created_at": "2025-12-17T10:30:45Z",
+      "change_type": "kb_update",
+      "title": "Updated pricing information for 2025",
+      "description": "Added new pricing document...",
+      "severity": "major",
+      "emoji": "💰"
+    },
+    ...
+  ]
+
+# Create changelog entry (platform team)
+POST /clients/{client_id}/changelog
+  Body: {
+    "change_type": "kb_update",
+    "title": "Updated pricing information",
+    "description": "Full description...",
+    "severity": "major",
+    "tags": ["pricing"]
+  }
+
+# Owner: Get all changes across all clients
+GET /admin/changelog?days=7
+  # Recent changes across platform
+```
+
+**Automatic changelog generation:**
+```python
+# Triggered when KB upload is completed
+def auto_create_changelog_entry(client_id: str, upload: dict):
+    changelog_table.put_item(Item={
+        "client_id": client_id,
+        "change_id": f"change_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": "system",
+        "change_type": "kb_update",
+        "title": f"Knowledge base updated: {upload['file_name']}",
+        "description": upload['review_notes'],
+        "severity": "minor",
+        "emoji": "📚",
+        "tags": ["knowledge-base"],
+        "related_upload_id": upload['upload_id']
+    })
+
+# Triggered when A/B test completes
+def auto_create_changelog_for_ab_test(client_id: str, test: dict):
+    changelog_table.put_item(Item={
+        "client_id": client_id,
+        "change_id": f"change_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}",
+        "created_at": datetime.utcnow().isoformat(),
+        "created_by": "system",
+        "change_type": "personality_change",
+        "title": f"Personality updated: {test['winner_variant_name']} is now default",
+        "description": f"A/B test completed. Winner: {test['winner_variant_name']} with {test['winner_conversion_rate']}% conversion rate.",
+        "severity": "major",
+        "emoji": "🎭",
+        "tags": ["personality", "ab-test"]
+    })
+```
+
+#### Frontend UI
+
+**Changelog Page:** `/app/(dashboard)/changelog/page.tsx`
+```typescript
+// Timeline view (like GitHub activity feed)
+<div className="space-y-4">
+  {changelog.map(entry => (
+    <div className="flex gap-4">
+      {/* Timeline line */}
+      <div className="flex flex-col items-center">
+        <div className="w-8 h-8 rounded-full bg-purple-500 flex items-center justify-center text-lg">
+          {entry.emoji}
+        </div>
+        <div className="w-0.5 h-full bg-border mt-2" />
+      </div>
+
+      {/* Change card */}
+      <Card className="flex-1">
+        <CardHeader>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="font-semibold">{entry.title}</h3>
+              <p className="text-sm text-muted-foreground">
+                {formatDate(entry.created_at)} • {entry.change_type}
+              </p>
+            </div>
+            <Badge variant={
+              entry.severity === 'major' ? 'default' :
+              entry.severity === 'minor' ? 'secondary' : 'outline'
+            }>
+              {entry.severity}
+            </Badge>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm">{entry.description}</p>
+          {entry.tags && (
+            <div className="flex gap-2 mt-3">
+              {entry.tags.map(tag => (
+                <Badge variant="outline" key={tag}>#{tag}</Badge>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  ))}
+</div>
+
+// Filter by change type
+<Tabs defaultValue="all">
+  <TabsList>
+    <TabsTrigger value="all">All Changes</TabsTrigger>
+    <TabsTrigger value="kb_update">📚 Knowledge Base</TabsTrigger>
+    <TabsTrigger value="personality_change">🎭 Personality</TabsTrigger>
+    <TabsTrigger value="feature_enabled">✨ Features</TabsTrigger>
+  </TabsList>
+</Tabs>
+```
+
+**Dashboard - Recent Changes Widget:**
+```typescript
+<Card>
+  <CardHeader>
+    <h3 className="flex items-center gap-2">
+      📋 Recent Updates
+      <Badge>{recentChanges.length}</Badge>
+    </h3>
+  </CardHeader>
+  <CardContent>
+    <div className="space-y-2">
+      {recentChanges.slice(0, 3).map(change => (
+        <div className="flex items-start gap-3 text-sm">
+          <span className="text-lg">{change.emoji}</span>
+          <div className="flex-1">
+            <div className="font-medium">{change.title}</div>
+            <div className="text-xs text-muted-foreground">
+              {formatDistanceToNow(change.created_at)} ago
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+    <Button variant="ghost" size="sm" className="w-full mt-3">
+      View All Changes →
+    </Button>
+  </CardContent>
+</Card>
+```
+
+**Benefits:**
+- Transparency - klient widzi co się dzieje z jego chatbotem
+- Audit trail - historia wszystkich zmian
+- Accountability - kto i kiedy coś zmienił
+- Communication - eliminuje potrzebę statusowych emaili
+
+---
+
+## 13. IMPLEMENTATION PRIORITY (Advanced Features)
+
+### Phase 1: Quick Wins (1-2 tygodnie)
+1. **Changelog** - najłatwiejsze, największy impact na customer experience
+2. **KB Upload** - streamlines workflow, reduces support burden
+
+### Phase 2: Analytics Enhancements (2-3 tygodnie)
+3. **Sentiment Analysis** - real-time mood tracking
+4. **Trending Topics** - early warning system
+
+### Phase 3: Optimization (3-4 tygodnie)
+5. **A/B Testing** - data-driven personality optimization
+
+**Total for all 5 features: ~8-10 tygodni**
+
+---
+
+## 14. TECH STACK ADDITIONS (Advanced Features)
+
+**New dependencies:**
+```bash
+# Backend (Lambda)
+pip install PyPDF2          # PDF text extraction
+pip install python-docx     # DOCX parsing
+pip install textract        # Generic document extraction (optional)
+
+# Frontend
+npm install react-day-picker date-fns  # Date range picker (już masz date-fns)
+npm install recharts/funnel            # Funnel charts (dla A/B testing)
+npm install react-dropzone             # File upload UI
+```
+
+**New AWS Services:**
+- SNS Topics (notifications dla spikes, AB test completion)
+- EventBridge Rules (hourly topic spike detection, sentiment aggregation)
+- S3 Lifecycle Policies (auto-cleanup old uploads after 90 days)
+
+**Cost estimation (advanced features):**
+- SNS: $0.50/month (~1000 notifications)
+- EventBridge: FREE (included in free tier)
+- S3 storage: $1/month (~20GB uploads)
+- Additional Lambda executions: $2/month
+- **Total: ~$3.50/month** for advanced features
+
+---
+
+## 15. ADVANCED FEATURES SCHEMA SUMMARY
+
+**New DynamoDB Tables:**
+1. `platform_ab_tests` - A/B testing experiments
+2. `platform_kb_uploads` - Knowledge base upload queue
+3. `platform_changelog` - Update history
+
+**Modified Tables:**
+- `platform_analytics_events` - dodaj pola:
+  - `metadata.ab_test_id`
+  - `metadata.variant_assignment`
+  - `metadata.sentiment`
+  - `metadata.sentiment_score`
+  - `metadata.topic`
+
+**Total storage overhead:**
+- ~500 KB/month per client (all advanced features combined)
+- Negligible cost increase (~$0.01/client/month)
