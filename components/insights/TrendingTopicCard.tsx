@@ -86,7 +86,7 @@ export default function TrendingTopicCard({
                     <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
                         <div
                             className={`h-full ${trendBgColor} rounded-full transition-all duration-500`}
-                            style={{ width: `${Math.min(percentage * 2, 100)}%` }}
+                            style={{ width: `${percentage}%` }}
                         />
                     </div>
                 </div>

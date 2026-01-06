@@ -197,12 +197,14 @@ export default function InsightsPage() {
                         value={currentSummary.total_questions}
                         icon={TrendingUp}
                     />
-                    <StatsCard
-                        title="Luki w bazie wiedzy"
-                        value={activePeriod === 'daily' ? currentSummary.gaps_count : '-'}
-                        icon={AlertTriangle}
-                        trend={activePeriod === 'daily' && currentSummary.gaps_count > 0 ? 'down' : 'neutral'}
-                    />
+                    {activePeriod === 'daily' && (
+                        <StatsCard
+                            title="Luki w bazie wiedzy"
+                            value={currentSummary.gaps_count}
+                            icon={AlertTriangle}
+                            trend={currentSummary.gaps_count > 0 ? 'down' : 'neutral'}
+                        />
+                    )}
                 </div>
 
                 {/* Buying Intent Highlight (only if significant) */}
@@ -226,11 +228,13 @@ export default function InsightsPage() {
                 <TabsContent value="daily" className="mt-0">
                     <Tabs defaultValue="topics" className="w-full">
                         <TabsList className="bg-zinc-800/50">
-                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                                🔥 Top Pytania ({dailyTopics.length})
+                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+                                <Flame size={16} className={activePeriod === 'daily' ? "text-orange-500" : ""} />
+                                Top Pytania ({dailyTopics.length})
                             </TabsTrigger>
-                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                                ⚠️ Luki w KB ({gaps.length})
+                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+                                <AlertTriangle size={16} className="text-yellow-500" />
+                                Luki w KB ({gaps.length})
                             </TabsTrigger>
                         </TabsList>
 
