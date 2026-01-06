@@ -72,3 +72,30 @@ export interface AuthUser {
   clientId?: string;
   groups: string[];
 }
+
+export interface Topic {
+  topic_id: string;
+  topic_name: string;
+  count: number;
+  question_examples: string[];
+  trend: 'up' | 'down' | 'stable' | 'new';
+  intent_breakdown: {
+    buying: number;
+    comparing: number;
+    info_seeking: number;
+  };
+  is_gap: boolean;
+  gap_reason: string;
+  category?: string;
+  smart_insight?: string;
+  rank: number;
+}
+
+export interface Gap {
+  topic_id: string;
+  topic_name: string;
+  count: number;
+  question_examples: string[];
+  gap_reason: string;
+  suggestion: string;
+}

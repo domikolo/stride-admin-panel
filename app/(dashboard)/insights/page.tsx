@@ -8,38 +8,19 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getTrendingTopics, getGaps } from '@/lib/api';
+import { Topic, Gap } from '@/lib/types';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
+import SmartInsightCard from '@/components/insights/SmartInsightCard';
+import TopMoverCard from '@/components/insights/TopMoverCard';
+import WeeklyCategoryChart from '@/components/insights/WeeklyCategoryChart';
 import StatsCard from '@/components/dashboard/StatsCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from 'lucide-react';
 
-interface Topic {
-    topic_id: string;
-    topic_name: string;
-    count: number;
-    question_examples: string[];
-    trend: 'up' | 'down' | 'stable' | 'new';
-    intent_breakdown: {
-        buying: number;
-        comparing: number;
-        info_seeking: number;
-    };
-    is_gap: boolean;
-    gap_reason: string;
-    rank: number;
-}
 
-interface Gap {
-    topic_id: string;
-    topic_name: string;
-    count: number;
-    question_examples: string[];
-    gap_reason: string;
-    suggestion: string;
-}
 
 type PeriodType = 'daily' | 'weekly';
 
@@ -246,21 +227,31 @@ export default function InsightsPage() {
                                     </p>
                                 </Card>
                             ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {dailyTopics.map((topic) => (
-                                        <TrendingTopicCard
-                                            key={topic.topic_id}
-                                            rank={topic.rank}
-                                            topicName={topic.topic_name}
-                                            count={topic.count}
-                                            totalQuestions={dailySummary.total_questions}
-                                            examples={topic.question_examples}
-                                            trend={topic.trend}
-                                            intentBreakdown={topic.intent_breakdown}
-                                            isGap={topic.is_gap}
-                                            gapReason={topic.gap_reason}
+                                <div className="space-y-6">
+                                    {/* Smart Insight for Top Topic */}
+                                    {dailyTopics.length > 0 && dailyTopics[0].smart_insight && (
+                                        <SmartInsightCard
+                                            insight={dailyTopics[0].smart_insight}
+                                            topicName={dailyTopics[0].topic_name}
                                         />
-                                    ))}
+                                    )}
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                        {dailyTopics.map((topic) => (
+                                            <TrendingTopicCard
+                                                key={topic.topic_id}
+                                                rank={topic.rank}
+                                                topicName={topic.topic_name}
+                                                count={topic.count}
+                                                totalQuestions={dailySummary.total_questions}
+                                                examples={topic.question_examples}
+                                                trend={topic.trend}
+                                                intentBreakdown={topic.intent_breakdown}
+                                                isGap={topic.is_gap}
+                                                gapReason={topic.gap_reason}
+                                            />
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </TabsContent>
@@ -298,20 +289,42 @@ export default function InsightsPage() {
                             </p>
                         </Card>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {weeklyTopics.map((topic) => (
-                                <TrendingTopicCard
-                                    key={topic.topic_id}
-                                    rank={topic.rank}
-                                    topicName={topic.topic_name}
-                                    count={topic.count}
-                                    totalQuestions={weeklySummary.total_questions}
-                                    examples={topic.question_examples}
-                                    trend={topic.trend}
-                                    intentBreakdown={topic.intent_breakdown}
-                                    isGap={false}
-                                />
-                            ))}
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Left Column: Top Mover & Category Chart */}
+                                <div className="lg:col-span-1 space-y-6">
+                                    {/* Find top mover (biggest trend up) */}
+                                    {weeklyTopics.some(t => t.trend === 'up') && (
+                                        <TopMoverCard
+                                            topicName={weeklyTopics.find(t => t.trend === 'up')?.topic_name || ''}
+                                            count={weeklyTopics.find(t => t.trend === 'up')?.count || 0}
+                                            trend="up"
+                                        />
+                                    )}
+
+                                    <WeeklyCategoryChart
+                                        topics={weeklyTopics}
+                                        totalQuestions={weeklySummary.total_questions}
+                                    />
+                                </div>
+
+                                {/* Right Column: List of Topics */}
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+                                    {weeklyTopics.map((topic) => (
+                                        <TrendingTopicCard
+                                            key={topic.topic_id}
+                                            rank={topic.rank}
+                                            topicName={topic.topic_name}
+                                            count={topic.count}
+                                            totalQuestions={weeklySummary.total_questions}
+                                            examples={topic.question_examples}
+                                            trend={topic.trend}
+                                            intentBreakdown={topic.intent_breakdown}
+                                            isGap={false}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
                         </div>
                     )}
                 </TabsContent>

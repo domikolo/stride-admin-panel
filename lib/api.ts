@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -114,21 +114,7 @@ export const getTrendingTopics = (clientId: string, period: 'daily' | 'weekly' =
   api.get<{
     client_id: string;
     period_type: 'daily' | 'weekly';
-    topics: Array<{
-      topic_id: string;
-      topic_name: string;
-      count: number;
-      question_examples: string[];
-      trend: 'up' | 'down' | 'stable' | 'new';
-      intent_breakdown: {
-        buying: number;
-        comparing: number;
-        info_seeking: number;
-      };
-      is_gap: boolean;
-      gap_reason: string;
-      rank: number;
-    }>;
+    topics: Topic[];
     summary: {
       total_topics: number;
       total_questions: number;
@@ -147,14 +133,7 @@ export const getTrendingTopics = (clientId: string, period: 'daily' | 'weekly' =
 export const getGaps = (clientId: string) =>
   api.get<{
     client_id: string;
-    gaps: Array<{
-      topic_id: string;
-      topic_name: string;
-      count: number;
-      question_examples: string[];
-      gap_reason: string;
-      suggestion: string;
-    }>;
+    gaps: Gap[];
     count: number;
     message: string;
   }>(`/clients/${clientId}/trending-topics/gaps`);
