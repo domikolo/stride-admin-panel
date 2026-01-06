@@ -110,9 +110,10 @@ export const getClientDailyStats = (clientId: string, days = 30) =>
 /**
  * Get trending topics
  */
-export const getTrendingTopics = (clientId: string) =>
+export const getTrendingTopics = (clientId: string, period: 'daily' | 'weekly' = 'daily') =>
   api.get<{
     client_id: string;
+    period_type: 'daily' | 'weekly';
     topics: Array<{
       topic_id: string;
       topic_name: string;
@@ -138,7 +139,7 @@ export const getTrendingTopics = (clientId: string) =>
       end: string | null;
     };
     last_updated: string | null;
-  }>(`/clients/${clientId}/trending-topics`);
+  }>(`/clients/${clientId}/trending-topics?period=${period}`);
 
 /**
  * Get knowledge base gaps

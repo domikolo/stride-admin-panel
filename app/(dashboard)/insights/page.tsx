@@ -1,5 +1,6 @@
 /**
  * Insights Page - Trending Questions & Knowledge Gaps
+ * With Daily / Weekly period tabs
  */
 
 'use client';
@@ -13,7 +14,7 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, AlertTriangle, MessageSquare, TrendingUp } from 'lucide-react';
+import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from 'lucide-react';
 
 interface Topic {
     topic_id: string;
@@ -40,16 +41,31 @@ interface Gap {
     suggestion: string;
 }
 
+type PeriodType = 'daily' | 'weekly';
+
 export default function InsightsPage() {
     const { user } = useAuth();
-    const [topics, setTopics] = useState<Topic[]>([]);
+
+    // Separate state for daily and weekly
+    const [dailyTopics, setDailyTopics] = useState<Topic[]>([]);
+    const [weeklyTopics, setWeeklyTopics] = useState<Topic[]>([]);
     const [gaps, setGaps] = useState<Gap[]>([]);
-    const [summary, setSummary] = useState({
+
+    const [dailySummary, setDailySummary] = useState({
         total_topics: 0,
         total_questions: 0,
         gaps_count: 0,
     });
-    const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+    const [weeklySummary, setWeeklySummary] = useState({
+        total_topics: 0,
+        total_questions: 0,
+        gaps_count: 0,
+    });
+
+    const [dailyLastUpdated, setDailyLastUpdated] = useState<string | null>(null);
+    const [weeklyLastUpdated, setWeeklyLastUpdated] = useState<string | null>(null);
+
+    const [activePeriod, setActivePeriod] = useState<PeriodType>('daily');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -64,14 +80,21 @@ export default function InsightsPage() {
             setLoading(true);
             const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-            const [topicsData, gapsData] = await Promise.all([
-                getTrendingTopics(clientId),
+            // Load both daily and weekly in parallel
+            const [dailyData, weeklyData, gapsData] = await Promise.all([
+                getTrendingTopics(clientId, 'daily'),
+                getTrendingTopics(clientId, 'weekly'),
                 getGaps(clientId),
             ]);
 
-            setTopics(topicsData.topics);
-            setSummary(topicsData.summary);
-            setLastUpdated(topicsData.last_updated);
+            setDailyTopics(dailyData.topics);
+            setDailySummary(dailyData.summary);
+            setDailyLastUpdated(dailyData.last_updated);
+
+            setWeeklyTopics(weeklyData.topics);
+            setWeeklySummary(weeklyData.summary);
+            setWeeklyLastUpdated(weeklyData.last_updated);
+
             setGaps(gapsData.gaps);
             setError(null);
         } catch (err) {
@@ -93,8 +116,13 @@ export default function InsightsPage() {
         });
     };
 
-    // Calculate top buying intent
-    const topBuyingTopic = [...topics]
+    // Get current period data
+    const currentTopics = activePeriod === 'daily' ? dailyTopics : weeklyTopics;
+    const currentSummary = activePeriod === 'daily' ? dailySummary : weeklySummary;
+    const currentLastUpdated = activePeriod === 'daily' ? dailyLastUpdated : weeklyLastUpdated;
+
+    // Calculate top buying intent for current period
+    const topBuyingTopic = [...currentTopics]
         .sort((a, b) => b.intent_breakdown.buying - a.intent_breakdown.buying)[0];
 
     if (loading) {
@@ -124,13 +152,8 @@ export default function InsightsPage() {
                     Trending Questions
                 </h1>
                 <p className="text-zinc-400 mt-2">
-                    Najczęstsze pytania użytkowników chatbota (ostatnie 14 dni)
+                    Analiza pytań użytkowników chatbota
                 </p>
-                {lastUpdated && (
-                    <p className="text-zinc-500 text-sm mt-1">
-                        Ostatnia aktualizacja: {formatDate(lastUpdated)}
-                    </p>
-                )}
             </div>
 
             {/* Error */}
@@ -140,98 +163,149 @@ export default function InsightsPage() {
                 </div>
             )}
 
-            {/* Summary Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <StatsCard
-                    title="Unikalne tematy"
-                    value={summary.total_topics}
-                    icon={MessageSquare}
-                />
-                <StatsCard
-                    title="Łączne pytania"
-                    value={summary.total_questions}
-                    icon={TrendingUp}
-                />
-                <StatsCard
-                    title="Luki w bazie wiedzy"
-                    value={summary.gaps_count}
-                    icon={AlertTriangle}
-                    trend={summary.gaps_count > 0 ? 'down' : 'neutral'}
-                />
-            </div>
-
-            {/* Buying Intent Highlight */}
-            {topBuyingTopic && topBuyingTopic.intent_breakdown.buying > 30 && (
-                <Card className="glass-card p-4 border-green-500/30">
-                    <div className="flex items-center gap-3">
-                        <span className="text-2xl">💰</span>
-                        <div>
-                            <p className="text-white font-medium">
-                                Hot Lead Alert: "{topBuyingTopic.topic_name}"
-                            </p>
-                            <p className="text-sm text-zinc-400">
-                                {topBuyingTopic.intent_breakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
-                            </p>
-                        </div>
-                    </div>
-                </Card>
-            )}
-
-            {/* Tabs for Topics and Gaps */}
-            <Tabs defaultValue="topics" className="w-full">
-                <TabsList className="bg-zinc-800/50">
-                    <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                        🔥 Top Pytania ({topics.length})
+            {/* Period Tabs - Main Navigation */}
+            <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as PeriodType)} className="w-full">
+                <TabsList className="bg-zinc-800/50 mb-6">
+                    <TabsTrigger value="daily" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+                        <Clock size={16} />
+                        Dzisiaj (24h)
                     </TabsTrigger>
-                    <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black">
-                        ⚠️ Luki w KB ({gaps.length})
+                    <TabsTrigger value="weekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+                        <Calendar size={16} />
+                        Tydzień (7 dni)
                     </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="topics" className="mt-6">
-                    {topics.length === 0 ? (
+                {/* Period info */}
+                <p className="text-zinc-500 text-sm mb-4">
+                    {activePeriod === 'daily'
+                        ? 'Dane z ostatnich 24 godzin • Trend: zmiana vs wczoraj'
+                        : 'Dane z ostatnich 7 dni • Trend: zmiana vs poprzedni tydzień'
+                    }
+                    {currentLastUpdated && ` • Ostatnia aktualizacja: ${formatDate(currentLastUpdated)}`}
+                </p>
+
+                {/* Summary Stats */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <StatsCard
+                        title="Unikalne tematy"
+                        value={currentSummary.total_topics}
+                        icon={MessageSquare}
+                    />
+                    <StatsCard
+                        title="Łączne pytania"
+                        value={currentSummary.total_questions}
+                        icon={TrendingUp}
+                    />
+                    <StatsCard
+                        title="Luki w bazie wiedzy"
+                        value={activePeriod === 'daily' ? currentSummary.gaps_count : '-'}
+                        icon={AlertTriangle}
+                        trend={activePeriod === 'daily' && currentSummary.gaps_count > 0 ? 'down' : 'neutral'}
+                    />
+                </div>
+
+                {/* Buying Intent Highlight (only if significant) */}
+                {topBuyingTopic && topBuyingTopic.intent_breakdown.buying > 30 && (
+                    <Card className="glass-card p-4 border-green-500/30 mb-6">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl">💰</span>
+                            <div>
+                                <p className="text-white font-medium">
+                                    Hot Lead Alert: "{topBuyingTopic.topic_name}"
+                                </p>
+                                <p className="text-sm text-zinc-400">
+                                    {topBuyingTopic.intent_breakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
+                                </p>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
+                {/* Content based on period */}
+                <TabsContent value="daily" className="mt-0">
+                    <Tabs defaultValue="topics" className="w-full">
+                        <TabsList className="bg-zinc-800/50">
+                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                                🔥 Top Pytania ({dailyTopics.length})
+                            </TabsTrigger>
+                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black">
+                                ⚠️ Luki w KB ({gaps.length})
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="topics" className="mt-6">
+                            {dailyTopics.length === 0 ? (
+                                <Card className="glass-card p-8 text-center">
+                                    <p className="text-zinc-400">
+                                        Brak danych. Poczekaj na pierwszą analizę (codziennie o 2:00 w nocy).
+                                    </p>
+                                </Card>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {dailyTopics.map((topic) => (
+                                        <TrendingTopicCard
+                                            key={topic.topic_id}
+                                            rank={topic.rank}
+                                            topicName={topic.topic_name}
+                                            count={topic.count}
+                                            totalQuestions={dailySummary.total_questions}
+                                            examples={topic.question_examples}
+                                            trend={topic.trend}
+                                            intentBreakdown={topic.intent_breakdown}
+                                            isGap={topic.is_gap}
+                                            gapReason={topic.gap_reason}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+
+                        <TabsContent value="gaps" className="mt-6">
+                            {gaps.length === 0 ? (
+                                <Card className="glass-card p-8 text-center">
+                                    <p className="text-zinc-400">
+                                        🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy.
+                                    </p>
+                                </Card>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {gaps.map((gap) => (
+                                        <GapCard
+                                            key={gap.topic_id}
+                                            topicName={gap.topic_name}
+                                            count={gap.count}
+                                            examples={gap.question_examples}
+                                            gapReason={gap.gap_reason}
+                                            suggestion={gap.suggestion}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </TabsContent>
+
+                <TabsContent value="weekly" className="mt-0">
+                    {weeklyTopics.length === 0 ? (
                         <Card className="glass-card p-8 text-center">
                             <p className="text-zinc-400">
-                                Brak danych. Poczekaj na pierwszą analizę (codziennie o 2:00 w nocy).
+                                Brak danych tygodniowych. Poczekaj na pierwszą analizę (co niedzielę o 3:00 w nocy).
                             </p>
                         </Card>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {topics.map((topic) => (
+                            {weeklyTopics.map((topic) => (
                                 <TrendingTopicCard
                                     key={topic.topic_id}
                                     rank={topic.rank}
                                     topicName={topic.topic_name}
                                     count={topic.count}
-                                    totalQuestions={summary.total_questions}
+                                    totalQuestions={weeklySummary.total_questions}
                                     examples={topic.question_examples}
                                     trend={topic.trend}
                                     intentBreakdown={topic.intent_breakdown}
-                                    isGap={topic.is_gap}
-                                    gapReason={topic.gap_reason}
-                                />
-                            ))}
-                        </div>
-                    )}
-                </TabsContent>
-
-                <TabsContent value="gaps" className="mt-6">
-                    {gaps.length === 0 ? (
-                        <Card className="glass-card p-8 text-center">
-                            <p className="text-zinc-400">
-                                🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy.
-                            </p>
-                        </Card>
-                    ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {gaps.map((gap) => (
-                                <GapCard
-                                    key={gap.topic_id}
-                                    topicName={gap.topic_name}
-                                    count={gap.count}
-                                    examples={gap.question_examples}
-                                    gapReason={gap.gap_reason}
-                                    suggestion={gap.suggestion}
+                                    isGap={false}
                                 />
                             ))}
                         </div>
