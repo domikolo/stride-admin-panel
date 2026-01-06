@@ -106,3 +106,54 @@ export const getClientDailyStats = (clientId: string, days = 30) =>
   api.get<{ client_id: string; daily_stats: DailyStat[]; count: number }>(
     `/clients/${clientId}/stats/daily?days=${days}`
   );
+
+/**
+ * Get trending topics
+ */
+export const getTrendingTopics = (clientId: string) =>
+  api.get<{
+    client_id: string;
+    topics: Array<{
+      topic_id: string;
+      topic_name: string;
+      count: number;
+      question_examples: string[];
+      trend: 'up' | 'down' | 'stable' | 'new';
+      intent_breakdown: {
+        buying: number;
+        comparing: number;
+        info_seeking: number;
+      };
+      is_gap: boolean;
+      gap_reason: string;
+      rank: number;
+    }>;
+    summary: {
+      total_topics: number;
+      total_questions: number;
+      gaps_count: number;
+    };
+    period: {
+      start: string | null;
+      end: string | null;
+    };
+    last_updated: string | null;
+  }>(`/clients/${clientId}/trending-topics`);
+
+/**
+ * Get knowledge base gaps
+ */
+export const getGaps = (clientId: string) =>
+  api.get<{
+    client_id: string;
+    gaps: Array<{
+      topic_id: string;
+      topic_name: string;
+      count: number;
+      question_examples: string[];
+      gap_reason: string;
+      suggestion: string;
+    }>;
+    count: number;
+    message: string;
+  }>(`/clients/${clientId}/trending-topics/gaps`);
