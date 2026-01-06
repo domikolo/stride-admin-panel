@@ -203,6 +203,7 @@ export default function InsightsPage() {
                                     rank={topic.rank}
                                     topicName={topic.topic_name}
                                     count={topic.count}
+                                    totalQuestions={summary.total_questions}
                                     examples={topic.question_examples}
                                     trend={topic.trend}
                                     intentBreakdown={topic.intent_breakdown}

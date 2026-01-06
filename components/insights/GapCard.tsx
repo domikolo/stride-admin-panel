@@ -13,6 +13,13 @@ interface GapCardProps {
     suggestion: string;
 }
 
+// Polish grammar helper for "pytanie"
+function formatQuestionCount(count: number): string {
+    if (count === 1) return '1 pytanie';
+    if (count >= 2 && count <= 4) return `${count} pytania`;
+    return `${count} pytań`;
+}
+
 export default function GapCard({
     topicName,
     count,
@@ -27,7 +34,7 @@ export default function GapCard({
                     <AlertTriangle className="text-yellow-400" size={20} />
                     <div>
                         <CardTitle className="text-lg text-white">{topicName}</CardTitle>
-                        <p className="text-sm text-zinc-400">{count} pytań bez dobrej odpowiedzi</p>
+                        <p className="text-sm text-zinc-400">{formatQuestionCount(count)} bez dobrej odpowiedzi</p>
                     </div>
                 </div>
             </CardHeader>

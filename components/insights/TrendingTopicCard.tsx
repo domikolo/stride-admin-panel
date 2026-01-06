@@ -4,14 +4,15 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface TrendingTopicCardProps {
     rank: number;
     topicName: string;
     count: number;
+    totalQuestions: number;  // New prop for progress bar
     examples: string[];
     trend: 'up' | 'down' | 'stable' | 'new';
+    trendPercent?: number;   // Optional trend percentage
     intentBreakdown: {
         buying: number;
         comparing: number;
@@ -21,32 +22,31 @@ interface TrendingTopicCardProps {
     gapReason?: string;
 }
 
-const INTENT_COLORS = {
-    buying: '#22c55e',     // Green - hot leads
-    comparing: '#f59e0b',  // Yellow
-    info_seeking: '#3b82f6', // Blue
-};
+// Polish grammar helper for "pytanie"
+function formatQuestionCount(count: number): string {
+    if (count === 1) return '1 pytanie';
+    if (count >= 2 && count <= 4) return `${count} pytania`;
+    return `${count} pytań`;
+}
 
 export default function TrendingTopicCard({
     rank,
     topicName,
     count,
+    totalQuestions,
     examples,
     trend,
+    trendPercent,
     intentBreakdown,
     isGap,
     gapReason,
 }: TrendingTopicCardProps) {
     const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
     const trendColor = trend === 'up' ? 'text-green-400' : trend === 'down' ? 'text-red-400' : 'text-zinc-400';
-    const trendLabel = trend === 'new' ? 'Nowy' : trend === 'up' ? 'Rośnie' : trend === 'down' ? 'Spada' : 'Stabilny';
+    const trendBgColor = trend === 'up' ? 'bg-green-500' : trend === 'down' ? 'bg-red-500' : 'bg-blue-500';
 
-    // Prepare pie chart data
-    const pieData = [
-        { name: 'Kupuje', value: intentBreakdown.buying, color: INTENT_COLORS.buying },
-        { name: 'Porównuje', value: intentBreakdown.comparing, color: INTENT_COLORS.comparing },
-        { name: 'Szuka info', value: intentBreakdown.info_seeking, color: INTENT_COLORS.info_seeking },
-    ].filter(d => d.value > 0);
+    // Calculate percentage of total questions
+    const percentage = totalQuestions > 0 ? (count / totalQuestions) * 100 : 0;
 
     return (
         <Card className={`glass-card ${isGap ? 'border-yellow-500/30' : ''}`}>
@@ -60,16 +60,37 @@ export default function TrendingTopicCard({
                                 {isGap && <AlertTriangle className="text-yellow-400" size={16} />}
                                 {trend === 'new' && <Sparkles className="text-purple-400" size={16} />}
                             </CardTitle>
-                            <p className="text-sm text-zinc-400">{count} pytań</p>
+                            <p className="text-sm text-zinc-400">{formatQuestionCount(count)}</p>
                         </div>
                     </div>
-                    <div className={`flex items-center gap-1 ${trendColor}`}>
-                        {trend !== 'new' && <TrendIcon size={16} />}
-                        <span className="text-xs">{trendLabel}</span>
+                    {/* Trend indicator with percentage */}
+                    <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full ${trend === 'up' ? 'bg-green-500/20' : trend === 'down' ? 'bg-red-500/20' : trend === 'new' ? 'bg-purple-500/20' : 'bg-zinc-500/20'}`}>
+                        {trend === 'new' ? (
+                            <Sparkles size={14} className="text-purple-400" />
+                        ) : (
+                            <TrendIcon size={14} className={trendColor} />
+                        )}
+                        <span className={`text-xs font-medium ${trend === 'new' ? 'text-purple-400' : trendColor}`}>
+                            {trend === 'new' ? 'Nowy!' : trend === 'up' ? '+↑' : trend === 'down' ? '-↓' : '→'}
+                        </span>
                     </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* Progress bar - % całości */}
+                <div>
+                    <div className="flex justify-between text-xs text-zinc-400 mb-1">
+                        <span>Udział w pytaniach</span>
+                        <span className="font-medium text-white">{percentage.toFixed(1)}%</span>
+                    </div>
+                    <div className="h-2 bg-zinc-700 rounded-full overflow-hidden">
+                        <div
+                            className={`h-full ${trendBgColor} rounded-full transition-all duration-500`}
+                            style={{ width: `${Math.min(percentage * 2, 100)}%` }}
+                        />
+                    </div>
+                </div>
+
                 {/* Examples */}
                 <div>
                     <p className="text-xs text-zinc-500 mb-2">Przykładowe pytania:</p>
@@ -82,56 +103,12 @@ export default function TrendingTopicCard({
                     </ul>
                 </div>
 
-                {/* Intent breakdown mini chart */}
-                <div className="flex items-center gap-4">
-                    <div className="w-16 h-16">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    dataKey="value"
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={15}
-                                    outerRadius={28}
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <Tooltip
-                                    contentStyle={{
-                                        backgroundColor: '#18181b',
-                                        border: '1px solid #27272a',
-                                        borderRadius: '8px',
-                                        fontSize: '12px',
-                                    }}
-                                    formatter={(value) => typeof value === 'number' ? `${value.toFixed(0)}%` : `${value}%`}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                {/* Buying intent highlight if significant */}
+                {intentBreakdown.buying > 30 && (
+                    <div className="flex items-center gap-2 text-xs p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                        <span className="text-green-400">💰 {intentBreakdown.buying.toFixed(0)}% wyraża zamiar zakupu</span>
                     </div>
-                    <div className="flex-1 space-y-1">
-                        {intentBreakdown.buying > 0 && (
-                            <div className="flex items-center gap-2 text-xs">
-                                <span className="w-2 h-2 rounded-full bg-green-500" />
-                                <span className="text-zinc-400">Kupuje: {intentBreakdown.buying.toFixed(0)}%</span>
-                            </div>
-                        )}
-                        {intentBreakdown.comparing > 0 && (
-                            <div className="flex items-center gap-2 text-xs">
-                                <span className="w-2 h-2 rounded-full bg-yellow-500" />
-                                <span className="text-zinc-400">Porównuje: {intentBreakdown.comparing.toFixed(0)}%</span>
-                            </div>
-                        )}
-                        {intentBreakdown.info_seeking > 0 && (
-                            <div className="flex items-center gap-2 text-xs">
-                                <span className="w-2 h-2 rounded-full bg-blue-500" />
-                                <span className="text-zinc-400">Szuka info: {intentBreakdown.info_seeking.toFixed(0)}%</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
+                )}
 
                 {/* Gap warning */}
                 {isGap && gapReason && (
