@@ -1,5 +1,5 @@
 /**
- * Main Dashboard Page
+ * Main Dashboard Page - Improved with sparklines, better layout
  */
 
 'use client';
@@ -9,9 +9,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { getClientStats, getClientDailyStats } from '@/lib/api';
 import { ClientStats, DailyStat } from '@/lib/types';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { MessageSquare, Calendar, TrendingUp, DollarSign } from 'lucide-react';
+import { MessageSquare, Calendar, TrendingUp, DollarSign, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 
 export default function DashboardPage() {
@@ -52,14 +54,25 @@ export default function DashboardPage() {
     }
   };
 
+  // Generate sparkline data from daily stats
+  const conversationSparkline = dailyStats.slice(-7).map(d => d.conversations);
+  const appointmentSparkline = dailyStats.slice(-7).map(d => d.appointments);
+
   if (loading) {
     return (
       <div className="space-y-8">
-        <h1 className="text-4xl font-bold text-white">Dashboard</h1>
+        <div>
+          <Skeleton className="h-10 w-48 mb-2" />
+          <Skeleton className="h-5 w-32" />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32" />
+            <Skeleton key={i} className="h-36" />
           ))}
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <Skeleton className="h-80" />
+          <Skeleton className="h-80" />
         </div>
       </div>
     );
@@ -67,11 +80,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
-          Dashboard
-        </h1>
-        <p className="text-zinc-400 mt-2">Last 30 days overview</p>
+      {/* Header */}
+      <div className="flex items-end justify-between">
+        <div>
+          <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+            Dashboard
+          </h1>
+          <p className="text-zinc-400 mt-2 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Last 30 days overview
+          </p>
+        </div>
       </div>
 
       {error && (
@@ -80,6 +99,7 @@ export default function DashboardPage() {
         </div>
       )}
 
+      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Conversations"
@@ -87,6 +107,8 @@ export default function DashboardPage() {
           icon={MessageSquare}
           trend="up"
           change={12}
+          sparklineData={conversationSparkline}
+          iconColor="text-blue-400"
         />
         <StatsCard
           title="Appointments"
@@ -94,12 +116,15 @@ export default function DashboardPage() {
           icon={Calendar}
           trend="up"
           change={8}
+          sparklineData={appointmentSparkline}
+          iconColor="text-purple-400"
         />
         <StatsCard
           title="Conversion Rate"
           value={`${stats?.conversion_rate.toFixed(1) || 0}%`}
           icon={TrendingUp}
           trend="neutral"
+          iconColor="text-emerald-400"
         />
         <StatsCard
           title="Total Cost"
@@ -107,12 +132,32 @@ export default function DashboardPage() {
           icon={DollarSign}
           trend="down"
           change={-5}
+          iconColor="text-amber-400"
         />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="flex flex-wrap gap-3">
+        <Link href="/conversations">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
+            View all conversations <ArrowRight size={16} />
+          </Button>
+        </Link>
+        <Link href="/appointments">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
+            View all appointments <ArrowRight size={16} />
+          </Button>
+        </Link>
+        <Link href="/insights">
+          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
+            View insights <ArrowRight size={16} />
+          </Button>
+        </Link>
       </div>
 
       {/* Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Line Chart - Conversations Over Time */}
+        {/* Line Chart - Activity Over Time */}
         <Card className="glass-card p-6">
           <h3 className="text-lg font-semibold text-white mb-4">Activity Over Time</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -121,13 +166,13 @@ export default function DashboardPage() {
               <XAxis
                 dataKey="date"
                 stroke="#71717a"
-                tick={{ fill: '#71717a' }}
+                tick={{ fill: '#71717a', fontSize: 12 }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
                   return `${date.getMonth() + 1}/${date.getDate()}`;
                 }}
               />
-              <YAxis stroke="#71717a" tick={{ fill: '#71717a' }} />
+              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#18181b',
@@ -143,7 +188,7 @@ export default function DashboardPage() {
                 dataKey="conversations"
                 stroke="#3b82f6"
                 strokeWidth={2}
-                dot={{ fill: '#3b82f6' }}
+                dot={false}
                 name="Conversations"
               />
               <Line
@@ -151,7 +196,7 @@ export default function DashboardPage() {
                 dataKey="appointments"
                 stroke="#8b5cf6"
                 strokeWidth={2}
-                dot={{ fill: '#8b5cf6' }}
+                dot={false}
                 name="Appointments"
               />
             </LineChart>
@@ -164,14 +209,21 @@ export default function DashboardPage() {
           <ResponsiveContainer width="100%" height={300}>
             <BarChart
               data={[
-                { name: 'Conversations', value: stats?.conversations_count || 0 },
-                { name: 'Appointments', value: stats?.appointments_created || 0 },
-                { name: 'Verified', value: stats?.appointments_verified || 0 },
+                { name: 'Conversations', value: stats?.conversations_count || 0, fill: '#3b82f6' },
+                { name: 'Appointments', value: stats?.appointments_created || 0, fill: '#8b5cf6' },
+                { name: 'Verified', value: stats?.appointments_verified || 0, fill: '#22c55e' },
               ]}
+              layout="vertical"
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis dataKey="name" stroke="#71717a" tick={{ fill: '#71717a' }} />
-              <YAxis stroke="#71717a" tick={{ fill: '#71717a' }} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
+              <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} />
+              <YAxis
+                type="category"
+                dataKey="name"
+                stroke="#71717a"
+                tick={{ fill: '#71717a', fontSize: 12 }}
+                width={100}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#18181b',
@@ -181,7 +233,7 @@ export default function DashboardPage() {
                 }}
                 labelStyle={{ color: '#a1a1aa' }}
               />
-              <Bar dataKey="value" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="value" radius={[0, 8, 8, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </Card>
