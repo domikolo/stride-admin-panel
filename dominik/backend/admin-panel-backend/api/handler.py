@@ -15,15 +15,17 @@ import json
 import boto3
 import os
 from datetime import datetime, timedelta
+from decimal import Decimal
 from boto3.dynamodb.conditions import Key
 from typing import Dict, Any, Optional
-from .auth import verify_jwt_token, get_user_role
+from auth import verify_jwt_token, get_user_role
 
 # DynamoDB tables
 dynamodb = boto3.resource("dynamodb")
 clients_registry_table = dynamodb.Table("clients_registry")
 analytics_events_table = dynamodb.Table("platform_analytics_events")
 trending_topics_table = dynamodb.Table("platform_trending_topics")
+session_summaries_table = dynamodb.Table("session_summaries")
 
 
 def lambda_handler(event, context):
@@ -374,7 +376,10 @@ def get_client_daily_stats(user: Dict, client_id: str, query_params: Dict, heade
 
 
 def get_client_conversations(user: Dict, client_id: str, query_params: Dict, headers: Dict) -> Dict:
-    """GET /clients/{client_id}/conversations - Konwersacje klienta"""
+    """GET /clients/{client_id}/conversations - Konwersacje klienta
+
+    Uses session_summaries table for fast, consistent listing.
+    """
 
     # Check authorization
     user_role = get_user_role(user)
@@ -384,73 +389,64 @@ def get_client_conversations(user: Dict, client_id: str, query_params: Dict, hea
         return error_response(403, "You can only view your own conversations", headers)
 
     try:
-        # Get client info from registry to find table name
-        client_response = clients_registry_table.get_item(
-            Key={"client_id": client_id, "SK": "PROFILE"}
-        )
-
-        if "Item" not in client_response:
-            return error_response(404, "Client not found", headers)
-
-        client = client_response["Item"]
-
-        # For stride-services (MVP), use existing table
-        if client_id == "stride-services":
-            conversations_table_name = "Conversations-stride"
-        else:
-            # For future clients
-            tables_prefix = client.get("tables_prefix", client_id)
-            conversations_table_name = f"{tables_prefix}-conversations"
-
-        conversations_table = dynamodb.Table(conversations_table_name)
-
-        # Scan conversations (paginated)
         limit = int(query_params.get("limit", 50))
 
-        # Get unique sessions
-        response = conversations_table.scan(Limit=limit)
-        items = response.get("Items", [])
+        # Query session summaries (fast, consistent)
+        print(f"Querying session_summaries for client: {client_id}")
+        response = session_summaries_table.scan(
+            FilterExpression="attribute_exists(session_id)",
+            Limit=limit * 2  # Get extra to allow for sorting
+        )
 
-        # Group by session_id
-        sessions = {}
-        for item in items:
-            session_id = item.get("session_id")
-            if session_id not in sessions:
-                sessions[session_id] = []
-            sessions[session_id].append({
-                "timestamp": item.get("timestamp"),
-                "role": item.get("role"),
-                "text": item.get("text")
-            })
+        summaries = response.get("Items", [])
+        print(f"Found {len(summaries)} session summaries")
 
         # Format response
         conversations = []
-        for session_id, messages in sessions.items():
-            # Sort messages by timestamp
-            messages.sort(key=lambda x: x["timestamp"])
+        for summary in summaries:
+            start_time = summary.get("conversation_start")
+            end_time = summary.get("conversation_end")
+
+            # Handle both unix timestamp (int/float/Decimal) and ISO string
+            if isinstance(start_time, (int, float, Decimal)):
+                first_message = convert_timestamp_to_iso(int(start_time))
+            else:
+                first_message = start_time
+
+            if isinstance(end_time, (int, float, Decimal)):
+                last_message = convert_timestamp_to_iso(int(end_time))
+            else:
+                last_message = end_time
 
             conversations.append({
-                "session_id": session_id,
-                "messages_count": len(messages),
-                "first_message": convert_timestamp_to_iso(messages[0]["timestamp"]) if messages else None,
-                "last_message": convert_timestamp_to_iso(messages[-1]["timestamp"]) if messages else None,
-                "preview": messages[0]["text"][:100] if messages else ""
+                "session_id": summary.get("session_id"),
+                "messages_count": int(summary.get("message_count", 0)),
+                "first_message": first_message,
+                "last_message": last_message,
+                "preview": summary.get("first_message_preview", "")[:100]
             })
 
-        # Sort by last message
-        conversations.sort(key=lambda x: x["last_message"] or "", reverse=True)
+        # Sort by last message (newest first)
+        conversations.sort(key=lambda x: x.get("last_message") or "", reverse=True)
+
+        # Apply limit after sorting
+        conversations = conversations[:limit]
+
+        print(f"Returning {len(conversations)} conversations")
 
         return {
             "statusCode": 200,
             "headers": headers,
             "body": json.dumps({
-                "conversations": conversations[:limit],
+                "conversations": conversations,
                 "count": len(conversations)
             })
         }
 
     except Exception as e:
         print(f"Error getting conversations: {e}")
+        import traceback
+        traceback.print_exc()
         return error_response(500, f"Failed to get conversations: {str(e)}", headers)
 
 

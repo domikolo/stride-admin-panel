@@ -3,6 +3,7 @@ Conversation service for managing chat history in DynamoDB.
 Handles message storage, retrieval, and rate limiting.
 """
 
+import boto3
 import logging
 import time
 from typing import List, Dict, Optional
@@ -104,6 +105,10 @@ def save_conversation_turn(
 
     # Save assistant message (timestamp + 1 to maintain order)
     assistant_saved = save_message(session_id, "assistant", assistant_message, base_ts + 1)
+
+    # Update session summary for admin panel (non-blocking)
+    if user_saved and assistant_saved:
+        update_session_summary(session_id, user_message, base_ts)
 
     return user_saved and assistant_saved
 
@@ -301,3 +306,80 @@ def clear_session_history(session_id: str) -> bool:
             exc_info=True
         )
         return False
+
+
+# =============================================================================
+# SESSION SUMMARIES (for Admin Panel)
+# =============================================================================
+
+summaries_table = boto3.resource("dynamodb").Table("session_summaries")
+
+def update_session_summary(
+    session_id: str,
+    user_message: str,
+    timestamp: int,
+    client_id: str = "stride-services"
+) -> None:
+    """
+    Update or create session summary for admin panel.
+    This gives us fast session listing without scanning all messages.
+
+    Args:
+        session_id: Unique session identifier
+        user_message: First user message (for preview)
+        timestamp: Unix timestamp of the message
+        client_id: Client identifier (default: stride-services)
+
+    Note:
+        This function fails gracefully - if summary update fails,
+        the main conversation flow continues unaffected.
+    """
+    try:
+        # Try to update existing summary
+        summaries_table.update_item(
+            Key={
+                "session_id": session_id,
+                "SK": "SUMMARY"
+            },
+            UpdateExpression="""
+                SET message_count = if_not_exists(message_count, :zero) + :inc,
+                    last_activity = :time,
+                    conversation_end = :time,
+                    #status = :active
+            """,
+            ExpressionAttributeNames={
+                "#status": "status"
+            },
+            ExpressionAttributeValues={
+                ":zero": 0,
+                ":inc": 2,  # user + assistant = 2 messages
+                ":time": timestamp,
+                ":active": "active"
+            }
+        )
+        logger.debug(f"Updated session summary for {session_id}")
+
+    except summaries_table.meta.client.exceptions.ResourceNotFoundException:
+        # New session - create summary item
+        summaries_table.put_item(Item={
+            "session_id": session_id,
+            "SK": "SUMMARY",
+            "client_id": client_id,
+            "conversation_start": timestamp,
+            "conversation_end": timestamp,
+            "message_count": 2,
+            "first_message_preview": user_message[:100] if user_message else "",
+            "last_activity": timestamp,
+            "status": "active",
+            "ttl": timestamp + TTL_SECONDS
+        })
+        logger.info(f"Created new session summary for {session_id}")
+
+    except Exception as e:
+        # Don't fail the main flow if summary update fails
+        logger.error(
+            f"Failed to update session summary: {e}",
+            exc_info=True,
+            extra={"session_id": session_id}
+        )
+        # Continue without raising - this is non-critical
