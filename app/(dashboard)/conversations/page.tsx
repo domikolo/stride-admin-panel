@@ -15,7 +15,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
-import { formatDistanceToNow, isToday, isThisWeek, isThisMonth } from 'date-fns';
+import { isToday, isThisWeek, isThisMonth } from 'date-fns';
 import { Search, MessageSquare, Filter, ChevronLeft, ChevronRight, Target, AlertCircle } from 'lucide-react';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
@@ -181,23 +181,28 @@ export default function ConversationsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Session ID</TableHead>
+                  <TableHead>Conv #</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Messages</TableHead>
-                  <TableHead>Last Activity</TableHead>
+                  <TableHead>Date & Time</TableHead>
                   <TableHead>Preview</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {paginatedConversations.map((conv) => {
                   const status = getConversationStatus(conv);
+                  const lastMessageDate = new Date(conv.last_message);
                   return (
                     <TableRow
-                      key={conv.session_id}
+                      key={`${conv.session_id}-${conv.conversation_number}`}
                       className="cursor-pointer hover:bg-white/5 transition-colors"
                       onClick={() => router.push(`/conversations/${conv.session_id}`)}
                     >
                       <TableCell className="font-mono text-sm">
                         {conv.session_id.slice(0, 12)}...
+                      </TableCell>
+                      <TableCell className="font-mono text-sm font-bold text-white">
+                        #{conv.conversation_number}
                       </TableCell>
                       <TableCell>
                         <Badge variant={status.variant} className="gap-1">
@@ -209,7 +214,10 @@ export default function ConversationsPage() {
                         <Badge variant="secondary">{conv.messages_count}</Badge>
                       </TableCell>
                       <TableCell className="text-zinc-400 text-sm">
-                        {formatDistanceToNow(new Date(conv.last_message), { addSuffix: true })}
+                        <div className="flex flex-col">
+                          <span>{lastMessageDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                          <span className="text-xs text-zinc-500">{lastMessageDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-zinc-400 text-sm max-w-xs truncate">
                         {conv.preview}

@@ -39,6 +39,7 @@ export interface DailyStat {
 
 export interface Conversation {
   session_id: string;
+  conversation_number: number;
   messages_count: number;
   first_message: string;
   last_message: string;
