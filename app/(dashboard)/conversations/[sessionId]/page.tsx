@@ -5,7 +5,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getConversationDetails } from '@/lib/api';
 import { ConversationMessage } from '@/lib/types';
@@ -21,8 +21,12 @@ import toast from 'react-hot-toast';
 export default function ConversationDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
   const sessionId = params.sessionId as string;
+  const conversationNumber = searchParams.get('conversation_number')
+    ? parseInt(searchParams.get('conversation_number')!)
+    : undefined;
 
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,12 +37,12 @@ export default function ConversationDetailPage() {
     if (user && sessionId) {
       loadConversation();
     }
-  }, [user, sessionId]);
+  }, [user, sessionId, conversationNumber]);
 
   const loadConversation = async () => {
     try {
       const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-      const data = await getConversationDetails(clientId, sessionId);
+      const data = await getConversationDetails(clientId, sessionId, conversationNumber);
       setMessages(data.messages);
       setError(null);
     } catch (error) {
@@ -105,7 +109,7 @@ export default function ConversationDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
-              Conversation
+              Conversation {conversationNumber && `#${conversationNumber}`}
             </h1>
             <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2">
               <span className="font-mono">{sessionId.slice(0, 16)}...</span>

@@ -196,7 +196,7 @@ export default function ConversationsPage() {
                     <TableRow
                       key={`${conv.session_id}-${conv.conversation_number}`}
                       className="cursor-pointer hover:bg-white/5 transition-colors"
-                      onClick={() => router.push(`/conversations/${conv.session_id}`)}
+                      onClick={() => router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number}`)}
                     >
                       <TableCell className="font-mono text-sm">
                         {conv.session_id.slice(0, 12)}...

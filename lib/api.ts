@@ -94,10 +94,16 @@ export const getClientAppointments = (clientId: string, status?: string) => {
 /**
  * Get conversation details (all messages)
  */
-export const getConversationDetails = (clientId: string, sessionId: string) =>
-  api.get<{ session_id: string; messages: ConversationMessage[]; count: number }>(
-    `/clients/${clientId}/conversations/${sessionId}`
+export const getConversationDetails = (
+  clientId: string,
+  sessionId: string,
+  conversationNumber?: number
+) => {
+  const query = conversationNumber ? `?conversation_number=${conversationNumber}` : '';
+  return api.get<{ session_id: string; messages: ConversationMessage[]; count: number; conversation_number?: number }>(
+    `/clients/${clientId}/conversations/${sessionId}${query}`
   );
+};
 
 /**
  * Get daily stats for charts
