@@ -207,8 +207,8 @@ export default function ConversationsPage() {
           break;
         case 'status':
           // Custom order: In Progress > Test > Completed
-          const statusOrder = { in_progress: 2, test: 1, completed: 0 };
-          comparison = statusOrder[a.metrics.groupStatus] - statusOrder[b.metrics.groupStatus];
+          const statusOrder: Record<string, number> = { in_progress: 2, test: 1, completed: 0 };
+          comparison = (statusOrder[a.metrics.groupStatus] || 0) - (statusOrder[b.metrics.groupStatus] || 0);
           break;
       }
       return sortDirection === 'asc' ? comparison : -comparison;
