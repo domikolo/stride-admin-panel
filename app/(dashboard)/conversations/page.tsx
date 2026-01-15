@@ -333,7 +333,7 @@ export default function ConversationsPage() {
                     currentSort={sortKey}
                     direction={sortDirection}
                     onSort={handleSort}
-                    tooltip="Unikalny identyfikator użytkownika. Grupuje wszystkie rozmowy jednego klienta."
+                    tooltip="Identyfikator urządzenia/sesji użytkownika. Jeśli w ramach jednej sesji odbyło się więcej rozmów, są one tutaj grupowane."
                   />
                   <TableHead className="w-24">
                     <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji. Jeśli sesja zawiera tylko jedną rozmowę, funkcja zwijania jest nieaktywna, co oznacza, że w sesji miała miejsce tylko jedna rozmowa.">
@@ -442,7 +442,6 @@ export default function ConversationsPage() {
                             <TableCell className="py-2">
                               <div className="flex items-center pl-10">
                                 <div className="w-5 h-5 flex items-center justify-center border-l border-b border-zinc-700/50 rounded-bl-md mr-3"></div>
-                                <span className="text-xs text-zinc-500">ID: {conv.session_id.slice(-6)}</span>
                               </div>
                             </TableCell>
                             <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold">
