@@ -164,8 +164,8 @@ export default function ConversationDetailPage() {
                 {/* Avatar */}
                 <div
                   className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user'
-                      ? 'bg-blue-500/20 text-blue-400'
-                      : 'bg-purple-500/20 text-purple-400'
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-purple-500/20 text-purple-400'
                     }`}
                 >
                   {message.role === 'user' ? <User size={16} /> : <Bot size={16} />}
@@ -178,8 +178,8 @@ export default function ConversationDetailPage() {
                 >
                   <div
                     className={`px-4 py-3 rounded-2xl ${message.role === 'user'
-                        ? 'bg-blue-500/10 border border-blue-500/20 rounded-tr-sm'
-                        : 'bg-white/5 border border-white/10 rounded-tl-sm'
+                      ? 'bg-blue-500/10 border border-blue-500/20 rounded-tr-sm'
+                      : 'bg-white/5 border border-white/10 rounded-tl-sm'
                       }`}
                   >
                     <p className="text-zinc-200 whitespace-pre-wrap break-words text-sm leading-relaxed">
@@ -187,7 +187,7 @@ export default function ConversationDetailPage() {
                     </p>
                   </div>
                   <p className={`text-xs text-zinc-500 mt-1 ${message.role === 'user' ? 'text-right' : ''}`}>
-                    {format(new Date(message.timestamp), 'h:mm a')}
+                    {format(new Date(message.timestamp), 'HH:mm')}
                   </p>
                 </div>
               </div>
