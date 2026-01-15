@@ -336,7 +336,7 @@ export default function ConversationsPage() {
                     tooltip="Unikalny identyfikator użytkownika. Grupuje wszystkie rozmowy jednego klienta."
                   />
                   <TableHead className="w-24">
-                    <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji.">
+                    <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji. Jeśli sesja zawiera tylko jedną rozmowę, funkcja zwijania jest nieaktywna, co oznacza, że w sesji miała miejsce tylko jedna rozmowa.">
                       Rozmowa #
                     </HeaderTooltip>
                   </TableHead>
@@ -367,7 +367,8 @@ export default function ConversationsPage() {
               </TableHeader>
               <TableBody>
                 {paginatedGroups.map((group) => {
-                  const isExpanded = expandedSessions.has(group.sessionId);
+                  const isSingleSession = group.conversations.length === 1;
+                  const isExpanded = isSingleSession ? false : expandedSessions.has(group.sessionId);
                   const statusDisplay = getStatusDisplay(group.metrics.groupStatus);
                   const latestDate = group.metrics.latestMessage;
 
@@ -376,16 +377,23 @@ export default function ConversationsPage() {
                     <React.Fragment key={group.sessionId}>
                       {/* Parent Group Row */}
                       <TableRow
-                        className="cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5"
-                        onClick={() => toggleSession(group.sessionId)}
+                        className={`
+                          transition-colors border-b border-white/5 relative
+                          ${isSingleSession ? 'cursor-default' : 'cursor-pointer hover:bg-white/5'}
+                        `}
+                        onClick={() => !isSingleSession && toggleSession(group.sessionId)}
                       >
                         <TableCell className="font-mono text-sm py-4">
                           <div className="flex items-center gap-3">
-                            <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-white/10 text-white' : 'text-zinc-500'}`}>
-                              {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
-                            </div>
+                            {!isSingleSession ? (
+                              <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-white/10 text-white' : 'text-zinc-500'}`}>
+                                {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                              </div>
+                            ) : (
+                              <div className="w-6" /> /* Spacer for alignment */
+                            )}
                             <span className="font-bold text-white tracking-wide">{group.sessionId.slice(0, 16)}...</span>
-                            {group.conversations.length > 1 && (
+                            {!isSingleSession && (
                               <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-500/30 text-blue-400 bg-blue-500/10">
                                 {group.conversations.length} rozmów
                               </Badge>
@@ -416,7 +424,7 @@ export default function ConversationsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="italic text-zinc-500 text-sm">
-                          Kliknij, aby zobaczyć szczegóły...
+                          {!isSingleSession ? "Kliknij, aby zobaczyć szczegóły..." : group.conversations[0]?.preview}
                         </TableCell>
                       </TableRow>
 
@@ -445,7 +453,10 @@ export default function ConversationsPage() {
                               {conv.messages_count}
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400">
-                              {convDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                              <div className="flex flex-col">
+                                <span>{convDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                                <span className="text-xs text-zinc-600">{convDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                              </div>
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400 max-w-xs truncate">
                               {conv.preview}
