@@ -1,10 +1,10 @@
 /**
- * Conversations Page - Improved with smart grouping, sorting, and user-friendly tooltips
+ * Conversations Page - Improved with collapsible session groups and smart sorting
  */
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getClientConversations } from '@/lib/api';
@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
 import { isToday, isThisWeek, isThisMonth, differenceInMinutes } from 'date-fns';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, HelpCircle, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, HelpCircle, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 type SortKey = 'date' | 'messages' | 'sessionId' | 'status';
@@ -87,6 +87,7 @@ export default function ConversationsPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
   const itemsPerPage = 15;
 
@@ -119,6 +120,16 @@ export default function ConversationsPage() {
     }
   };
 
+  const toggleSession = (sessionId: string) => {
+    const newExpanded = new Set(expandedSessions);
+    if (newExpanded.has(sessionId)) {
+      newExpanded.delete(sessionId);
+    } else {
+      newExpanded.add(sessionId);
+    }
+    setExpandedSessions(newExpanded);
+  };
+
   // Helper to determine status
   const getConversationStatusRaw = (conv: Conversation) => {
     const lastMessageDate = new Date(conv.last_message);
@@ -133,8 +144,19 @@ export default function ConversationsPage() {
     return 'completed';
   };
 
+  // Format Status for Display
+  const getStatusDisplay = (statusRaw: string) => {
+    if (statusRaw === 'test') {
+      return { label: 'Test', variant: 'outline' as const, icon: FlaskConical, className: 'text-zinc-400 border-zinc-600' };
+    }
+    if (statusRaw === 'in_progress') {
+      return { label: 'In Progress', variant: 'outline' as const, icon: Clock, className: 'text-yellow-400 border-yellow-600 bg-yellow-500/10' };
+    }
+    return { label: 'Completed', variant: 'outline' as const, icon: CheckCircle2, className: 'text-green-400 border-green-600 bg-green-500/10' };
+  };
+
   // Filter, search, group and sort logic
-  const groupedConversations = useMemo(() => {
+  const groupData = useMemo(() => {
     let filtered = conversations;
 
     // 1. Apply date filter
@@ -160,7 +182,6 @@ export default function ConversationsPage() {
     }
 
     // 3. Group by Session ID first
-    // We create a map of SessionID -> Array<Conversation>
     const sessionMap = new Map<string, Conversation[]>();
     filtered.forEach(conv => {
       const existing = sessionMap.get(conv.session_id) || [];
@@ -173,6 +194,7 @@ export default function ConversationsPage() {
       // Basic metrics for the group
       const latestMessage = new Date(Math.max(...convs.map(c => new Date(c.last_message).getTime())));
       const totalMessages = convs.reduce((sum, c) => sum + c.messages_count, 0);
+
       // Determine "primary" status of the group (priority: In Progress > Test > Completed)
       const statuses = convs.map(getConversationStatusRaw);
       const groupStatus = statuses.includes('in_progress') ? 'in_progress' :
@@ -217,23 +239,9 @@ export default function ConversationsPage() {
     return groups;
   }, [conversations, filter, searchQuery, sortKey, sortDirection]);
 
-  // Flatten for pagination but keep group info
-  const flatConversations = useMemo(() => {
-    return groupedConversations.flatMap(group =>
-      group.conversations.map((conv, idx) => ({
-        ...conv,
-        isFirstInGroup: idx === 0,
-        isLastInGroup: idx === group.conversations.length - 1,
-        groupSize: group.conversations.length,
-        // Helper to draw the connection line
-        hasConnectionLine: group.conversations.length > 1
-      }))
-    );
-  }, [groupedConversations]);
-
-  // Pagination
-  const totalPages = Math.ceil(flatConversations.length / itemsPerPage);
-  const paginatedConversations = flatConversations.slice(
+  // Pagination for GROUPS (not conversations)
+  const totalPages = Math.ceil(groupData.length / itemsPerPage);
+  const paginatedGroups = groupData.slice(
     (currentPage - 1) * itemsPerPage,
     currentPage * itemsPerPage
   );
@@ -242,17 +250,6 @@ export default function ConversationsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, searchQuery]);
-
-  // Format Status for Display
-  const getStatusDisplay = (statusRaw: string) => {
-    if (statusRaw === 'test') {
-      return { label: 'Test', variant: 'outline' as const, icon: FlaskConical, className: 'text-zinc-400 border-zinc-600' };
-    }
-    if (statusRaw === 'in_progress') {
-      return { label: 'In Progress', variant: 'outline' as const, icon: Clock, className: 'text-yellow-400 border-yellow-600 bg-yellow-500/10' };
-    }
-    return { label: 'Completed', variant: 'outline' as const, icon: CheckCircle2, className: 'text-green-400 border-green-600 bg-green-500/10' };
-  };
 
   if (loading) {
     return (
@@ -275,7 +272,7 @@ export default function ConversationsPage() {
           Rozmowy
         </h1>
         <p className="text-zinc-400 mt-1">
-          {conversations.length} rozmów w {groupedConversations.length} sesjach
+          {groupData.length} sesji użytkowników ({conversations.length} rozmów)
         </p>
       </div>
 
@@ -317,7 +314,7 @@ export default function ConversationsPage() {
 
       {/* Table */}
       <Card className="glass-card">
-        {paginatedConversations.length === 0 ? (
+        {paginatedGroups.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
             title="Brak rozmów"
@@ -336,10 +333,10 @@ export default function ConversationsPage() {
                     currentSort={sortKey}
                     direction={sortDirection}
                     onSort={handleSort}
-                    tooltip="Unikalny identyfikator użytkownika. Pozwala rozpoznać powracających klientów, nawet jeśli odwiedzają stronę po dłuższym czasie."
+                    tooltip="Unikalny identyfikator użytkownika. Grupuje wszystkie rozmowy jednego klienta."
                   />
-                  <TableHead>
-                    <HeaderTooltip tooltip="Która to z kolei rozmowa tego użytkownika. Jeśli ktoś wraca po dłuższej przerwie, system tworzy nową rozmowę pod tym samym ID użytkownika.">
+                  <TableHead className="w-24">
+                    <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji.">
                       Rozmowa #
                     </HeaderTooltip>
                   </TableHead>
@@ -349,7 +346,7 @@ export default function ConversationsPage() {
                     currentSort={sortKey}
                     direction={sortDirection}
                     onSort={handleSort}
-                    tooltip="Pokazuje czy rozmowa jest aktywna (In Progress), zakończona (Completed) czy testowa (Test)."
+                    tooltip="Status sesji. In Progress - jeśli trwa. Test - jeśli testowa. Completed - jeśli zakończona."
                   />
                   <SortableHeader
                     label="Wiadomości"
@@ -369,78 +366,94 @@ export default function ConversationsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {paginatedConversations.map((conv) => {
-                  const lastMessageDate = new Date(conv.last_message);
-                  const showSessionId = conv.isFirstInGroup;
-                  const statusRaw = getConversationStatusRaw(conv);
-                  const status = getStatusDisplay(statusRaw);
+                {paginatedGroups.map((group) => {
+                  const isExpanded = expandedSessions.has(group.sessionId);
+                  const statusDisplay = getStatusDisplay(group.metrics.groupStatus);
+                  const latestDate = group.metrics.latestMessage;
 
                   return (
-                    <TableRow
-                      key={`${conv.session_id}-${conv.conversation_number}`}
-                      className={`cursor-pointer hover:bg-white/5 transition-colors relative
-                        ${!conv.isLastInGroup && conv.groupSize > 1 ? 'border-b-0' : ''} 
-                        ${!conv.isFirstInGroup && conv.groupSize > 1 ? 'bg-white/[0.02]' : ''}
-                      `}
-                      onClick={() => router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number}`)}
-                    >
-                      <TableCell className="font-mono text-sm relative">
-                        {/* Visual grouping line using absolute positioning to span rows perfectly if needed, 
-                            but simplified here using border-l on a div */}
-                        <div className="flex h-full items-center">
-                          {conv.hasConnectionLine && (
-                            <div className={`
-                              absolute left-0 top-0 bottom-0 w-1 
-                              ${conv.isFirstInGroup ? 'top-1/2 rounded-tl-lg rounded-tr-lg' : ''}
-                              ${conv.isLastInGroup ? 'bottom-1/2 rounded-bl-lg rounded-br-lg' : ''}
-                              ${!conv.isFirstInGroup && !conv.isLastInGroup ? '' : ''}
-                              bg-blue-500/20 ml-1
-                            `}></div>
-                          )}
+                    // Use a fragment to group the main row and expanded rows
+                    <React.Fragment key={group.sessionId}>
+                      {/* Parent Group Row */}
+                      <TableRow
+                        className="cursor-pointer hover:bg-white/5 transition-colors border-b border-white/5"
+                        onClick={() => toggleSession(group.sessionId)}
+                      >
+                        <TableCell className="font-mono text-sm py-4">
+                          <div className="flex items-center gap-3">
+                            <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-white/10 text-white' : 'text-zinc-500'}`}>
+                              {isExpanded ? <ChevronDown size={14} /> : <ChevronRightIcon size={14} />}
+                            </div>
+                            <span className="font-bold text-white tracking-wide">{group.sessionId.slice(0, 16)}...</span>
+                            {group.conversations.length > 1 && (
+                              <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-500/30 text-blue-400 bg-blue-500/10">
+                                {group.conversations.length} rozmów
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-zinc-600 font-mono text-xs text-center">
+                          —
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusDisplay.variant} className={`gap-1 ${statusDisplay.className}`}>
+                            <statusDisplay.icon size={12} />
+                            {statusDisplay.label}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1.5 font-medium text-zinc-300">
+                            <MessageSquare size={14} className="text-zinc-500" />
+                            {group.metrics.totalMessages}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-zinc-300 text-sm font-medium">
+                          <div className="flex flex-col">
+                            <span>
+                              {latestDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                            </span>
+                            <span className="text-xs text-zinc-500">{latestDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="italic text-zinc-500 text-sm">
+                          Kliknij, aby zobaczyć szczegóły...
+                        </TableCell>
+                      </TableRow>
 
-                          {showSessionId ? (
-                            <div className="flex items-center gap-2 pl-4">
-                              <span className="font-medium text-white">{conv.session_id.slice(0, 12)}...</span>
-                              {conv.groupSize > 1 && (
-                                <Badge variant="outline" className="text-xs px-1.5 py-0 border-blue-500/30 text-blue-400 bg-blue-500/10">
-                                  {conv.groupSize}
-                                </Badge>
-                              )}
-                            </div>
-                          ) : (
-                            // Indented visual for sub-conversations
-                            <div className="pl-8 flex items-center text-zinc-600">
-                              <div className="w-4 h-px bg-zinc-700 mr-2"></div>
-                            </div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className={`font-mono text-sm font-bold ${showSessionId ? 'text-white' : 'text-zinc-400'}`}>
-                        #{conv.conversation_number || 1}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={status.variant} className={`gap-1 ${status.className}`}>
-                          <status.icon size={12} />
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={showSessionId ? "bg-zinc-800" : "bg-zinc-800/50 text-zinc-500"}>
-                          {conv.messages_count}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-zinc-400 text-sm">
-                        <div className="flex flex-col">
-                          <span className={showSessionId ? "text-zinc-300" : "text-zinc-500"}>
-                            {lastMessageDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                          </span>
-                          <span className="text-xs text-zinc-600">{lastMessageDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-zinc-400 text-sm max-w-xs truncate opacity-80">
-                        {conv.preview}
-                      </TableCell>
-                    </TableRow>
+                      {/* Expanded Child Rows */}
+                      {isExpanded && group.conversations.map((conv, idx) => {
+                        const convDate = new Date(conv.last_message);
+                        const isLast = idx === group.conversations.length - 1;
+
+                        return (
+                          <TableRow
+                            key={`${conv.session_id}-${conv.conversation_number}`}
+                            className={`bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer ${isLast ? 'border-b-2 border-white/5' : 'border-b-0'}`}
+                            onClick={() => router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number}`)}
+                          >
+                            <TableCell className="py-2">
+                              <div className="flex items-center pl-10">
+                                <div className="w-5 h-5 flex items-center justify-center border-l border-b border-zinc-700/50 rounded-bl-md mr-3"></div>
+                                <span className="text-xs text-zinc-500">ID: {conv.session_id.slice(-6)}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold">
+                              #{conv.conversation_number || 1}
+                            </TableCell>
+                            <TableCell></TableCell> {/* No status for individual sub-convs in this view to keep it clean, or could add */}
+                            <TableCell className="text-sm text-zinc-400 pl-4">
+                              {conv.messages_count}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-400">
+                              {convDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}
+                            </TableCell>
+                            <TableCell className="text-sm text-zinc-400 max-w-xs truncate">
+                              {conv.preview}
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </React.Fragment>
                   );
                 })}
               </TableBody>
