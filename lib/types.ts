@@ -23,11 +23,16 @@ export interface ClientStats {
   conversion_rate: number;
   verification_rate: number;
   total_cost_usd: number;
+  cpa_usd?: number;
+  avg_time_to_conversion_min?: number;
   total_tokens: {
     input: number;
     output: number;
     total: number;
   };
+  activity_heatmap?: Record<string, Record<string, { messages: number; appointments: number }>>;
+  conversation_length_histogram?: Record<string, number>;
+  drop_off_by_length?: Record<string, { total: number; dropped: number }>;
 }
 
 export interface DailyStat {

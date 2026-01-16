@@ -15,6 +15,9 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
+import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
+import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -118,6 +121,25 @@ export default function DashboardPage() {
           change={8}
           sparklineData={appointmentSparkline}
           iconColor="text-purple-400"
+        />
+      </div>
+
+      {/* Advanced Stats Row */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <StatsCard
+          title="Cost Per Appointment (CPA)"
+          value={`$${stats?.cpa_usd?.toFixed(2) || '0.00'}`}
+          icon={DollarSign}
+          trend="neutral"
+          iconColor="text-pink-400"
+        />
+        <StatsCard
+          title="Avg. Time to Book"
+          value={`${stats?.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
+          icon={Calendar}
+          trend="down"
+          sparklineData={appointmentSparkline} // Reusing sparkline as proxy for now
+          iconColor="text-indigo-400"
         />
         <StatsCard
           title="Conversion Rate"
@@ -237,6 +259,24 @@ export default function DashboardPage() {
             </BarChart>
           </ResponsiveContainer>
         </Card>
+      </div>
+
+      {/* Deep Insights Charts */}
+      <div className="grid grid-cols-1 xl:grid-cols-6 gap-6">
+        {/* Heatmap takes full width on top */}
+        <div className="xl:col-span-6">
+          <ActivityHeatmap data={stats?.activity_heatmap} loading={loading} />
+        </div>
+
+        {/* Drop-off takes 3/6 */}
+        <div className="xl:col-span-4">
+          <DropOffChart data={stats?.drop_off_by_length} loading={loading} />
+        </div>
+
+        {/* Histogram takes 2/6 */}
+        <div className="xl:col-span-2">
+          <ConversationLengthChart data={stats?.conversation_length_histogram} loading={loading} />
+        </div>
       </div>
     </div>
   );
