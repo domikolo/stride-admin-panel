@@ -5,7 +5,7 @@
 'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { LucideIcon, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -17,6 +17,7 @@ interface StatsCardProps {
   trend?: 'up' | 'down' | 'neutral';
   sparklineData?: number[];
   iconColor?: string;
+  description?: string; // New prop for detailed explanation
 }
 
 export default function StatsCard({
@@ -26,7 +27,8 @@ export default function StatsCard({
   change,
   trend,
   sparklineData,
-  iconColor = 'text-zinc-400'
+  iconColor = 'text-zinc-400',
+  description
 }: StatsCardProps) {
   const trendColor = trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-zinc-400';
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
@@ -35,7 +37,19 @@ export default function StatsCard({
   return (
     <Card className="glass-card hover:border-white/20 transition-all duration-300">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-zinc-400">{title}</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle className="text-sm font-medium text-zinc-400">{title}</CardTitle>
+          {description && (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info size={14} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[250px]">
+                <p>{description}</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
+        </div>
         <div className={`p-2 rounded-lg bg-white/5 ${iconColor}`}>
           <Icon size={18} />
         </div>

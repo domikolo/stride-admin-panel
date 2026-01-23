@@ -105,22 +105,24 @@ export default function DashboardPage() {
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
-          title="Conversations"
+          title="Rozmowy"
           value={stats?.conversations_count || 0}
           icon={MessageSquare}
           trend="up"
           change={12}
           sparklineData={conversationSparkline}
           iconColor="text-blue-400"
+          description="Liczba wszystkich rozpoczętych konwersacji z botem w wybranym okresie."
         />
         <StatsCard
-          title="Appointments"
+          title="Spotkania"
           value={stats?.appointments_created || 0}
           icon={Calendar}
           trend="up"
           change={8}
           sparklineData={appointmentSparkline}
           iconColor="text-purple-400"
+          description="Liczba wstępnie umówionych spotkań przez bota (przed weryfikacją)."
         />
       </div>
 
@@ -132,29 +134,33 @@ export default function DashboardPage() {
           icon={DollarSign}
           trend="neutral"
           iconColor="text-pink-400"
+          description="Średni koszt pozyskania jednego zweryfikowanego spotkania. Obliczany jako całkowity koszt tokenów AI podzielony przez liczbę potwierdzonych spotkań."
         />
         <StatsCard
-          title="Avg. Time to Book"
+          title="Śr. czas konwersji"
           value={`${stats?.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
           icon={Calendar}
           trend="down"
           sparklineData={appointmentSparkline} // Reusing sparkline as proxy for now
           iconColor="text-indigo-400"
+          description="Średni czas trwania rozmowy od pierwszej wiadomości do momentu umówienia spotkania."
         />
         <StatsCard
-          title="Conversion Rate"
+          title="Wskaźnik Konwersji"
           value={`${stats?.conversion_rate.toFixed(1) || 0}%`}
           icon={TrendingUp}
           trend="neutral"
           iconColor="text-emerald-400"
+          description="Procent rozmów, które zakończyły się sukcesem (umówieniem spotkania). Wyższy wynik oznacza lepszą skuteczność skryptu."
         />
         <StatsCard
-          title="Total Cost"
+          title="Całkowity Koszt"
           value={`$${stats?.total_cost_usd.toFixed(2) || '0.00'}`}
           icon={DollarSign}
           trend="down"
           change={-5}
           iconColor="text-amber-400"
+          description="Suma kosztów tokenów (input/output) zużytych przez model AI na wszystkie rozmowy w tym okresie."
         />
       </div>
 

@@ -35,14 +35,18 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
     return (
         <Card className="glass-card p-6">
             <div className="flex items-center gap-2 mb-4">
-                <h3 className="text-lg font-semibold text-white">Conversation Length</h3>
+                <h3 className="text-lg font-semibold text-white">Długość Konwersacji</h3>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Distribution of conversation lengths by number of messages.</p>
-                        <p>Helps identify if users have short queries or deep conversations.</p>
+                    <TooltipContent className="max-w-[300px]">
+                        <p className="font-semibold mb-1">Ile wiadomości wymieniają użytkownicy?</p>
+                        <p>Ten wykres pokazuje rozkład liczby wiadomości w ramach jednej sesji.</p>
+                        <ul className="list-disc pl-4 mt-2 space-y-1">
+                            <li><strong>Krótkie (1-2)</strong>: Często oznaczają "odrzucenia" lub proste pytania.</li>
+                            <li><strong>Długie (21+)</strong>: Mogą sugerować duże zaangażowanie lub problemy bota ze zrozumieniem intencji.</li>
+                        </ul>
                     </TooltipContent>
                 </Tooltip>
             </div>

@@ -44,18 +44,19 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
     return (
         <Card className="glass-card p-6">
             <div className="flex items-center gap-2 mb-1">
-                <h3 className="text-lg font-semibold text-white">Drop-off Rate by Length</h3>
+                <h3 className="text-lg font-semibold text-white">Wskaźnik Odrzuceń (Drop-off Rate)</h3>
                 <Tooltip>
                     <TooltipTrigger asChild>
                         <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent>
-                        <p>Percentage of users who leave the conversation without booking.</p>
-                        <p>Line = Drop-off Rate (%). Bars = Volume.</p>
+                    <TooltipContent className="max-w-[300px]">
+                        <p className="font-semibold mb-1">Kiedy użytkownicy rezygnują?</p>
+                        <p>Wykres pokazuje procent użytkowników, którzy zakończyli rozmowę bez umówienia spotkania, w zależności od długości tej rozmowy.</p>
+                        <p className="mt-2 text-xs text-zinc-400">Linia = % Odrzuceń. Słupki = Liczba sesji.</p>
                     </TooltipContent>
                 </Tooltip>
             </div>
-            <p className="text-xs text-zinc-400 mb-4">Percentage of sessions that end without an appointment.</p>
+            <p className="text-xs text-zinc-400 mb-4">Procent sesji zakończonych bez umówienia spotkania.</p>
 
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">

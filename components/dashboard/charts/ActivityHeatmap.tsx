@@ -77,24 +77,27 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
         <Card className="glass-card p-6 overflow-x-auto">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-white">Activity Heatmap</h3>
+                    <h3 className="text-lg font-semibold text-white">Mapa Aktywności (Heatmap)</h3>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent>
-                            <p>Darker colors indicate higher volume.</p>
-                            <p>Top half (Blue) = Messages sent/received.</p>
-                            <p>Bottom half (Green) = Appointments created.</p>
+                        <TooltipContent className="max-w-[300px]">
+                            <p className="font-semibold mb-1">Kiedy Twoi klienci są najbardziej aktywni?</p>
+                            <ul className="list-disc pl-4 space-y-1">
+                                <li><strong>Ciemniejszy kolor</strong> = większa liczba zdarzeń w danej godzinie.</li>
+                                <li><span className="text-blue-400">Górna połówka (Niebieski)</span>: Intensywność wymiany wiadomości.</li>
+                                <li><span className="text-emerald-400">Dolna połówka (Zielony)</span>: Momenty, w których najczęściej umawiane są spotkania.</li>
+                            </ul>
                         </TooltipContent>
                     </Tooltip>
                 </div>
                 <div className="flex gap-4 text-xs text-zinc-400">
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div> Messages (Top)
+                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div> Wiadomości
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> Appointments (Bottom)
+                        <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> Spotkania
                     </div>
                 </div>
             </div>
@@ -143,6 +146,6 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                     ))}
                 </div>
             </div>
-        </Card>
+        </Card >
     );
 }
