@@ -2,7 +2,9 @@
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
+import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer, Legend } from 'recharts';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface DropOffChartProps {
     data?: Record<string, { total: number; dropped: number }>;
@@ -41,7 +43,18 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
 
     return (
         <Card className="glass-card p-6">
-            <h3 className="text-lg font-semibold text-white mb-1">Drop-off Rate by Length</h3>
+            <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg font-semibold text-white">Drop-off Rate by Length</h3>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Percentage of users who leave the conversation without booking.</p>
+                        <p>Line = Drop-off Rate (%). Bars = Volume.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </div>
             <p className="text-xs text-zinc-400 mb-4">Percentage of sessions that end without an appointment.</p>
 
             <div className="h-[250px] w-full">
@@ -71,7 +84,7 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                             axisLine={false}
                             unit="%"
                         />
-                        <Tooltip
+                        <ChartTooltip
                             cursor={{ fill: '#27272a60' }}
                             contentStyle={{
                                 backgroundColor: '#18181b',

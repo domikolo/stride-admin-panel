@@ -2,6 +2,8 @@
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ActivityHeatmapProps {
     data?: Record<string, Record<string, { messages: number; appointments: number }>>;
@@ -74,7 +76,19 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
     return (
         <Card className="glass-card p-6 overflow-x-auto">
             <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-white">Activity Heatmap</h3>
+                <div className="flex items-center gap-2">
+                    <h3 className="text-lg font-semibold text-white">Activity Heatmap</h3>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>Darker colors indicate higher volume.</p>
+                            <p>Top half (Blue) = Messages sent/received.</p>
+                            <p>Bottom half (Green) = Appointments created.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </div>
                 <div className="flex gap-4 text-xs text-zinc-400">
                     <div className="flex items-center gap-2">
                         <div className="w-3 h-3 bg-blue-500 rounded-sm"></div> Messages (Top)

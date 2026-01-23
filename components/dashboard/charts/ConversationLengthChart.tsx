@@ -2,7 +2,9 @@
 
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, ResponsiveContainer } from 'recharts';
+import { Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ConversationLengthChartProps {
     data?: Record<string, number>;
@@ -32,7 +34,18 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
 
     return (
         <Card className="glass-card p-6">
-            <h3 className="text-lg font-semibold text-white mb-4">Conversation Length (Messages)</h3>
+            <div className="flex items-center gap-2 mb-4">
+                <h3 className="text-lg font-semibold text-white">Conversation Length</h3>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>Distribution of conversation lengths by number of messages.</p>
+                        <p>Helps identify if users have short queries or deep conversations.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </div>
             <div className="h-[250px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
@@ -50,7 +63,7 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
                             tickLine={false}
                             axisLine={false}
                         />
-                        <Tooltip
+                        <ChartTooltip
                             cursor={{ fill: '#27272a60' }}
                             contentStyle={{
                                 backgroundColor: '#18181b',

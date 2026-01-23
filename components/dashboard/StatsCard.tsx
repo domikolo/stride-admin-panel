@@ -7,6 +7,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { LineChart, Line, ResponsiveContainer } from 'recharts';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface StatsCardProps {
   title: string;
@@ -43,13 +44,22 @@ export default function StatsCard({
         <div className="flex items-end justify-between">
           <div>
             <div className="text-4xl font-bold text-white tracking-tight">{value}</div>
+
             {change !== undefined && (
-              <div className={`flex items-center gap-1 text-sm mt-2 ${trendColor}`}>
-                <TrendIcon size={14} />
-                <span>{change > 0 ? '+' : ''}{change}%</span>
-                <span className="text-zinc-500 text-xs">vs last period</span>
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className={`flex items-center gap-1 text-sm mt-2 cursor-help ${trendColor}`}>
+                    <TrendIcon size={14} />
+                    <span>{change > 0 ? '+' : ''}{change}%</span>
+                    <span className="text-zinc-500 text-xs">vs last period</span>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Percentage change compared to the previous 30 days</p>
+                </TooltipContent>
+              </Tooltip>
             )}
+
           </div>
 
           {/* Sparkline */}
