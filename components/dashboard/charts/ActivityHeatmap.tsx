@@ -67,6 +67,10 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
         return `${DAYS[dayIndex]} ${hour}:00 - ${hourData.messages} msgs, ${hourData.appointments} appts`;
     };
 
+    // Visualization:
+    // Top half (Blue) = Message intensity
+    // Bottom half (Green) = Appointment intensity
+
     return (
         <Card className="glass-card p-6 overflow-x-auto">
             <div className="flex items-center justify-between mb-6">
