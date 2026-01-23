@@ -24,36 +24,41 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
         );
     }
 
-    // Find max value for normalization
-    let maxActivity = 0;
+    // Find max values for normalization separately
+    let maxMessages = 0;
+    let maxAppointments = 0;
+
     Object.values(data).forEach((dayData) => {
         Object.values(dayData).forEach((hourData) => {
-            // Weight appointments higher to make them visible
-            const score = hourData.messages + (hourData.appointments * 5);
-            if (score > maxActivity) maxActivity = score;
+            if (hourData.messages > maxMessages) maxMessages = hourData.messages;
+            if (hourData.appointments > maxAppointments) maxAppointments = hourData.appointments;
         });
     });
 
-    const getIntensityClass = (messages: number, appointments: number) => {
-        const score = messages + (appointments * 5);
-        if (score === 0) return 'bg-zinc-800/30'; // Minimal activity base
+    // Ensure we don't divide by zero
+    maxMessages = maxMessages || 1;
+    maxAppointments = maxAppointments || 1;
 
-        // Normalize 0-1
-        const intensity = Math.min(score / (maxActivity || 1), 1);
+    const getMessageColor = (count: number) => {
+        if (count === 0) return 'bg-zinc-800/30';
+        const intensity = count / maxMessages;
 
-        if (appointments > 0) {
-            // Verification/Appointment focused color (Green/Purple mix)
-            if (intensity < 0.3) return 'bg-emerald-900/40';
-            if (intensity < 0.6) return 'bg-emerald-700/60';
-            return 'bg-emerald-500/80 shadow-[0_0_10px_rgba(16,185,129,0.3)]';
-        } else {
-            // Message focused color (Blue)
-            if (intensity < 0.2) return 'bg-blue-900/20';
-            if (intensity < 0.4) return 'bg-blue-800/40';
-            if (intensity < 0.6) return 'bg-blue-700/60';
-            if (intensity < 0.8) return 'bg-blue-600/80';
-            return 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]';
-        }
+        if (intensity < 0.2) return 'bg-blue-900/30';
+        if (intensity < 0.4) return 'bg-blue-800/50';
+        if (intensity < 0.6) return 'bg-blue-700/70';
+        if (intensity < 0.8) return 'bg-blue-600/90';
+        return 'bg-blue-500';
+    };
+
+    const getAppointmentColor = (count: number) => {
+        if (count === 0) return 'bg-zinc-800/30';
+        const intensity = count / maxAppointments;
+
+        if (intensity < 0.2) return 'bg-emerald-900/30';
+        if (intensity < 0.4) return 'bg-emerald-800/50';
+        if (intensity < 0.6) return 'bg-emerald-700/70';
+        if (intensity < 0.8) return 'bg-emerald-600/90';
+        return 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]';
     };
 
     const getTooltip = (dayIndex: number, hour: number) => {
@@ -68,10 +73,10 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                 <h3 className="text-lg font-semibold text-white">Activity Heatmap</h3>
                 <div className="flex gap-4 text-xs text-zinc-400">
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-blue-600 rounded-sm"></div> Messages
+                        <div className="w-3 h-3 bg-blue-500 rounded-sm"></div> Messages (Top)
                     </div>
                     <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> Appointments
+                        <div className="w-3 h-3 bg-emerald-500 rounded-sm"></div> Appointments (Bottom)
                     </div>
                 </div>
             </div>
@@ -79,7 +84,7 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
             <div className="min-w-[600px]">
                 {/* Header Hours */}
                 <div className="flex mb-2">
-                    <div className="w-12 shrink-0"></div> {/* Row label spacer */}
+                    <div className="w-12 shrink-0"></div>
                     <div className="flex-1 grid grid-cols-24 gap-1">
                         {HOURS.map((h) => (
                             <div key={h} className="text-[10px] text-zinc-500 text-center">
@@ -92,7 +97,7 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                 {/* Rows */}
                 <div className="space-y-1">
                     {DAYS.map((day, dayIndex) => (
-                        <div key={day} className="flex items-center h-8">
+                        <div key={day} className="flex items-center h-10"> {/* Increased row height for split view */}
                             <div className="w-12 shrink-0 text-xs text-zinc-400 font-medium">
                                 {day}
                             </div>
@@ -104,9 +109,15 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                                     return (
                                         <div
                                             key={hour}
-                                            className={`h-full rounded-sm transition-all duration-300 hover:scale-125 cursor-help ${getIntensityClass(hourData.messages, hourData.appointments)}`}
+                                            className="h-full flex flex-col gap-[1px] rounded-sm overflow-hidden hover:scale-110 transition-transform duration-200 cursor-help ring-1 ring-zinc-800/50"
                                             title={getTooltip(dayIndex, hour)}
-                                        />
+                                        >
+                                            {/* Messages (Top Half) */}
+                                            <div className={`flex-1 w-full ${getMessageColor(hourData.messages)}`} />
+
+                                            {/* Appointments (Bottom Half) */}
+                                            <div className={`flex-1 w-full ${getAppointmentColor(hourData.appointments)}`} />
+                                        </div>
                                     );
                                 })}
                             </div>
