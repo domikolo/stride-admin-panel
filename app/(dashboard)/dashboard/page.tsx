@@ -21,12 +21,12 @@ import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
 import AIChatAssistant from '@/components/dashboard/AIChatAssistant';
 import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
-import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight } from 'lucide-react';
+import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight, Calendar as CalendarIcon, Lightbulb } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -146,14 +146,14 @@ export default function DashboardPage() {
           value={stats?.conversations_count || 0}
           icon={MessageSquare}
           iconColor="text-blue-400"
-          description="Liczba wszystkich rozmów w ostatnich 30 dniach"
+          description="Liczba rozmów w ostatnich 30 dniach"
         />
         <StatsCard
           title="Całkowity Koszt"
           value={`$${stats?.total_cost_usd.toFixed(2) || '0.00'}`}
           icon={DollarSign}
           iconColor="text-amber-400"
-          description="Suma kosztów AI w wybranym okresie"
+          description="Koszt AI w ostatnich 30 dniach"
         />
         <Link href="/insights?tab=gaps">
           <StatsCard
@@ -184,17 +184,17 @@ export default function DashboardPage() {
         {/* Recent Activity */}
         <RecentActivityFeed activities={activities} loading={loading} />
 
-        {/* Activity Chart */}
+        {/* Activity Chart - BarChart without animation (fixes auto-scroll) */}
         <Card className="glass-card p-4 lg:col-span-1">
           <h3 className="text-lg font-semibold text-white mb-4">Aktywność (7 dni)</h3>
           <ResponsiveContainer width="100%" height={200}>
-            <LineChart data={dailyStats}>
+            <BarChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis
                 dataKey="date"
                 stroke="#71717a"
                 tick={{ fill: '#71717a', fontSize: 10 }}
-                tickFormatter={(value) => {
+                tickFormatter={(value: string) => {
                   const date = new Date(value);
                   return `${date.getDate()}/${date.getMonth() + 1}`;
                 }}
@@ -208,15 +208,14 @@ export default function DashboardPage() {
                   color: '#fff',
                 }}
               />
-              <Line
-                type="monotone"
+              <Bar
                 dataKey="conversations"
-                stroke="#3b82f6"
-                strokeWidth={2}
-                dot={false}
+                fill="#3b82f6"
+                radius={[4, 4, 0, 0]}
                 name="Rozmowy"
+                isAnimationActive={false}
               />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </Card>
 
@@ -230,7 +229,7 @@ export default function DashboardPage() {
                 className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">📋</span>
+                  <MessageSquare size={20} className="text-blue-400" />
                   Zobacz rozmowy
                 </span>
                 <ArrowRight size={20} />
@@ -242,7 +241,7 @@ export default function DashboardPage() {
                 className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">🔥</span>
+                  <Flame size={20} className="text-orange-400" />
                   Trending Topics
                 </span>
                 <ArrowRight size={20} />
@@ -254,7 +253,7 @@ export default function DashboardPage() {
                 className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
               >
                 <span className="flex items-center gap-3">
-                  <span className="text-xl">📅</span>
+                  <CalendarIcon size={20} className="text-purple-400" />
                   Spotkania
                 </span>
                 <ArrowRight size={20} />

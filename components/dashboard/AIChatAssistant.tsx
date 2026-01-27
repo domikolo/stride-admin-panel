@@ -8,7 +8,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Bot, Send, Sparkles } from 'lucide-react';
+import { Send, Sparkles } from 'lucide-react';
 
 interface ChatMessage {
     role: 'user' | 'assistant';
@@ -100,22 +100,18 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
             {/* Header */}
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center">
-                    <Bot size={18} className="text-blue-400" />
+                    <Sparkles size={18} className="text-blue-400" />
                 </div>
                 <div>
                     <h3 className="text-sm font-semibold text-white">AI Chat Assistant</h3>
                     <p className="text-xs text-zinc-500">Zapytaj o dane</p>
                 </div>
-                <span className="ml-auto text-xs bg-amber-500/20 text-amber-400 px-2 py-0.5 rounded-full">
-                    Beta
-                </span>
             </div>
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto space-y-3 mb-4">
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                        <Sparkles size={32} className="text-zinc-600 mb-3" />
                         <p className="text-zinc-500 text-sm mb-4">
                             Zapytaj mnie o cokolwiek związanego z Twoimi danymi
                         </p>
@@ -139,8 +135,8 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
                         >
                             <div
                                 className={`max-w-[80%] px-3 py-2 rounded-lg text-sm ${msg.role === 'user'
-                                        ? 'bg-blue-500/20 text-blue-100'
-                                        : 'bg-white/5 text-zinc-300'
+                                    ? 'bg-blue-500/20 text-blue-100'
+                                    : 'bg-white/5 text-zinc-300'
                                     }`}
                             >
                                 {msg.content}

@@ -88,11 +88,6 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            <div className="mt-4 text-xs text-zinc-500 text-center">
-                Shows how many messages are exchanged in typical sessions.
-                <br />
-                <span className="text-zinc-400">Trend:</span> More messages usually indicates deeper engagement or complex queries.
-            </div>
         </Card>
     );
 }

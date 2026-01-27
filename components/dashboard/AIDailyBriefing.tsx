@@ -112,16 +112,16 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
             <div className="flex flex-wrap gap-4 mt-4 pt-4 border-t border-white/10">
                 <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-white">{briefing.stats.conversations}</span>
-                    <span className="text-xs text-zinc-400">rozmów</span>
+                    <span className="text-xs text-zinc-400">rozmów (24h)</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-2xl font-bold text-white">${briefing.stats.total_cost_usd.toFixed(2)}</span>
-                    <span className="text-xs text-zinc-400">koszt</span>
+                    <span className="text-xs text-zinc-400">koszt (24h)</span>
                 </div>
                 {briefing.stats.gaps_count > 0 && (
                     <div className="flex items-center gap-2">
                         <span className="text-2xl font-bold text-amber-400">{briefing.stats.gaps_count}</span>
-                        <span className="text-xs text-zinc-400">luki KB</span>
+                        <span className="text-xs text-zinc-400">luki KB (aktualnie)</span>
                     </div>
                 )}
                 {briefing.stats.top_question && (

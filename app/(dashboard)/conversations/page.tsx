@@ -378,10 +378,17 @@ export default function ConversationsPage() {
                       {/* Parent Group Row */}
                       <TableRow
                         className={`
-                          transition-colors border-b border-white/5 relative
-                          ${isSingleSession ? 'cursor-default' : 'cursor-pointer hover:bg-white/5'}
+                          transition-colors border-b border-white/5 relative cursor-pointer hover:bg-white/5
                         `}
-                        onClick={() => !isSingleSession && toggleSession(group.sessionId)}
+                        onClick={() => {
+                          if (isSingleSession) {
+                            // Navigate directly to the conversation
+                            const conv = group.conversations[0];
+                            router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number || 1}`);
+                          } else {
+                            toggleSession(group.sessionId);
+                          }
+                        }}
                       >
                         <TableCell className="font-mono text-sm py-4">
                           <div className="flex items-center gap-3">
@@ -401,7 +408,7 @@ export default function ConversationsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-zinc-600 font-mono text-xs text-center">
-                          —
+                          {isSingleSession ? `#${group.conversations[0]?.conversation_number || 1}` : '—'}
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusDisplay.variant} className={`gap-1 ${statusDisplay.className}`}>
@@ -424,7 +431,7 @@ export default function ConversationsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="italic text-zinc-500 text-sm">
-                          {!isSingleSession ? "Kliknij, aby zobaczyć szczegóły..." : group.conversations[0]?.preview}
+                          {!isSingleSession ? "Kliknij, aby rozwinąć..." : (group.conversations[0]?.preview || "Kliknij, aby zobaczyć...")}
                         </TableCell>
                       </TableRow>
 

@@ -162,88 +162,6 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {/* Analytics Section */}
-      {stats && (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <StatsCard
-              title="Spotkania"
-              value={stats.appointments_created}
-              icon={Calendar}
-              iconColor="text-purple-400"
-              description="Łączna liczba umówionych spotkań"
-            />
-            <StatsCard
-              title="CPA"
-              value={`$${stats.cpa_usd?.toFixed(2) || '0.00'}`}
-              icon={DollarSign}
-              iconColor="text-emerald-400"
-              description="Cost Per Appointment"
-            />
-            <StatsCard
-              title="Śr. czas konwersji"
-              value={`${stats.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
-              icon={Clock}
-              iconColor="text-blue-400"
-              description="Średni czas od pierwszej wiadomości do spotkania"
-            />
-            <StatsCard
-              title="Wskaźnik Konwersji"
-              value={`${stats.conversion_rate}%`}
-              icon={TrendingUp}
-              iconColor="text-amber-400"
-              description="Rozmowy → Spotkania"
-            />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Conversion Funnel */}
-            <Card className="glass-card p-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={[
-                    { name: 'Rozmowy', value: stats.conversations_count },
-                    { name: 'Spotkania', value: stats.appointments_created },
-                    { name: 'Zweryfikowane', value: stats.appointments_verified },
-                  ]}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-                  <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
-                  <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#18181b',
-                      border: '1px solid #27272a',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Activity Heatmap */}
-            {stats.activity_heatmap && (
-              <ActivityHeatmap data={stats.activity_heatmap} />
-            )}
-          </div>
-
-          {/* Second Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {stats.drop_off_by_length && Object.keys(stats.drop_off_by_length).length > 0 && (
-              <DropOffChart data={stats.drop_off_by_length} />
-            )}
-            {stats.conversation_length_histogram && Object.keys(stats.conversation_length_histogram).length > 0 && (
-              <ConversationLengthChart data={stats.conversation_length_histogram} />
-            )}
-          </div>
-        </>
-      )}
-
       {/* Status Filters */}
       <div className="flex gap-2">
         {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
@@ -440,6 +358,88 @@ export default function AppointmentsPage() {
             })}
           </div>
         </Card>
+      )}
+
+      {/* Analytics Section - Now below appointments table/calendar */}
+      {stats && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
+            <StatsCard
+              title="Spotkania"
+              value={stats.appointments_created}
+              icon={Calendar}
+              iconColor="text-purple-400"
+              description="Spotkania umówione w ostatnich 30 dniach"
+            />
+            <StatsCard
+              title="CPA"
+              value={`$${stats.cpa_usd?.toFixed(2) || '0.00'}`}
+              icon={DollarSign}
+              iconColor="text-emerald-400"
+              description="Koszt za spotkanie (ostatnie 30 dni)"
+            />
+            <StatsCard
+              title="Śr. czas konwersji"
+              value={`${stats.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
+              icon={Clock}
+              iconColor="text-blue-400"
+              description="Od pierwszej wiadomości do spotkania"
+            />
+            <StatsCard
+              title="Wskaźnik Konwersji"
+              value={`${stats.conversion_rate}%`}
+              icon={TrendingUp}
+              iconColor="text-amber-400"
+              description="% rozmów zakończonych spotkaniem"
+            />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Conversion Funnel */}
+            <Card className="glass-card p-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={[
+                    { name: 'Rozmowy', value: stats.conversations_count },
+                    { name: 'Spotkania', value: stats.appointments_created },
+                    { name: 'Zweryfikowane', value: stats.appointments_verified },
+                  ]}
+                  layout="vertical"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
+                  <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#18181b',
+                      border: '1px solid #27272a',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Activity Heatmap */}
+            {stats.activity_heatmap && (
+              <ActivityHeatmap data={stats.activity_heatmap} />
+            )}
+          </div>
+
+          {/* Second Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {stats.drop_off_by_length && Object.keys(stats.drop_off_by_length).length > 0 && (
+              <DropOffChart data={stats.drop_off_by_length} />
+            )}
+            {stats.conversation_length_histogram && Object.keys(stats.conversation_length_histogram).length > 0 && (
+              <ConversationLengthChart data={stats.conversation_length_histogram} />
+            )}
+          </div>
+        </>
       )}
     </div>
   );

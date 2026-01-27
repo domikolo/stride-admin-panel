@@ -127,10 +127,6 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                     </ComposedChart>
                 </ResponsiveContainer>
             </div>
-            <div className="mt-4 text-xs text-zinc-500 text-center">
-                High drop-off rate on short conversations (1-2) is normal (bounces).
-                <br />High drop-off on long conversations (21+) suggests unresolved issues.
-            </div>
         </Card>
     );
 }
