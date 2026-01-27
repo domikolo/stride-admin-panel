@@ -1,5 +1,6 @@
 /**
- * Appointments Page - Improved with calendar view toggle, filters, actions
+ * Appointments Page - With Analytics Section
+ * Contains appointment management + analytics moved from dashboard
  */
 
 'use client';
@@ -7,16 +8,21 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getClientAppointments } from '@/lib/api';
-import { Appointment } from '@/lib/types';
+import { getClientAppointments, getClientStats } from '@/lib/api';
+import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
+import StatsCard from '@/components/dashboard/StatsCard';
+import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
+import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
+import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, Clock, User, Phone, Mail, ExternalLink } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
 type StatusFilter = 'all' | 'verified' | 'pending' | 'cancelled';
@@ -25,27 +31,35 @@ export default function AppointmentsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [stats, setStats] = useState<ClientStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewType>('table');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
+  const getClientId = () =>
+    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+
   useEffect(() => {
     if (user) {
-      loadAppointments();
+      loadData();
     }
   }, [user]);
 
-  const loadAppointments = async () => {
+  const loadData = async () => {
     try {
-      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-      const data = await getClientAppointments(clientId);
-      setAppointments(data.appointments);
+      const clientId = getClientId();
+      const [appointmentsData, statsData] = await Promise.all([
+        getClientAppointments(clientId),
+        getClientStats(clientId, 'MONTHLY'),
+      ]);
+      setAppointments(appointmentsData.appointments);
+      setStats(statsData);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load appointments:', error);
-      setError('Failed to load appointments. Please try again.');
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError('Failed to load data. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -146,6 +160,88 @@ export default function AppointmentsPage() {
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           {error}
         </div>
+      )}
+
+      {/* Analytics Section */}
+      {stats && (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <StatsCard
+              title="Spotkania"
+              value={stats.appointments_created}
+              icon={Calendar}
+              iconColor="text-purple-400"
+              description="Łączna liczba umówionych spotkań"
+            />
+            <StatsCard
+              title="CPA"
+              value={`$${stats.cpa_usd?.toFixed(2) || '0.00'}`}
+              icon={DollarSign}
+              iconColor="text-emerald-400"
+              description="Cost Per Appointment"
+            />
+            <StatsCard
+              title="Śr. czas konwersji"
+              value={`${stats.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
+              icon={Clock}
+              iconColor="text-blue-400"
+              description="Średni czas od pierwszej wiadomości do spotkania"
+            />
+            <StatsCard
+              title="Wskaźnik Konwersji"
+              value={`${stats.conversion_rate}%`}
+              icon={TrendingUp}
+              iconColor="text-amber-400"
+              description="Rozmowy → Spotkania"
+            />
+          </div>
+
+          {/* Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Conversion Funnel */}
+            <Card className="glass-card p-4">
+              <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart
+                  data={[
+                    { name: 'Rozmowy', value: stats.conversations_count },
+                    { name: 'Spotkania', value: stats.appointments_created },
+                    { name: 'Zweryfikowane', value: stats.appointments_verified },
+                  ]}
+                  layout="vertical"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
+                  <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#18181b',
+                      border: '1px solid #27272a',
+                      borderRadius: '8px',
+                    }}
+                  />
+                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Card>
+
+            {/* Activity Heatmap */}
+            {stats.activity_heatmap && (
+              <ActivityHeatmap data={stats.activity_heatmap} />
+            )}
+          </div>
+
+          {/* Second Charts Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {stats.drop_off_by_length && Object.keys(stats.drop_off_by_length).length > 0 && (
+              <DropOffChart data={stats.drop_off_by_length} />
+            )}
+            {stats.conversation_length_histogram && Object.keys(stats.conversation_length_histogram).length > 0 && (
+              <ConversationLengthChart data={stats.conversation_length_histogram} />
+            )}
+          </div>
+        </>
       )}
 
       {/* Status Filters */}
@@ -315,8 +411,8 @@ export default function AppointmentsPage() {
                 <div
                   key={day.toISOString()}
                   className={`h-24 p-2 rounded-lg border transition-colors ${isCurrentMonth
-                      ? 'border-white/5 bg-white/[0.02] hover:bg-white/5'
-                      : 'border-transparent opacity-40'
+                    ? 'border-white/5 bg-white/[0.02] hover:bg-white/5'
+                    : 'border-transparent opacity-40'
                     } ${isToday ? 'ring-1 ring-white/20' : ''}`}
                 >
                   <div className={`text-sm mb-1 ${isToday ? 'text-white font-bold' : 'text-zinc-400'}`}>

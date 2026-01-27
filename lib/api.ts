@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -143,3 +143,20 @@ export const getGaps = (clientId: string) =>
     count: number;
     message: string;
   }>(`/clients/${clientId}/trending-topics/gaps`);
+
+/**
+ * Get recent activity (conversations + appointments)
+ */
+export const getRecentActivity = (clientId: string, limit = 10) =>
+  api.get<{
+    activities: Activity[];
+    count: number;
+  }>(`/clients/${clientId}/recent-activity?limit=${limit}`);
+
+/**
+ * Get daily briefing (AI summary)
+ */
+export const getDailyBriefing = (clientId: string, refresh = false) =>
+  api.get<DailyBriefing>(
+    `/clients/${clientId}/daily-briefing${refresh ? '?refresh=true' : ''}`
+  );

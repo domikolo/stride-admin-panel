@@ -105,3 +105,28 @@ export interface Gap {
   gap_reason: string;
   suggestion: string;
 }
+
+// Dashboard Hub Types
+export interface Activity {
+  type: 'conversation' | 'appointment';
+  id: string;
+  preview?: string;
+  contact_name?: string;
+  timestamp: string;
+  message_count?: number;
+  status?: string;
+}
+
+export interface DailyBriefing {
+  briefing: string;
+  generated_at: string;
+  stats: {
+    conversations: number;
+    conversations_change_percent: number;
+    messages: number;
+    appointments: number;
+    total_cost_usd: number;
+    gaps_count: number;
+    top_question: string | null;
+  };
+}

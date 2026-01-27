@@ -1,77 +1,106 @@
 /**
- * Main Dashboard Page - Improved with sparklines, better layout
+ * Dashboard Page - AI Hub
+ * Central dashboard with AI briefing, chat assistant, and quick insights
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { getClientStats, getClientDailyStats } from '@/lib/api';
-import { ClientStats, DailyStat } from '@/lib/types';
+import {
+  getClientStats,
+  getClientDailyStats,
+  getTrendingTopics,
+  getGaps,
+  getRecentActivity,
+  getDailyBriefing
+} from '@/lib/api';
+import { ClientStats, DailyStat, Topic, Activity, DailyBriefing } from '@/lib/types';
 import StatsCard from '@/components/dashboard/StatsCard';
-import { MessageSquare, Calendar, TrendingUp, DollarSign, ArrowRight } from 'lucide-react';
+import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
+import AIChatAssistant from '@/components/dashboard/AIChatAssistant';
+import InsightsPreview from '@/components/dashboard/InsightsPreview';
+import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
+import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
-import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
-import DropOffChart from '@/components/dashboard/charts/DropOffChart';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+
+  // State
   const [stats, setStats] = useState<ClientStats | null>(null);
   const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
+  const [topics, setTopics] = useState<Topic[]>([]);
+  const [gapsCount, setGapsCount] = useState(0);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
+
   const [loading, setLoading] = useState(true);
+  const [briefingRefreshing, setBriefingRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const getClientId = () =>
+    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
   useEffect(() => {
     if (user) {
-      loadStats();
-      loadDailyStats();
+      loadAllData();
     }
   }, [user]);
 
-  const loadStats = async () => {
+  const loadAllData = async () => {
     try {
-      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-      const data = await getClientStats(clientId, 'MONTHLY');
-      setStats(data);
+      setLoading(true);
+      const clientId = getClientId();
+
+      // Parallel data fetching
+      const [statsData, dailyData, topicsData, gapsData, activityData, briefingData] = await Promise.all([
+        getClientStats(clientId, 'MONTHLY').catch(() => null),
+        getClientDailyStats(clientId, 7).catch(() => ({ daily_stats: [] })),
+        getTrendingTopics(clientId, 'daily').catch(() => ({ topics: [] })),
+        getGaps(clientId).catch(() => ({ gaps: [] })),
+        getRecentActivity(clientId, 10).catch(() => ({ activities: [] })),
+        getDailyBriefing(clientId).catch(() => null),
+      ]);
+
+      setStats(statsData);
+      setDailyStats(dailyData.daily_stats);
+      setTopics(topicsData.topics);
+      setGapsCount(gapsData.gaps?.length || 0);
+      setActivities(activityData.activities);
+      setBriefing(briefingData);
       setError(null);
-    } catch (error) {
-      console.error('Failed to load stats:', error);
-      setError('Failed to load stats. Please try again.');
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+      setError('Nie udało się załadować danych.');
     } finally {
       setLoading(false);
     }
   };
 
-  const loadDailyStats = async () => {
+  const handleRefreshBriefing = async () => {
     try {
-      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-      const data = await getClientDailyStats(clientId, 30);
-      setDailyStats(data.daily_stats);
-    } catch (error) {
-      console.error('Failed to load daily stats:', error);
+      setBriefingRefreshing(true);
+      const clientId = getClientId();
+      const data = await getDailyBriefing(clientId, true);
+      setBriefing(data);
+    } catch (err) {
+      console.error('Failed to refresh briefing:', err);
+    } finally {
+      setBriefingRefreshing(false);
     }
   };
 
-  // Generate sparkline data from daily stats
-  const conversationSparkline = dailyStats.slice(-7).map(d => d.conversations);
-  const appointmentSparkline = dailyStats.slice(-7).map(d => d.appointments);
-
   if (loading) {
     return (
-      <div className="space-y-8">
-        <div>
-          <Skeleton className="h-10 w-48 mb-2" />
-          <Skeleton className="h-5 w-32" />
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-36" />
-          ))}
+      <div className="space-y-6">
+        <Skeleton className="h-32" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-80" />
@@ -82,7 +111,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -90,8 +119,8 @@ export default function DashboardPage() {
             Dashboard
           </h1>
           <p className="text-zinc-400 mt-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            Last 30 days overview
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            AI Hub - centralny panel zarządzania
           </p>
         </div>
       </div>
@@ -102,105 +131,75 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* AI Daily Briefing - Hero */}
+      <AIDailyBriefing
+        briefing={briefing}
+        loading={loading}
+        onRefresh={handleRefreshBriefing}
+        refreshing={briefingRefreshing}
+      />
+
+      {/* Quick Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Rozmowy"
           value={stats?.conversations_count || 0}
           icon={MessageSquare}
-          trend="up"
-          change={12}
-          sparklineData={conversationSparkline}
           iconColor="text-blue-400"
-          description="Liczba wszystkich rozpoczętych konwersacji z botem w wybranym okresie."
-        />
-        <StatsCard
-          title="Spotkania"
-          value={stats?.appointments_created || 0}
-          icon={Calendar}
-          trend="up"
-          change={8}
-          sparklineData={appointmentSparkline}
-          iconColor="text-purple-400"
-          description="Liczba wstępnie umówionych spotkań przez bota (przed weryfikacją)."
-        />
-      </div>
-
-      {/* Advanced Stats Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatsCard
-          title="Cost Per Appointment (CPA)"
-          value={`$${stats?.cpa_usd?.toFixed(2) || '0.00'}`}
-          icon={DollarSign}
-          trend="neutral"
-          iconColor="text-pink-400"
-          description="Średni koszt pozyskania jednego zweryfikowanego spotkania. Obliczany jako całkowity koszt tokenów AI podzielony przez liczbę potwierdzonych spotkań."
-        />
-        <StatsCard
-          title="Śr. czas konwersji"
-          value={`${stats?.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
-          icon={Calendar}
-          trend="down"
-          sparklineData={appointmentSparkline} // Reusing sparkline as proxy for now
-          iconColor="text-indigo-400"
-          description="Średni czas trwania rozmowy od pierwszej wiadomości do momentu umówienia spotkania."
-        />
-        <StatsCard
-          title="Wskaźnik Konwersji"
-          value={`${stats?.conversion_rate.toFixed(1) || 0}%`}
-          icon={TrendingUp}
-          trend="neutral"
-          iconColor="text-emerald-400"
-          description="Procent rozmów, które zakończyły się sukcesem (umówieniem spotkania). Wyższy wynik oznacza lepszą skuteczność skryptu."
+          description="Liczba wszystkich rozmów w ostatnich 30 dniach"
         />
         <StatsCard
           title="Całkowity Koszt"
           value={`$${stats?.total_cost_usd.toFixed(2) || '0.00'}`}
           icon={DollarSign}
-          trend="down"
-          change={-5}
           iconColor="text-amber-400"
-          description="Suma kosztów tokenów (input/output) zużytych przez model AI na wszystkie rozmowy w tym okresie."
+          description="Suma kosztów AI w wybranym okresie"
+        />
+        <Link href="/insights?tab=gaps">
+          <StatsCard
+            title="Luki w KB"
+            value={gapsCount}
+            icon={AlertTriangle}
+            iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
+            description="Kliknij, aby zobaczyć brakujące odpowiedzi"
+          />
+        </Link>
+        <StatsCard
+          title="Top Pytanie"
+          value={topics[0]?.topic_name || '-'}
+          icon={Flame}
+          iconColor="text-orange-400"
+          description="Najczęściej zadawane pytanie"
         />
       </div>
 
-      {/* Quick Actions */}
-      <div className="flex flex-wrap gap-3">
-        <Link href="/conversations">
-          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
-            View all conversations <ArrowRight size={16} />
-          </Button>
-        </Link>
-        <Link href="/appointments">
-          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
-            View all appointments <ArrowRight size={16} />
-          </Button>
-        </Link>
-        <Link href="/insights">
-          <Button variant="ghost" className="text-zinc-400 hover:text-white gap-2">
-            View insights <ArrowRight size={16} />
-          </Button>
-        </Link>
+      {/* Main Content: Chat + Insights */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <AIChatAssistant />
+        <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
       </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Line Chart - Activity Over Time */}
-        <Card className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Activity Over Time</h3>
-          <ResponsiveContainer width="100%" height={300}>
+      {/* Bottom Row: Activity + Chart + Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Recent Activity */}
+        <RecentActivityFeed activities={activities} loading={loading} />
+
+        {/* Activity Chart */}
+        <Card className="glass-card p-4 lg:col-span-1">
+          <h3 className="text-lg font-semibold text-white mb-4">Aktywność (7 dni)</h3>
+          <ResponsiveContainer width="100%" height={200}>
             <LineChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis
                 dataKey="date"
                 stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 12 }}
+                tick={{ fill: '#71717a', fontSize: 10 }}
                 tickFormatter={(value) => {
                   const date = new Date(value);
-                  return `${date.getMonth() + 1}/${date.getDate()}`;
+                  return `${date.getDate()}/${date.getMonth() + 1}`;
                 }}
               />
-              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} />
+              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 10 }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#18181b',
@@ -208,81 +207,43 @@ export default function DashboardPage() {
                   borderRadius: '8px',
                   color: '#fff',
                 }}
-                labelStyle={{ color: '#a1a1aa' }}
               />
-              <Legend wrapperStyle={{ color: '#a1a1aa' }} />
               <Line
                 type="monotone"
                 dataKey="conversations"
                 stroke="#3b82f6"
                 strokeWidth={2}
                 dot={false}
-                name="Conversations"
-              />
-              <Line
-                type="monotone"
-                dataKey="appointments"
-                stroke="#8b5cf6"
-                strokeWidth={2}
-                dot={false}
-                name="Appointments"
+                name="Rozmowy"
               />
             </LineChart>
           </ResponsiveContainer>
         </Card>
 
-        {/* Bar Chart - Conversion Funnel */}
-        <Card className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-4">Conversion Funnel</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={[
-                { name: 'Conversations', value: stats?.conversations_count || 0, fill: '#3b82f6' },
-                { name: 'Appointments', value: stats?.appointments_created || 0, fill: '#8b5cf6' },
-                { name: 'Verified', value: stats?.appointments_verified || 0, fill: '#22c55e' },
-              ]}
-              layout="vertical"
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" horizontal={false} />
-              <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a', fontSize: 12 }} />
-              <YAxis
-                type="category"
-                dataKey="name"
-                stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 12 }}
-                width={100}
-              />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #27272a',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-                labelStyle={{ color: '#a1a1aa' }}
-              />
-              <Bar dataKey="value" radius={[0, 8, 8, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+        {/* Quick Actions */}
+        <Card className="glass-card p-4">
+          <h3 className="text-lg font-semibold text-white mb-4">Szybkie akcje</h3>
+          <div className="space-y-3">
+            <Link href="/conversations" className="block">
+              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
+                📋 Zobacz rozmowy
+                <ArrowRight size={16} />
+              </Button>
+            </Link>
+            <Link href="/insights" className="block">
+              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
+                🔥 Trending Topics
+                <ArrowRight size={16} />
+              </Button>
+            </Link>
+            <Link href="/appointments" className="block">
+              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
+                📅 Spotkania
+                <ArrowRight size={16} />
+              </Button>
+            </Link>
+          </div>
         </Card>
-      </div>
-
-      {/* Deep Insights Charts */}
-      <div className="grid grid-cols-1 xl:grid-cols-6 gap-6">
-        {/* Heatmap takes full width on top */}
-        <div className="xl:col-span-6">
-          <ActivityHeatmap data={stats?.activity_heatmap} loading={loading} />
-        </div>
-
-        {/* Drop-off takes 3/6 */}
-        <div className="xl:col-span-4">
-          <DropOffChart data={stats?.drop_off_by_length} loading={loading} />
-        </div>
-
-        {/* Histogram takes 2/6 */}
-        <div className="xl:col-span-2">
-          <ConversationLengthChart data={stats?.conversation_length_histogram} loading={loading} />
-        </div>
       </div>
     </div>
   );
