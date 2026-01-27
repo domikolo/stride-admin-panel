@@ -67,16 +67,16 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                 </Link>
             </div>
 
-            {/* Hot Lead Alert */}
+            {/* Hot Lead Alert - Von Restorff: distinctive but consistent with theme */}
             {hotLead && (
-                <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
                     <div className="flex items-center gap-2">
-                        <DollarSign size={16} className="text-emerald-400" />
-                        <span className="text-sm text-emerald-300 font-medium">
+                        <DollarSign size={16} className="text-amber-400" />
+                        <span className="text-sm text-amber-300 font-medium">
                             Hot Lead: &quot;{hotLead.topic_name}&quot;
                         </span>
                     </div>
-                    <p className="text-xs text-emerald-400/70 mt-1">
+                    <p className="text-xs text-amber-400/70 mt-1">
                         {hotLead.intent_breakdown.buying.toFixed(0)}% wyraża zamiar zakupu
                     </p>
                 </div>
@@ -84,10 +84,10 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
 
             {/* Smart Insight */}
             {smartInsight && (
-                <div className="mb-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                <div className="mb-4 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
                     <div className="flex items-start gap-2">
-                        <Lightbulb size={16} className="text-amber-400 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-amber-200">{smartInsight}</p>
+                        <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-blue-200">{smartInsight}</p>
                     </div>
                 </div>
             )}

@@ -111,7 +111,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex items-end justify-between">
         <div>
@@ -220,26 +220,44 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </Card>
 
-        {/* Quick Actions */}
-        <Card className="glass-card p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Szybkie akcje</h3>
+        {/* Quick Actions - Fitts's Law: larger touch targets */}
+        <Card className="glass-card p-5">
+          <h3 className="text-lg font-semibold text-white mb-5">Szybkie akcje</h3>
           <div className="space-y-3">
             <Link href="/conversations" className="block">
-              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
-                📋 Zobacz rozmowy
-                <ArrowRight size={16} />
+              <Button
+                variant="ghost"
+                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="text-xl">📋</span>
+                  Zobacz rozmowy
+                </span>
+                <ArrowRight size={20} />
               </Button>
             </Link>
             <Link href="/insights" className="block">
-              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
-                🔥 Trending Topics
-                <ArrowRight size={16} />
+              <Button
+                variant="ghost"
+                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="text-xl">🔥</span>
+                  Trending Topics
+                </span>
+                <ArrowRight size={20} />
               </Button>
             </Link>
             <Link href="/appointments" className="block">
-              <Button variant="ghost" className="w-full justify-between text-zinc-400 hover:text-white">
-                📅 Spotkania
-                <ArrowRight size={16} />
+              <Button
+                variant="ghost"
+                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
+              >
+                <span className="flex items-center gap-3">
+                  <span className="text-xl">📅</span>
+                  Spotkania
+                </span>
+                <ArrowRight size={20} />
               </Button>
             </Link>
           </div>

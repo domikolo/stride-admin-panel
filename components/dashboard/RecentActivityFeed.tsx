@@ -40,14 +40,21 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
 
     if (loading) {
         return (
-            <Card className="glass-card p-4">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <Card className="glass-card p-5">
+                <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
                     <Clock size={18} className="text-zinc-400" />
                     Ostatnia aktywność
                 </h3>
                 <div className="space-y-3">
                     {[1, 2, 3, 4, 5].map((i) => (
-                        <Skeleton key={i} className="h-14" />
+                        <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-white/[0.02]">
+                            <Skeleton className="w-10 h-10 rounded-lg" />
+                            <div className="flex-1 space-y-2">
+                                <Skeleton className="h-4 w-24" />
+                                <Skeleton className="h-3 w-32" />
+                            </div>
+                            <Skeleton className="h-3 w-16" />
+                        </div>
                     ))}
                 </div>
             </Card>
@@ -83,8 +90,8 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                     >
                         {/* Icon */}
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'conversation'
-                                ? 'bg-blue-500/20 text-blue-400'
-                                : 'bg-purple-500/20 text-purple-400'
+                            ? 'bg-blue-500/20 text-blue-400'
+                            : 'bg-purple-500/20 text-purple-400'
                             }`}>
                             {activity.type === 'conversation' ? (
                                 <MessageSquare size={16} />
@@ -112,7 +119,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                                     activity.preview || `${activity.message_count || 0} wiadomości`
                                 ) : (
                                     <span className={`inline-flex items-center gap-1 ${activity.status === 'verified' ? 'text-emerald-400' :
-                                            activity.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'
+                                        activity.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'
                                         }`}>
                                         {activity.status === 'verified' ? '✓ Zweryfikowane' :
                                             activity.status === 'pending' ? '⏳ Oczekuje' : activity.status}
