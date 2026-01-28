@@ -37,7 +37,9 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
     };
 
     useEffect(() => {
-        scrollToBottom();
+        if (messages.length > 0) {
+            scrollToBottom();
+        }
     }, [messages]);
 
     const handleSend = async () => {
