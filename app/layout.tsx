@@ -12,6 +12,9 @@ export const metadata: Metadata = {
   description: "Admin panel for Stride Services SaaS platform",
 };
 
+// Force dynamic rendering to prevent Cognito initialization during build
+export const dynamic = 'force-dynamic';
+
 export default function RootLayout({
   children,
 }: Readonly<{

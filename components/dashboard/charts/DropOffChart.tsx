@@ -109,11 +109,11 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                                 borderRadius: '8px',
                                 color: '#fff',
                             }}
-                            formatter={(value: number, name: string, props: any) => [
+                            formatter={(value: any, name: any, props: any) => [
                                 `${value}% (${props.payload.sessions} sesji)`,
                                 'Odrzucenia'
                             ]}
-                            labelFormatter={(label) => `Długość: ${label}`}
+                            labelFormatter={(label: any) => `Długość: ${label}`}
                         />
                         <Bar
                             dataKey="dropRate"
@@ -128,7 +128,7 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                                 position="right"
                                 fill="#a1a1aa"
                                 fontSize={11}
-                                formatter={(value: number) => `${value}%`}
+                                formatter={(value: any) => `${value}%`}
                             />
                         </Bar>
                     </BarChart>
