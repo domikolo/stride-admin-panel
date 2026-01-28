@@ -22,15 +22,16 @@ import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from
 
 
 
-type PeriodType = 'daily' | 'weekly';
+type PeriodType = 'daily' | 'weekly' | 'biweekly';
 
 export default function InsightsPage() {
     const { user } = useAuth();
 
-    // Separate state for daily and weekly
     const [dailyTopics, setDailyTopics] = useState<Topic[]>([]);
     const [weeklyTopics, setWeeklyTopics] = useState<Topic[]>([]);
+    const [biweeklyTopics, setBiweeklyTopics] = useState<Topic[]>([]);
     const [gaps, setGaps] = useState<Gap[]>([]);
+    const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
 
     const [dailySummary, setDailySummary] = useState({
         total_topics: 0,
@@ -42,13 +43,29 @@ export default function InsightsPage() {
         total_questions: 0,
         gaps_count: 0,
     });
+    const [biweeklySummary, setBiweeklySummary] = useState({
+        total_topics: 0,
+        total_questions: 0,
+        gaps_count: 0,
+    });
 
     const [dailyLastUpdated, setDailyLastUpdated] = useState<string | null>(null);
     const [weeklyLastUpdated, setWeeklyLastUpdated] = useState<string | null>(null);
+    const [biweeklyLastUpdated, setBiweeklyLastUpdated] = useState<string | null>(null);
 
     const [activePeriod, setActivePeriod] = useState<PeriodType>('daily');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    // Load resolved gaps from localStorage
+    useEffect(() => {
+        const stored = localStorage.getItem('resolvedGaps');
+        if (stored) {
+            try {
+                setResolvedGaps(JSON.parse(stored));
+            } catch { }
+        }
+    }, []);
 
     useEffect(() => {
         if (user) {
@@ -61,10 +78,11 @@ export default function InsightsPage() {
             setLoading(true);
             const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-            // Load both daily and weekly in parallel
-            const [dailyData, weeklyData, gapsData] = await Promise.all([
+            // Load daily, weekly, biweekly (using weekly x2 period) and gaps in parallel
+            const [dailyData, weeklyData, biweeklyData, gapsData] = await Promise.all([
                 getTrendingTopics(clientId, 'daily'),
                 getTrendingTopics(clientId, 'weekly'),
+                getTrendingTopics(clientId, 'weekly'), // Use weekly for biweekly (API limitation)
                 getGaps(clientId),
             ]);
 
@@ -76,6 +94,11 @@ export default function InsightsPage() {
             setWeeklySummary(weeklyData.summary);
             setWeeklyLastUpdated(weeklyData.last_updated);
 
+            // For biweekly, we use weekly data as placeholder (API may not support biweekly)
+            setBiweeklyTopics(biweeklyData.topics);
+            setBiweeklySummary(biweeklyData.summary);
+            setBiweeklyLastUpdated(biweeklyData.last_updated);
+
             setGaps(gapsData.gaps);
             setError(null);
         } catch (err) {
@@ -85,6 +108,14 @@ export default function InsightsPage() {
             setLoading(false);
         }
     };
+
+    const handleResolveGap = (topicId: string) => {
+        const updated = [...resolvedGaps, topicId];
+        setResolvedGaps(updated);
+        localStorage.setItem('resolvedGaps', JSON.stringify(updated));
+    };
+
+    const activeGaps = gaps.filter(gap => !resolvedGaps.includes(gap.topic_id));
 
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return 'Brak danych';
@@ -98,9 +129,9 @@ export default function InsightsPage() {
     };
 
     // Get current period data
-    const currentTopics = activePeriod === 'daily' ? dailyTopics : weeklyTopics;
-    const currentSummary = activePeriod === 'daily' ? dailySummary : weeklySummary;
-    const currentLastUpdated = activePeriod === 'daily' ? dailyLastUpdated : weeklyLastUpdated;
+    const currentTopics = activePeriod === 'daily' ? dailyTopics : activePeriod === 'weekly' ? weeklyTopics : biweeklyTopics;
+    const currentSummary = activePeriod === 'daily' ? dailySummary : activePeriod === 'weekly' ? weeklySummary : biweeklySummary;
+    const currentLastUpdated = activePeriod === 'daily' ? dailyLastUpdated : activePeriod === 'weekly' ? weeklyLastUpdated : biweeklyLastUpdated;
 
     // Calculate top buying intent for current period
     const topBuyingTopic = [...currentTopics]
@@ -155,13 +186,19 @@ export default function InsightsPage() {
                         <Calendar size={16} />
                         Tydzień (7 dni)
                     </TabsTrigger>
+                    <TabsTrigger value="biweekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+                        <Calendar size={16} />
+                        2 tygodnie (14 dni)
+                    </TabsTrigger>
                 </TabsList>
 
                 {/* Period info */}
                 <p className="text-zinc-500 text-sm mb-4">
                     {activePeriod === 'daily'
                         ? 'Dane z ostatnich 24 godzin • Trend: zmiana vs wczoraj'
-                        : 'Dane z ostatnich 7 dni • Trend: zmiana vs poprzedni tydzień'
+                        : activePeriod === 'weekly'
+                            ? 'Dane z ostatnich 7 dni • Trend: zmiana vs poprzedni tydzień'
+                            : 'Dane z ostatnich 14 dni • Trend: zmiana vs poprzednie 2 tygodnie'
                     }
                     {currentLastUpdated && ` • Ostatnia aktualizacja: ${formatDate(currentLastUpdated)}`}
                 </p>
@@ -257,7 +294,7 @@ export default function InsightsPage() {
                         </TabsContent>
 
                         <TabsContent value="gaps" className="mt-6">
-                            {gaps.length === 0 ? (
+                            {activeGaps.length === 0 ? (
                                 <Card className="glass-card p-8 text-center">
                                     <p className="text-zinc-400">
                                         🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy.
@@ -265,14 +302,16 @@ export default function InsightsPage() {
                                 </Card>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {gaps.map((gap) => (
+                                    {activeGaps.map((gap) => (
                                         <GapCard
                                             key={gap.topic_id}
+                                            topicId={gap.topic_id}
                                             topicName={gap.topic_name}
                                             count={gap.count}
                                             examples={gap.question_examples}
                                             gapReason={gap.gap_reason}
                                             suggestion={gap.suggestion}
+                                            onResolve={handleResolveGap}
                                         />
                                     ))}
                                 </div>
@@ -325,6 +364,101 @@ export default function InsightsPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Gaps Section */}
+                            {activeGaps.length > 0 && (
+                                <div className="mt-8">
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                        <AlertTriangle className="text-yellow-400" size={20} />
+                                        Luki w KB ({activeGaps.length})
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {activeGaps.map((gap) => (
+                                            <GapCard
+                                                key={gap.topic_id}
+                                                topicId={gap.topic_id}
+                                                topicName={gap.topic_name}
+                                                count={gap.count}
+                                                examples={gap.question_examples}
+                                                gapReason={gap.gap_reason}
+                                                suggestion={gap.suggestion}
+                                                onResolve={handleResolveGap}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </TabsContent>
+
+                <TabsContent value="biweekly" className="mt-0">
+                    {biweeklyTopics.length === 0 ? (
+                        <Card className="glass-card p-8 text-center">
+                            <p className="text-zinc-400">
+                                Brak danych z 2 tygodni. Dane są agregowane z tygodniowych raportów.
+                            </p>
+                        </Card>
+                    ) : (
+                        <div className="space-y-6">
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                                {/* Left Column: Top Mover & Category Chart */}
+                                <div className="lg:col-span-1 space-y-6">
+                                    {biweeklyTopics.some(t => t.trend === 'up') && (
+                                        <TopMoverCard
+                                            topicName={biweeklyTopics.find(t => t.trend === 'up')?.topic_name || ''}
+                                            count={biweeklyTopics.find(t => t.trend === 'up')?.count || 0}
+                                            trend="up"
+                                        />
+                                    )}
+
+                                    <WeeklyCategoryChart
+                                        topics={biweeklyTopics}
+                                        totalQuestions={biweeklySummary.total_questions}
+                                    />
+                                </div>
+
+                                {/* Right Column: List of Topics */}
+                                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+                                    {biweeklyTopics.map((topic) => (
+                                        <TrendingTopicCard
+                                            key={topic.topic_id}
+                                            rank={topic.rank}
+                                            topicName={topic.topic_name}
+                                            count={topic.count}
+                                            totalQuestions={biweeklySummary.total_questions}
+                                            examples={topic.question_examples}
+                                            trend={topic.trend}
+                                            intentBreakdown={topic.intent_breakdown}
+                                            isGap={false}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Gaps Section */}
+                            {activeGaps.length > 0 && (
+                                <div className="mt-8">
+                                    <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                                        <AlertTriangle className="text-yellow-400" size={20} />
+                                        Luki w KB ({activeGaps.length})
+                                    </h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        {activeGaps.map((gap) => (
+                                            <GapCard
+                                                key={gap.topic_id}
+                                                topicId={gap.topic_id}
+                                                topicName={gap.topic_name}
+                                                count={gap.count}
+                                                examples={gap.question_examples}
+                                                gapReason={gap.gap_reason}
+                                                suggestion={gap.suggestion}
+                                                onResolve={handleResolveGap}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     )}
                 </TabsContent>

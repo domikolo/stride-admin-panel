@@ -3,14 +3,17 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertTriangle, Lightbulb } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { AlertTriangle, Lightbulb, CheckCircle } from 'lucide-react';
 
 interface GapCardProps {
+    topicId: string;
     topicName: string;
     count: number;
     examples: string[];
     gapReason: string;
     suggestion: string;
+    onResolve?: (topicId: string) => void;
 }
 
 // Polish grammar helper for "pytanie"
@@ -21,21 +24,36 @@ function formatQuestionCount(count: number): string {
 }
 
 export default function GapCard({
+    topicId,
     topicName,
     count,
     examples,
     gapReason,
     suggestion,
+    onResolve,
 }: GapCardProps) {
     return (
         <Card className="glass-card border-yellow-500/30">
             <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                    <AlertTriangle className="text-yellow-400" size={20} />
-                    <div>
-                        <CardTitle className="text-lg text-white">{topicName}</CardTitle>
-                        <p className="text-sm text-zinc-400">{formatQuestionCount(count)} bez dobrej odpowiedzi</p>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="text-yellow-400" size={20} />
+                        <div>
+                            <CardTitle className="text-lg text-white">{topicName}</CardTitle>
+                            <p className="text-sm text-zinc-400">{formatQuestionCount(count)} bez dobrej odpowiedzi</p>
+                        </div>
                     </div>
+                    {onResolve && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => onResolve(topicId)}
+                            className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
+                        >
+                            <CheckCircle size={14} />
+                            Rozwiązane
+                        </Button>
+                    )}
                 </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -69,3 +87,4 @@ export default function GapCard({
         </Card>
     );
 }
+
