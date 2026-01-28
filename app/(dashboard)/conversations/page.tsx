@@ -408,7 +408,7 @@ export default function ConversationsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-zinc-600 font-mono text-xs text-center">
-                          {isSingleSession ? `#${group.conversations[0]?.conversation_number || 1}` : '—'}
+                          —
                         </TableCell>
                         <TableCell>
                           <Badge variant={statusDisplay.variant} className={`gap-1 ${statusDisplay.className}`}>

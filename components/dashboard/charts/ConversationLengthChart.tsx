@@ -83,7 +83,7 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
                             fill="#3b82f6"
                             radius={[4, 4, 0, 0]}
                             name="Sessions"
-                            animationDuration={1000}
+                            isAnimationActive={false}
                         />
                     </BarChart>
                 </ResponsiveContainer>

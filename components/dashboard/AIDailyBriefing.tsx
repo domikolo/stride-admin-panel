@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DailyBriefing } from '@/lib/types';
-import { Bot, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { Sparkles, RefreshCw, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -57,7 +57,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
             <Card className="glass-card p-6 border-2 border-white/10">
                 <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center">
-                        <Bot size={24} className="text-blue-400" />
+                        <Sparkles size={24} className="text-blue-400" />
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-white">AI Daily Briefing</h2>
@@ -75,7 +75,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                 <div className="flex items-start gap-4 flex-1">
                     {/* AI Icon */}
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/30 to-purple-500/30 flex items-center justify-center flex-shrink-0">
-                        <Bot size={24} className="text-blue-400" />
+                        <Sparkles size={24} className="text-blue-400" />
                     </div>
 
                     {/* Briefing text */}
