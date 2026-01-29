@@ -132,10 +132,10 @@ export default function ConversationsPage() {
 
   // Helper to determine status
   const getConversationStatusRaw = (conv: Conversation) => {
-    const lastMessageDate = new Date(conv.last_message);
+    const lastMessageDate = new Date(conv.lastMessage);
     const minutesSinceLastMessage = differenceInMinutes(new Date(), lastMessageDate);
 
-    if (conv.preview?.toLowerCase().includes('test') || conv.session_id.toLowerCase().includes('test')) {
+    if (conv.preview?.toLowerCase().includes('test') || conv.sessionId.toLowerCase().includes('test')) {
       return 'test';
     }
     if (minutesSinceLastMessage < 60) {
@@ -162,7 +162,7 @@ export default function ConversationsPage() {
     // 1. Apply date filter
     if (filter !== 'all') {
       filtered = filtered.filter(conv => {
-        const date = new Date(conv.last_message);
+        const date = new Date(conv.lastMessage);
         switch (filter) {
           case 'today': return isToday(date);
           case 'week': return isThisWeek(date);
@@ -176,7 +176,7 @@ export default function ConversationsPage() {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(conv =>
-        conv.session_id.toLowerCase().includes(query) ||
+        conv.sessionId.toLowerCase().includes(query) ||
         conv.preview?.toLowerCase().includes(query)
       );
     }
@@ -184,16 +184,16 @@ export default function ConversationsPage() {
     // 3. Group by Session ID first
     const sessionMap = new Map<string, Conversation[]>();
     filtered.forEach(conv => {
-      const existing = sessionMap.get(conv.session_id) || [];
+      const existing = sessionMap.get(conv.sessionId) || [];
       existing.push(conv);
-      sessionMap.set(conv.session_id, existing);
+      sessionMap.set(conv.sessionId, existing);
     });
 
     // 4. Create Group Objects with metrics for sorting
     const groups = Array.from(sessionMap.entries()).map(([sessionId, convs]) => {
       // Basic metrics for the group
-      const latestMessage = new Date(Math.max(...convs.map(c => new Date(c.last_message).getTime())));
-      const totalMessages = convs.reduce((sum, c) => sum + c.messages_count, 0);
+      const latestMessage = new Date(Math.max(...convs.map(c => new Date(c.lastMessage).getTime())));
+      const totalMessages = convs.reduce((sum, c) => sum + c.messagesCount, 0);
 
       // Determine "primary" status of the group (priority: In Progress > Test > Completed)
       const statuses = convs.map(getConversationStatusRaw);
@@ -201,7 +201,7 @@ export default function ConversationsPage() {
         statuses.includes('test') ? 'test' : 'completed';
 
       // Sort conversations INSIDE group (always by conversation number ascending)
-      const sortedConvs = [...convs].sort((a, b) => (a.conversation_number || 1) - (b.conversation_number || 1));
+      const sortedConvs = [...convs].sort((a, b) => (a.conversationNumber || 1) - (b.conversationNumber || 1));
 
       return {
         sessionId,
@@ -384,7 +384,7 @@ export default function ConversationsPage() {
                           if (isSingleSession) {
                             // Navigate directly to the conversation
                             const conv = group.conversations[0];
-                            router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number || 1}`);
+                            router.push(`/conversations/${conv.sessionId}?conversation_number=${conv.conversationNumber || 1}`);
                           } else {
                             toggleSession(group.sessionId);
                           }
@@ -437,14 +437,14 @@ export default function ConversationsPage() {
 
                       {/* Expanded Child Rows */}
                       {isExpanded && group.conversations.map((conv, idx) => {
-                        const convDate = new Date(conv.last_message);
+                        const convDate = new Date(conv.lastMessage);
                         const isLast = idx === group.conversations.length - 1;
 
                         return (
                           <TableRow
-                            key={`${conv.session_id}-${conv.conversation_number}`}
+                            key={`${conv.sessionId}-${conv.conversationNumber}`}
                             className={`bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer ${isLast ? 'border-b-2 border-white/5' : 'border-b-0'}`}
-                            onClick={() => router.push(`/conversations/${conv.session_id}?conversation_number=${conv.conversation_number}`)}
+                            onClick={() => router.push(`/conversations/${conv.sessionId}?conversation_number=${conv.conversationNumber}`)}
                           >
                             <TableCell className="py-2">
                               <div className="flex items-center pl-10">
@@ -452,11 +452,11 @@ export default function ConversationsPage() {
                               </div>
                             </TableCell>
                             <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold">
-                              #{conv.conversation_number || 1}
+                              #{conv.conversationNumber || 1}
                             </TableCell>
                             <TableCell></TableCell> {/* No status for individual sub-convs in this view to keep it clean, or could add */}
                             <TableCell className="text-sm text-zinc-400 pl-4">
-                              {conv.messages_count}
+                              {conv.messagesCount}
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400">
                               <div className="flex flex-col">

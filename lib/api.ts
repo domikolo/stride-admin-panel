@@ -119,7 +119,7 @@ export const getConversationDetails = (
   conversationNumber?: number
 ) => {
   const query = conversationNumber ? `?conversation_number=${conversationNumber}` : '';
-  return api.get<{ session_id: string; messages: ConversationMessage[]; count: number; conversation_number?: number }>(
+  return api.get<{ sessionId: string; messages: ConversationMessage[]; count: number; conversationNumber?: number }>(
     `/clients/${clientId}/conversations/${sessionId}${query}`
   );
 };
@@ -128,7 +128,7 @@ export const getConversationDetails = (
  * Get daily stats for charts
  */
 export const getClientDailyStats = (clientId: string, days = 30) =>
-  api.get<{ client_id: string; daily_stats: DailyStat[]; count: number }>(
+  api.get<{ clientId: string; dailyStats: DailyStat[]; count: number }>(
     `/clients/${clientId}/stats/daily?days=${days}`
   );
 

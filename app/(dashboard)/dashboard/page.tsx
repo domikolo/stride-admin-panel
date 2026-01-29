@@ -60,15 +60,15 @@ export default function DashboardPage() {
       // Parallel data fetching
       const [statsData, dailyData, topicsData, gapsData, activityData, briefingData] = await Promise.all([
         getClientStats(clientId, 'MONTHLY').catch(() => null),
-        getClientDailyStats(clientId, 7).catch(() => ({ daily_stats: [] })),
-        getTrendingTopics(clientId, 'daily').catch(() => ({ topics: [] })),
+        getClientDailyStats(clientId, 7).catch(() => ({ dailyStats: [] })),
+        getTrendingTopics(clientId, 'yesterday').catch(() => ({ topics: [] })),
         getGaps(clientId).catch(() => ({ gaps: [] })),
         getRecentActivity(clientId, 10).catch(() => ({ activities: [] })),
         getDailyBriefing(clientId).catch(() => null),
       ]);
 
       setStats(statsData);
-      setDailyStats(dailyData.daily_stats);
+      setDailyStats(dailyData.dailyStats);
       setTopics(topicsData.topics);
       setGapsCount(gapsData.gaps?.length || 0);
       setActivities(activityData.activities);
@@ -143,14 +143,14 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatsCard
           title="Rozmowy"
-          value={stats?.conversations_count || 0}
+          value={stats?.conversationsCount || 0}
           icon={MessageSquare}
           iconColor="text-blue-400"
           description="Liczba rozmów w ostatnich 30 dniach"
         />
         <StatsCard
           title="Całkowity Koszt"
-          value={`$${stats?.total_cost_usd.toFixed(2) || '0.00'}`}
+          value={`$${stats?.totalCostUsd.toFixed(2) || '0.00'}`}
           icon={DollarSign}
           iconColor="text-amber-400"
           description="Koszt AI w ostatnich 30 dniach"
@@ -166,7 +166,7 @@ export default function DashboardPage() {
         </Link>
         <StatsCard
           title="Top Pytanie"
-          value={topics[0]?.topic_name || '-'}
+          value={topics[0]?.topicName || '-'}
           icon={Flame}
           iconColor="text-orange-400"
           description="Najczęściej zadawane pytanie"

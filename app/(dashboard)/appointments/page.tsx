@@ -206,7 +206,7 @@ export default function AppointmentsPage() {
               </TableHeader>
               <TableBody>
                 {filteredAppointments.map((appt) => (
-                  <TableRow key={appt.appointment_id} className="hover:bg-white/5">
+                  <TableRow key={appt.appointmentId} className="hover:bg-white/5">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
@@ -224,25 +224,25 @@ export default function AppointmentsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="space-y-1">
-                        {appt.contact_info.name && (
+                        {appt.contactInfo.name && (
                           <div className="flex items-center gap-2 text-sm">
                             <User size={14} className="text-zinc-500" />
-                            <span>{appt.contact_info.name}</span>
+                            <span>{appt.contactInfo.name}</span>
                           </div>
                         )}
-                        {appt.contact_info.email && (
+                        {appt.contactInfo.email && (
                           <div className="flex items-center gap-2 text-sm text-zinc-400">
                             <Mail size={14} className="text-zinc-500" />
-                            <span>{appt.contact_info.email}</span>
+                            <span>{appt.contactInfo.email}</span>
                           </div>
                         )}
-                        {appt.contact_info.phone && (
+                        {appt.contactInfo.phone && (
                           <div className="flex items-center gap-2 text-sm text-zinc-400">
                             <Phone size={14} className="text-zinc-500" />
-                            <span>{appt.contact_info.phone}</span>
+                            <span>{appt.contactInfo.phone}</span>
                           </div>
                         )}
-                        {!appt.contact_info.name && !appt.contact_info.email && !appt.contact_info.phone && (
+                        {!appt.contactInfo.name && !appt.contactInfo.email && !appt.contactInfo.phone && (
                           <span className="text-zinc-500 text-sm">No contact info</span>
                         )}
                       </div>
@@ -256,7 +256,7 @@ export default function AppointmentsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => router.push(`/conversations/${appt.session_id}`)}
+                        onClick={() => router.push(`/conversations/${appt.sessionId}`)}
                         className="text-zinc-400 hover:text-white gap-1"
                       >
                         View chat
@@ -339,8 +339,8 @@ export default function AppointmentsPage() {
                   <div className="space-y-1 overflow-hidden">
                     {dayAppointments.slice(0, 2).map((appt) => (
                       <div
-                        key={appt.appointment_id}
-                        onClick={() => router.push(`/conversations/${appt.session_id}`)}
+                        key={appt.appointmentId}
+                        onClick={() => router.push(`/conversations/${appt.sessionId}`)}
                         className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 truncate cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-1"
                       >
                         <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusColor(appt.status)}`} />
@@ -367,28 +367,28 @@ export default function AppointmentsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
             <StatsCard
               title="Spotkania"
-              value={stats.appointments_created}
+              value={stats.appointmentsCreated}
               icon={Calendar}
               iconColor="text-purple-400"
               description="Spotkania umówione w ostatnich 30 dniach"
             />
             <StatsCard
               title="CPA"
-              value={`$${stats.cpa_usd?.toFixed(2) || '0.00'}`}
+              value={`$${stats.cpaUsd?.toFixed(2) || '0.00'}`}
               icon={DollarSign}
               iconColor="text-emerald-400"
               description="Koszt za spotkanie (ostatnie 30 dni)"
             />
             <StatsCard
               title="Śr. czas konwersji"
-              value={`${stats.avg_time_to_conversion_min?.toFixed(1) || 0} min`}
+              value={`${stats.avgTimeToConversionMin?.toFixed(1) || 0} min`}
               icon={Clock}
               iconColor="text-blue-400"
               description="Od pierwszej wiadomości do spotkania"
             />
             <StatsCard
               title="Wskaźnik Konwersji"
-              value={`${stats.conversion_rate}%`}
+              value={`${stats.conversionRate}%`}
               icon={TrendingUp}
               iconColor="text-amber-400"
               description="% rozmów zakończonych spotkaniem"
@@ -403,9 +403,9 @@ export default function AppointmentsPage() {
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart
                   data={[
-                    { name: 'Rozmowy', value: stats.conversations_count },
-                    { name: 'Spotkania', value: stats.appointments_created },
-                    { name: 'Zweryfikowane', value: stats.appointments_verified },
+                    { name: 'Rozmowy', value: stats.conversationsCount },
+                    { name: 'Spotkania', value: stats.appointmentsCreated },
+                    { name: 'Zweryfikowane', value: stats.appointmentsVerified },
                   ]}
                   layout="vertical"
                 >
@@ -425,18 +425,18 @@ export default function AppointmentsPage() {
             </Card>
 
             {/* Activity Heatmap */}
-            {stats.activity_heatmap && (
-              <ActivityHeatmap data={stats.activity_heatmap} />
+            {stats.activityHeatmap && (
+              <ActivityHeatmap data={stats.activityHeatmap} />
             )}
           </div>
 
           {/* Second Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {stats.drop_off_by_length && Object.keys(stats.drop_off_by_length).length > 0 && (
-              <DropOffChart data={stats.drop_off_by_length} />
+            {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && (
+              <DropOffChart data={stats.dropOffByLength} />
             )}
-            {stats.conversation_length_histogram && Object.keys(stats.conversation_length_histogram).length > 0 && (
-              <ConversationLengthChart data={stats.conversation_length_histogram} />
+            {stats.conversationLengthHistogram && Object.keys(stats.conversationLengthHistogram).length > 0 && (
+              <ConversationLengthChart data={stats.conversationLengthHistogram} />
             )}
           </div>
         </>

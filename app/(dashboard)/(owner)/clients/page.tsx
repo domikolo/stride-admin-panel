@@ -109,17 +109,17 @@ export default function ClientsPage() {
               </TableRow>
             ) : (
               clients.map((client) => (
-                <TableRow key={client.client_id}>
-                  <TableCell className="font-mono text-sm">{client.client_id}</TableCell>
-                  <TableCell className="font-medium">{client.company_name}</TableCell>
+                <TableRow key={client.clientId}>
+                  <TableCell className="font-mono text-sm">{client.clientId}</TableCell>
+                  <TableCell className="font-medium">{client.companyName}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(client.status)}>
                       {client.status}
                     </Badge>
                   </TableCell>
-                  <TableCell>{client.total_conversations}</TableCell>
+                  <TableCell>{client.totalConversations}</TableCell>
                   <TableCell className="text-zinc-400 text-sm">
-                    {new Date(client.created_at).toLocaleDateString()}
+                    {new Date(client.createdAt).toLocaleDateString()}
                   </TableCell>
                 </TableRow>
               ))
