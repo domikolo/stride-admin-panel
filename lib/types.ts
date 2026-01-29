@@ -3,36 +3,36 @@
  */
 
 export interface Client {
-  client_id: string;
-  company_name: string;
+  clientId: string;
+  companyName: string;
   status: 'active' | 'paused' | 'cancelled';
-  created_at: string;
-  lambda_function_name: string;
-  total_conversations: number;
+  createdAt: string;
+  lambdaFunctionName: string;
+  totalConversations: number;
 }
 
 export interface ClientStats {
-  client_id: string;
+  clientId: string;
   period: string;
-  start_date: string;
-  end_date: string;
-  conversations_count: number;
-  messages_count: number;
-  appointments_created: number;
-  appointments_verified: number;
-  conversion_rate: number;
-  verification_rate: number;
-  total_cost_usd: number;
-  cpa_usd?: number;
-  avg_time_to_conversion_min?: number;
-  total_tokens: {
+  startDate: string;
+  endDate: string;
+  conversationsCount: number;
+  messagesCount: number;
+  appointmentsCreated: number;
+  appointmentsVerified: number;
+  conversionRate: number;
+  verificationRate: number;
+  totalCostUsd: number;
+  cpaUsd?: number;
+  avgTimeToConversionMin?: number;
+  totalTokens: {
     input: number;
     output: number;
     total: number;
   };
-  activity_heatmap?: Record<string, Record<string, { messages: number; appointments: number }>>;
-  conversation_length_histogram?: Record<string, number>;
-  drop_off_by_length?: Record<string, { total: number; dropped: number }>;
+  activityHeatmap?: Record<string, Record<string, { messages: number; appointments: number }>>;
+  conversationLengthHistogram?: Record<string, number>;
+  dropOffByLength?: Record<string, { total: number; dropped: number }>;
 }
 
 export interface DailyStat {
@@ -43,11 +43,11 @@ export interface DailyStat {
 }
 
 export interface Conversation {
-  session_id: string;
-  conversation_number: number;
-  messages_count: number;
-  first_message: string;
-  last_message: string;
+  sessionId: string;
+  conversationNumber: number;
+  messagesCount: number;
+  firstMessage: string;
+  lastMessage: string;
   preview: string;
 }
 
@@ -58,18 +58,18 @@ export interface ConversationMessage {
 }
 
 export interface Appointment {
-  appointment_id: string;
-  session_id: string;
+  appointmentId: string;
+  sessionId: string;
   datetime: string;
   status: 'pending' | 'verified' | 'cancelled';
-  contact_info: {
+  contactInfo: {
     name?: string;
     email?: string;
     phone?: string;
   };
-  created_at: number;
-  verified_at?: number;
-  google_event_id?: string;
+  createdAt: number;
+  verifiedAt?: number;
+  googleEventId?: string;
 }
 
 export interface AuthUser {
@@ -80,29 +80,29 @@ export interface AuthUser {
 }
 
 export interface Topic {
-  topic_id: string;
-  topic_name: string;
+  topicId: string;
+  topicName: string;
   count: number;
-  question_examples: string[];
+  questionExamples: string[];
   trend: 'up' | 'down' | 'stable' | 'new';
-  intent_breakdown: {
+  intentBreakdown: {
     buying: number;
     comparing: number;
-    info_seeking: number;
+    infoSeeking: number;
   };
-  is_gap: boolean;
-  gap_reason: string;
+  isGap: boolean;
+  gapReason: string;
   category?: string;
-  smart_insight?: string;
+  smartInsight?: string;
   rank: number;
 }
 
 export interface Gap {
-  topic_id: string;
-  topic_name: string;
+  topicId: string;
+  topicName: string;
   count: number;
-  question_examples: string[];
-  gap_reason: string;
+  questionExamples: string[];
+  gapReason: string;
   suggestion: string;
 }
 
@@ -111,22 +111,22 @@ export interface Activity {
   type: 'conversation' | 'appointment';
   id: string;
   preview?: string;
-  contact_name?: string;
+  contactName?: string;
   timestamp: string;
-  message_count?: number;
+  messageCount?: number;
   status?: string;
 }
 
 export interface DailyBriefing {
   briefing: string;
-  generated_at: string;
+  generatedAt: string;
   stats: {
     conversations: number;
-    conversations_change_percent: number;
+    conversationsChangePercent: number;
     messages: number;
     appointments: number;
-    total_cost_usd: number;
-    gaps_count: number;
-    top_question: string | null;
+    totalCostUsd: number;
+    gapsCount: number;
+    topQuestion: string | null;
   };
 }

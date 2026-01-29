@@ -28,10 +28,10 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
     };
 
     // Find hot lead (topic with buying intent > 30%)
-    const hotLead = topics.find(t => t.intent_breakdown?.buying > 30);
+    const hotLead = topics.find(t => t.intentBreakdown?.buying > 30);
 
     // Get smart insight from top topic
-    const smartInsight = topics[0]?.smart_insight;
+    const smartInsight = topics[0]?.smartInsight;
 
     // Take top 3 topics
     const topTopics = topics.slice(0, 3);
@@ -73,11 +73,11 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                     <div className="flex items-center gap-2">
                         <DollarSign size={16} className="text-amber-400" />
                         <span className="text-sm text-amber-300 font-medium">
-                            Hot Lead: &quot;{hotLead.topic_name}&quot;
+                            Hot Lead: &quot;{hotLead.topicName}&quot;
                         </span>
                     </div>
                     <p className="text-xs text-amber-400/70 mt-1">
-                        {hotLead.intent_breakdown.buying.toFixed(0)}% wyraża zamiar zakupu
+                        {hotLead.intentBreakdown.buying.toFixed(0)}% wyraża zamiar zakupu
                     </p>
                 </div>
             )}
@@ -101,7 +101,7 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                 <div className="space-y-2">
                     {topTopics.map((topic, index) => (
                         <div
-                            key={topic.topic_id}
+                            key={topic.topicId}
                             className="flex items-center gap-3 p-2 rounded-lg bg-white/[0.02] hover:bg-white/5 transition-colors"
                         >
                             {/* Rank */}
@@ -113,7 +113,7 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                             <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2">
                                     <span className="text-sm text-white font-medium truncate">
-                                        {topic.topic_name}
+                                        {topic.topicName}
                                     </span>
                                     {getTrendIcon(topic.trend)}
                                 </div>

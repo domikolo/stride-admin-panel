@@ -16,7 +16,7 @@ interface TrendingTopicCardProps {
     intentBreakdown: {
         buying: number;
         comparing: number;
-        info_seeking: number;
+        infoSeeking: number;
     };
     isGap: boolean;
     gapReason?: string;

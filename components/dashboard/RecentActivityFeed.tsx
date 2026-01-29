@@ -107,7 +107,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                                     {activity.type === 'conversation' ? (
                                         <>Rozmowa</>
                                     ) : (
-                                        <>{activity.contact_name || 'Spotkanie'}</>
+                                        <>{activity.contactName || 'Spotkanie'}</>
                                     )}
                                 </span>
                                 <span className="text-xs text-zinc-500 flex-shrink-0">
@@ -116,7 +116,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                             </div>
                             <p className="text-xs text-zinc-400 truncate mt-0.5">
                                 {activity.type === 'conversation' ? (
-                                    activity.preview || `${activity.message_count || 0} wiadomości`
+                                    activity.preview || `${activity.messageCount || 0} wiadomości`
                                 ) : (
                                     <span className={`inline-flex items-center gap-1 ${activity.status === 'verified' ? 'text-emerald-400' :
                                         activity.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'

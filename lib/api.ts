@@ -7,6 +7,23 @@ import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appo
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
+// Helper to convert snake_case keys to camelCase recursively
+function camelCaseKeys(obj: any): any {
+  if (Array.isArray(obj)) {
+    return obj.map(camelCaseKeys);
+  }
+  if (obj && typeof obj === 'object') {
+    const newObj: any = {};
+    for (const [k, v] of Object.entries(obj)) {
+      const parts = k.split('_');
+      const camel = parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+      newObj[camel] = camelCaseKeys(v);
+    }
+    return newObj;
+  }
+  return obj;
+}
+
 class ApiClient {
   private async getHeaders(): Promise<HeadersInit> {
     const token = await getIdToken();
@@ -35,7 +52,8 @@ class ApiClient {
       throw new Error(errorData.error || `API error: ${response.statusText}`);
     }
 
-    return response.json();
+    const data = await response.json();
+    return camelCaseKeys(data) as T;
   }
 
   async post<T>(endpoint: string, data: unknown): Promise<T> {
@@ -50,7 +68,8 @@ class ApiClient {
       throw new Error(errorData.error || `API error: ${response.statusText}`);
     }
 
-    return response.json();
+    const responseData = await response.json();
+    return camelCaseKeys(responseData) as T;
   }
 }
 
@@ -114,35 +133,35 @@ export const getClientDailyStats = (clientId: string, days = 30) =>
   );
 
 /**
- * Get trending topics
+ * Timeframe for trending topics analysis
  */
-export const getTrendingTopics = (clientId: string, period: 'daily' | 'weekly' = 'daily') =>
-  api.get<{
-    client_id: string;
-    period_type: 'daily' | 'weekly';
-    topics: Topic[];
-    summary: {
-      total_topics: number;
-      total_questions: number;
-      gaps_count: number;
-    };
-    period: {
-      start: string | null;
-      end: string | null;
-    };
-    last_updated: string | null;
-  }>(`/clients/${clientId}/trending-topics?period=${period}`);
+export type Timeframe = 'yesterday' | 'week' | '2weeks' | 'month';
 
 /**
- * Get knowledge base gaps
+ * Get trending topics
  */
-export const getGaps = (clientId: string) =>
+export const getTrendingTopics = (clientId: string, timeframe: Timeframe = 'yesterday') =>
   api.get<{
-    client_id: string;
+    clientId: string;
+    timeframe: Timeframe;
+    topics: Topic[];
+    dateRange: {
+      start: string;
+      end: string;
+    };
+    gaps?: Gap[];
+  }>(`/clients/${clientId}/trending-topics?timeframe=${timeframe}`);
+
+/**
+ * Get knowledge base gaps (using unified trending-topics endpoint)
+ */
+export const getGaps = (clientId: string, timeframe: Timeframe = 'yesterday') =>
+  api.get<{
+    clientId: string;
+    timeframe: Timeframe;
+    topics: Topic[];
     gaps: Gap[];
-    count: number;
-    message: string;
-  }>(`/clients/${clientId}/trending-topics/gaps`);
+  }>(`/clients/${clientId}/trending-topics?timeframe=${timeframe}&include_gaps=true`);
 
 /**
  * Get recent activity (conversations + appointments)

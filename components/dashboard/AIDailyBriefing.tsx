@@ -81,7 +81,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                                 AI Daily Briefing
                             </h2>
                             <p className="text-xs text-zinc-500">
-                                Wygenerowano: {formatDate(briefing.generated_at)}
+                                Wygenerowano: {formatDate(briefing.generatedAt)}
                             </p>
                         </div>
                     </div>
@@ -93,12 +93,12 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                     </div>
 
                     {/* Quick Action / Top Question */}
-                    {briefing.stats.top_question && (
+                    {briefing.stats.topQuestion && (
                         <div className="mt-4 flex items-start gap-3 px-2">
                             <HelpCircle className="text-zinc-500 mt-1 flex-shrink-0" size={16} />
                             <div>
                                 <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Top Pytanie</span>
-                                <p className="text-sm text-zinc-300 italic">"{briefing.stats.top_question}"</p>
+                                <p className="text-sm text-zinc-300 italic">"{briefing.stats.topQuestion}"</p>
                             </div>
                         </div>
                     )}
@@ -136,17 +136,17 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                             <DollarSign size={20} className="text-emerald-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-white">${briefing.stats.total_cost_usd.toFixed(2)}</p>
+                            <p className="text-2xl font-bold text-white">${briefing.stats.totalCostUsd.toFixed(2)}</p>
                             <p className="text-xs text-zinc-400">koszt (24h)</p>
                         </div>
                     </div>
 
-                    <div className={`bg-white/5 hover:bg-white/10 transition-colors p-4 rounded-xl border border-white/5 flex items-center gap-4 group/card ${briefing.stats.gaps_count > 0 ? 'bg-amber-500/5 border-amber-500/20' : ''}`}>
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover/card:scale-110 transition-transform ${briefing.stats.gaps_count > 0 ? 'bg-amber-500/20' : 'bg-zinc-500/20'}`}>
-                            <AlertTriangle size={20} className={briefing.stats.gaps_count > 0 ? 'text-amber-400' : 'text-zinc-400'} />
+                    <div className={`bg-white/5 hover:bg-white/10 transition-colors p-4 rounded-xl border border-white/5 flex items-center gap-4 group/card ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/5 border-amber-500/20' : ''}`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover/card:scale-110 transition-transform ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/20' : 'bg-zinc-500/20'}`}>
+                            <AlertTriangle size={20} className={briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-400'} />
                         </div>
                         <div>
-                            <p className={`text-2xl font-bold ${briefing.stats.gaps_count > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>{briefing.stats.gaps_count}</p>
+                            <p className={`text-2xl font-bold ${briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>{briefing.stats.gapsCount}</p>
                             <p className="text-xs text-zinc-400">luki KB</p>
                         </div>
                     </div>
