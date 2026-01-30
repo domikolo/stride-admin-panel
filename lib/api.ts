@@ -139,8 +139,9 @@ export type Timeframe = 'yesterday' | 'week' | '2weeks' | 'month';
 
 /**
  * Get trending topics
+ * @param includeGaps - if true, response will include gaps array
  */
-export const getTrendingTopics = (clientId: string, timeframe: Timeframe = 'yesterday') =>
+export const getTrendingTopics = (clientId: string, timeframe: Timeframe = 'yesterday', includeGaps = false) =>
   api.get<{
     clientId: string;
     timeframe: Timeframe;
@@ -150,7 +151,7 @@ export const getTrendingTopics = (clientId: string, timeframe: Timeframe = 'yest
       end: string;
     };
     gaps?: Gap[];
-  }>(`/clients/${clientId}/trending-topics?timeframe=${timeframe}`);
+  }>(`/clients/${clientId}/trending-topics?timeframe=${timeframe}${includeGaps ? '&include_gaps=true' : ''}`);
 
 /**
  * Get knowledge base gaps (using unified trending-topics endpoint)
