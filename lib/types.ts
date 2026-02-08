@@ -130,3 +130,19 @@ export interface DailyBriefing {
     topQuestion: string | null;
   };
 }
+
+// AI Chatbot Types
+export interface ChatHistoryMessage {
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
+export interface ChatResponse {
+  message: string;
+  messageId: string;
+  tokensUsed: number;
+  costUsd: number;
+}
+
+export type ChatIntent = 'chat' | 'briefing' | 'smart_insight';

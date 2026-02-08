@@ -13,7 +13,8 @@ import {
   getTrendingTopics,
   getGaps,
   getRecentActivity,
-  getDailyBriefing
+  getDailyBriefing,
+  sendChatMessage
 } from '@/lib/api';
 import { ClientStats, DailyStat, Topic, Activity, DailyBriefing } from '@/lib/types';
 import StatsCard from '@/components/dashboard/StatsCard';
@@ -175,7 +176,12 @@ export default function DashboardPage() {
 
       {/* Main Content: Chat + Insights */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AIChatAssistant />
+        <AIChatAssistant
+          onSendMessage={async (message) => {
+            const response = await sendChatMessage(getClientId(), message);
+            return response.message;
+          }}
+        />
         <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
       </div>
 
