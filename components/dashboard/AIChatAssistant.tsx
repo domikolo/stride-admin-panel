@@ -1,6 +1,6 @@
 /**
  * AI Chat Assistant Component
- * Frontend-only placeholder - backend will be connected later
+ * Connects to backend chat API, loads history on mount
  */
 
 'use client';
@@ -9,6 +9,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Send, Sparkles } from 'lucide-react';
+import { sendChatMessage, getChatHistory } from '@/lib/api';
 
 interface ChatMessage {
     role: 'user' | 'assistant';
@@ -17,24 +18,51 @@ interface ChatMessage {
 }
 
 interface AIChatAssistantProps {
-    onSendMessage?: (message: string) => Promise<string>;
+    clientId: string;
 }
 
 const SUGGESTED_QUESTIONS = [
-    'Jakie były najczęstsze pytania wczoraj?',
-    'Ile kosztowały rozmowy w tym tygodniu?',
-    'Pokaż luki w bazie wiedzy',
+    'Jakie byly najczestsze pytania wczoraj?',
+    'Ile kosztowaly rozmowy w tym tygodniu?',
+    'Pokaz luki w bazie wiedzy',
 ];
 
-export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps) {
+export default function AIChatAssistant({ clientId }: AIChatAssistantProps) {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const [historyLoaded, setHistoryLoaded] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
+
+    // Load chat history on mount
+    useEffect(() => {
+        if (!clientId || historyLoaded) return;
+
+        const loadHistory = async () => {
+            try {
+                const data = await getChatHistory(clientId, 50);
+                if (data.messages && data.messages.length > 0) {
+                    setMessages(
+                        data.messages.map((msg) => ({
+                            role: msg.role,
+                            content: msg.content,
+                            timestamp: msg.timestamp,
+                        }))
+                    );
+                }
+            } catch (err) {
+                console.error('Failed to load chat history:', err);
+            } finally {
+                setHistoryLoaded(true);
+            }
+        };
+
+        loadHistory();
+    }, [clientId, historyLoaded]);
 
     useEffect(() => {
         if (messages.length > 0) {
@@ -43,7 +71,7 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
     }, [messages]);
 
     const handleSend = async () => {
-        if (!input.trim()) return;
+        if (!input.trim() || !clientId) return;
 
         const userMessage: ChatMessage = {
             role: 'user',
@@ -56,20 +84,11 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
         setIsLoading(true);
 
         try {
-            let response: string;
-
-            if (onSendMessage) {
-                // Use backend when available
-                response = await onSendMessage(userMessage.content);
-            } else {
-                // Placeholder response
-                await new Promise((resolve) => setTimeout(resolve, 800));
-                response = '🚧 AI Assistant będzie dostępny wkrótce! Pracujemy nad integracją.';
-            }
+            const response = await sendChatMessage(clientId, userMessage.content);
 
             const assistantMessage: ChatMessage = {
                 role: 'assistant',
-                content: response,
+                content: response.message,
                 timestamp: new Date().toISOString(),
             };
 
@@ -77,7 +96,7 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
         } catch (error) {
             const errorMessage: ChatMessage = {
                 role: 'assistant',
-                content: 'Przepraszam, wystąpił błąd. Spróbuj ponownie.',
+                content: 'Przepraszam, wystapil blad. Sprobuj ponownie.',
                 timestamp: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, errorMessage]);
@@ -115,7 +134,7 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
                 {messages.length === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center p-4">
                         <p className="text-zinc-500 text-sm mb-4">
-                            Zapytaj mnie o cokolwiek związanego z Twoimi danymi
+                            Zapytaj mnie o cokolwiek zwi&#261;zanego z Twoimi danymi
                         </p>
                         <div className="flex flex-wrap gap-2 justify-center">
                             {SUGGESTED_QUESTIONS.map((q, i) => (
@@ -149,7 +168,7 @@ export default function AIChatAssistant({ onSendMessage }: AIChatAssistantProps)
                 {isLoading && (
                     <div className="flex justify-start">
                         <div className="bg-white/5 text-zinc-400 px-3 py-2 rounded-lg text-sm">
-                            <span className="animate-pulse">●●●</span>
+                            <span className="animate-pulse">&#9679;&#9679;&#9679;</span>
                         </div>
                     </div>
                 )}
