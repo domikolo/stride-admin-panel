@@ -60,7 +60,7 @@ export default function DashboardPage() {
         getClientStats(clientId, 'MONTHLY').catch(() => null),
         getClientDailyStats(clientId, 7).catch(() => ({ dailyStats: [] })),
         getTrendingTopics(clientId, 'yesterday').catch(() => ({ topics: [] })),
-        getGaps(clientId).catch(() => ({ gaps: [] })),
+        getGaps(clientId, 'month').catch(() => ({ gaps: [] })),
         getRecentActivity(clientId, 10).catch(() => ({ activities: [] })),
         getDailyBriefing(clientId).catch(() => null),
       ]);
