@@ -56,7 +56,6 @@ export default function DashboardPage() {
       setLoading(true);
       const clientId = getClientId();
 
-      // Parallel data fetching
       const [statsData, dailyData, topicsData, gapsData, activityData, briefingData] = await Promise.all([
         getClientStats(clientId, 'MONTHLY').catch(() => null),
         getClientDailyStats(clientId, 7).catch(() => ({ dailyStats: [] })),
@@ -96,10 +95,11 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
-        <Skeleton className="h-32" />
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-24" />)}
+      <div className="space-y-8">
+        <Skeleton className="h-10 w-48" />
+        <Skeleton className="h-48" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-80" />
@@ -110,18 +110,16 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Header */}
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
-            Dashboard
-          </h1>
-          <p className="text-zinc-400 mt-2 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI Hub - centralny panel zarzadzania
-          </p>
-        </div>
+      <div>
+        <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+          Dashboard
+        </h1>
+        <p className="text-zinc-400 mt-2 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          AI Hub - centralny panel zarzadzania
+        </p>
       </div>
 
       {error && (
@@ -139,13 +137,14 @@ export default function DashboardPage() {
       />
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
         <StatsCard
           title="Rozmowy"
           value={stats?.conversationsCount || 0}
           icon={MessageSquare}
           iconColor="text-blue-400"
           description="Liczba rozmow w ostatnich 30 dniach"
+          valueHref="/conversations"
         />
         <StatsCard
           title="Calkowity Koszt"
@@ -154,21 +153,21 @@ export default function DashboardPage() {
           iconColor="text-amber-400"
           description="Koszt AI w ostatnich 30 dniach"
         />
-        <Link href="/insights?tab=gaps">
-          <StatsCard
-            title="Luki w KB"
-            value={gapsCount}
-            icon={AlertTriangle}
-            iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
-            description="Kliknij, aby zobaczyc brakujace odpowiedzi"
-          />
-        </Link>
+        <StatsCard
+          title="Luki w KB"
+          value={gapsCount}
+          icon={AlertTriangle}
+          iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
+          description="Luki w bazie wiedzy (30 dni)"
+          valueHref="/insights?period=monthly&tab=gaps"
+        />
         <StatsCard
           title="Top Pytanie"
           value={topics[0]?.topicName || '-'}
           icon={Flame}
           iconColor="text-orange-400"
           description="Najczesciej zadawane pytanie"
+          valueHref="/insights?period=daily"
         />
       </div>
 
@@ -181,21 +180,21 @@ export default function DashboardPage() {
       {/* Bottom Row: Chart + Quick Actions */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Activity Chart */}
-        <Card className="glass-card p-4">
-          <h3 className="text-lg font-semibold text-white mb-4">Aktywnosc (7 dni)</h3>
-          <ResponsiveContainer width="100%" height={200}>
+        <Card className="glass-card p-6">
+          <h3 className="text-lg font-semibold text-white mb-6">Aktywnosc (7 dni)</h3>
+          <ResponsiveContainer width="100%" height={240}>
             <BarChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
               <XAxis
                 dataKey="date"
                 stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 10 }}
+                tick={{ fill: '#71717a', fontSize: 11 }}
                 tickFormatter={(value: string) => {
                   const date = new Date(value);
                   return `${date.getDate()}/${date.getMonth() + 1}`;
                 }}
               />
-              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 10 }} />
+              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 11 }} />
               <Tooltip
                 contentStyle={{
                   backgroundColor: '#18181b',
@@ -216,8 +215,8 @@ export default function DashboardPage() {
         </Card>
 
         {/* Quick Actions */}
-        <Card className="glass-card p-5">
-          <h3 className="text-lg font-semibold text-white mb-5">Szybkie akcje</h3>
+        <Card className="glass-card p-6">
+          <h3 className="text-lg font-semibold text-white mb-6">Szybkie akcje</h3>
           <div className="space-y-3">
             <Link href="/conversations" className="block">
               <Button

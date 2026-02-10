@@ -6,6 +6,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getTrendingTopics, Timeframe } from '@/lib/api';
 import { Topic, Gap } from '@/lib/types';
@@ -23,6 +24,7 @@ import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from
 
 export default function InsightsPage() {
     const { user } = useAuth();
+    const searchParams = useSearchParams();
 
     const [dailyTopics, setDailyTopics] = useState<Topic[]>([]);
     const [weeklyTopics, setWeeklyTopics] = useState<Topic[]>([]);
@@ -58,7 +60,16 @@ export default function InsightsPage() {
         gapsCount: 0,
     });
 
-    const [activePeriod, setActivePeriod] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>('daily');
+    // URL params: ?period=daily|weekly|biweekly|monthly&tab=topics|gaps
+    const periodParam = searchParams.get('period');
+    const tabParam = searchParams.get('tab');
+    const initialPeriod = (['daily', 'weekly', 'biweekly', 'monthly'] as const).includes(periodParam as any)
+        ? (periodParam as 'daily' | 'weekly' | 'biweekly' | 'monthly')
+        : 'daily';
+    const initialTab = tabParam === 'gaps' ? 'gaps' : 'topics';
+
+    const [activePeriod, setActivePeriod] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>(initialPeriod);
+    const [activeTab, setActiveTab] = useState<'topics' | 'gaps'>(initialTab);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -297,7 +308,7 @@ export default function InsightsPage() {
 
                 {/* Content based on period */}
                 <TabsContent value="daily" className="mt-0">
-                    <Tabs defaultValue="topics" className="w-full">
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
                         <TabsList className="bg-zinc-800/50">
                             <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
                                 <Flame size={16} className={activePeriod === 'daily' ? "text-orange-500" : ""} />
@@ -374,7 +385,7 @@ export default function InsightsPage() {
                 </TabsContent>
 
                 <TabsContent value="weekly" className="mt-0">
-                    <Tabs defaultValue="topics" className="w-full">
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
                         <TabsList className="bg-zinc-800/50">
                             <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
                                 <Flame size={16} />
@@ -461,7 +472,7 @@ export default function InsightsPage() {
                 </TabsContent>
 
                 <TabsContent value="biweekly" className="mt-0">
-                    <Tabs defaultValue="topics" className="w-full">
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
                         <TabsList className="bg-zinc-800/50">
                             <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
                                 <Flame size={16} />
@@ -544,7 +555,7 @@ export default function InsightsPage() {
                 </TabsContent>
 
                 <TabsContent value="monthly" className="mt-0">
-                    <Tabs defaultValue="topics" className="w-full">
+                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
                         <TabsList className="bg-zinc-800/50">
                             <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
                                 <Flame size={16} />

@@ -5,7 +5,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import Link from 'next/link';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -57,7 +57,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                     <h2 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
                         AI Daily Briefing
                     </h2>
-                    <p className="text-zinc-400 mt-1">Brak danych do wyświetlenia na ten moment.</p>
+                    <p className="text-zinc-400 mt-1">Brak danych do wyswietlenia na ten moment.</p>
                 </div>
             </Card>
         );
@@ -92,13 +92,13 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         </p>
                     </div>
 
-                    {/* Quick Action / Top Question */}
+                    {/* Top Question */}
                     {briefing.stats.topQuestion && (
                         <div className="mt-4 flex items-start gap-3 px-2">
                             <HelpCircle className="text-zinc-500 mt-1 flex-shrink-0" size={16} />
                             <div>
                                 <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Top Pytanie</span>
-                                <p className="text-sm text-zinc-300 italic">"{briefing.stats.topQuestion}"</p>
+                                <p className="text-sm text-zinc-300 italic">&quot;{briefing.stats.topQuestion}&quot;</p>
                             </div>
                         </div>
                     )}
@@ -116,23 +116,29 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                                 className="text-zinc-500 hover:text-white h-8 text-xs gap-1.5"
                             >
                                 <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                                Odśwież
+                                Odswiez
                             </Button>
                         </div>
                     )}
 
-                    <div className="bg-white/5 hover:bg-white/10 transition-colors p-4 rounded-xl border border-white/5 flex items-center gap-4 group/card">
-                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center group-hover/card:scale-110 transition-transform">
+                    {/* Conversations - value links to /conversations */}
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                             <MessageSquare size={20} className="text-blue-400" />
                         </div>
                         <div>
-                            <p className="text-2xl font-bold text-white">{briefing.stats.conversations}</p>
-                            <p className="text-xs text-zinc-400">rozmów (24h)</p>
+                            <Link href="/conversations">
+                                <p className="text-2xl font-bold text-white hover:text-blue-400 transition-colors cursor-pointer">
+                                    {briefing.stats.conversations}
+                                </p>
+                            </Link>
+                            <p className="text-xs text-zinc-400">rozmow (24h)</p>
                         </div>
                     </div>
 
-                    <div className="bg-white/5 hover:bg-white/10 transition-colors p-4 rounded-xl border border-white/5 flex items-center gap-4 group/card">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center group-hover/card:scale-110 transition-transform">
+                    {/* Cost - no link */}
+                    <div className="bg-white/5 p-4 rounded-xl border border-white/5 flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                             <DollarSign size={20} className="text-emerald-400" />
                         </div>
                         <div>
@@ -141,12 +147,17 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         </div>
                     </div>
 
-                    <div className={`bg-white/5 hover:bg-white/10 transition-colors p-4 rounded-xl border border-white/5 flex items-center gap-4 group/card ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/5 border-amber-500/20' : ''}`}>
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center group-hover/card:scale-110 transition-transform ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/20' : 'bg-zinc-500/20'}`}>
+                    {/* Gaps - value links to /insights?period=daily&tab=gaps */}
+                    <div className={`bg-white/5 p-4 rounded-xl border flex items-center gap-4 ${briefing.stats.gapsCount > 0 ? 'border-amber-500/20' : 'border-white/5'}`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/20' : 'bg-zinc-500/20'}`}>
                             <AlertTriangle size={20} className={briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-400'} />
                         </div>
                         <div>
-                            <p className={`text-2xl font-bold ${briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>{briefing.stats.gapsCount}</p>
+                            <Link href="/insights?period=daily&tab=gaps">
+                                <p className={`text-2xl font-bold hover:text-blue-400 transition-colors cursor-pointer ${briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
+                                    {briefing.stats.gapsCount}
+                                </p>
+                            </Link>
                             <p className="text-xs text-zinc-400">luki KB</p>
                         </div>
                     </div>
