@@ -160,6 +160,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     widget.style.setProperty('transition', 'none', 'important');
     widget.style.setProperty('z-index', '2002', 'important');
     widget.style.setProperty('display', 'flex', 'important');
+    widget.style.setProperty('box-shadow', 'none', 'important');
+    widget.style.setProperty('background', '#0a0a0c', 'important');
 
     const header = widget.querySelector('.widget-header') as HTMLElement;
     const body = widget.querySelector('.widget-body') as HTMLElement;
@@ -186,6 +188,13 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       widget.style.setProperty('height', 'var(--floating-chat-widget-height)', 'important');
     }, 510);
 
+    // Fade in shadow + background during height expansion
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), width 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.6s ease-out, background 0.6s ease-out', 'important');
+      widget.style.setProperty('box-shadow', '0 30px 90px rgba(0,0,0,0.8), 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(60, 60, 65, 0.3) inset', 'important');
+      widget.style.setProperty('background', 'linear-gradient(165deg, rgba(18, 18, 20, 0.95) 0%, rgba(10, 10, 12, 0.98) 100%)', 'important');
+    }, 510);
+
     setTimeout(() => {
       setIsAnimating(false);
       setIsOpen(true);
@@ -195,6 +204,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       widget.style.setProperty('transform', 'translateY(-50%)', 'important');
       widget.style.removeProperty('transition');
       widget.style.setProperty('backdrop-filter', 'blur(20px)', 'important');
+      widget.style.setProperty('box-shadow', '0 30px 90px rgba(0,0,0,0.8), 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(60, 60, 65, 0.3) inset', 'important');
+      widget.style.setProperty('background', 'linear-gradient(165deg, rgba(18, 18, 20, 0.95) 0%, rgba(10, 10, 12, 0.98) 100%)', 'important');
 
       if (header) header.style.opacity = '1';
       if (body) body.style.opacity = '1';
@@ -223,8 +234,10 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
     widget.style.setProperty('backdrop-filter', 'none', 'important');
 
-    widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+    widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.4s ease-out, background 0.4s ease-out', 'important');
     widget.style.setProperty('height', '115px', 'important');
+    widget.style.setProperty('box-shadow', 'none', 'important');
+    widget.style.setProperty('background', '#0a0a0c', 'important');
 
     setTimeout(() => {
       widget.style.setProperty('transition', 'transform 0.5s cubic-bezier(0.77,0,0.18,1), height 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
@@ -244,6 +257,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       widget.style.removeProperty('transform');
       widget.style.removeProperty('transition');
       widget.style.removeProperty('width');
+      widget.style.removeProperty('box-shadow');
+      widget.style.removeProperty('background');
 
       if (header) header.style.removeProperty('opacity');
       if (body) body.style.removeProperty('opacity');
@@ -290,10 +305,10 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           transform: 'translateY(-50%) scale(1)',
           width: 'var(--floating-chat-btn-width)',
           height: 'var(--floating-chat-btn-height)',
-          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.1) 100%)',
-          border: '1px solid rgba(255, 255, 255, 0.15)',
+          background: '#0a0a0c',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '20px',
-          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4), 0 0 20px rgba(255, 255, 255, 0.08), inset 0 1px 1px rgba(255, 255, 255, 0.06)',
+          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5)',
           fontSize: 0,
           zIndex: 2003,
           cursor: 'pointer',
@@ -334,11 +349,11 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           top: '50%',
           right: 'var(--floating-chat-widget-right)',
           transform: 'translateY(-50%)',
-          background: 'linear-gradient(165deg, rgba(18, 18, 20, 0.95) 0%, rgba(10, 10, 12, 0.98) 100%)',
-          backdropFilter: 'blur(50px) saturate(180%)',
-          WebkitBackdropFilter: 'blur(50px) saturate(180%)',
-          boxShadow: '0 30px 90px rgba(0,0,0,0.8), 0 10px 40px rgba(0,0,0,0.5), 0 0 0 1px rgba(60, 60, 65, 0.3) inset, 0 2px 4px rgba(90, 90, 95, 0.15) inset',
-          border: '1px solid rgba(60, 60, 65, 0.6)',
+          background: '#0a0a0c',
+          backdropFilter: 'none',
+          WebkitBackdropFilter: 'none',
+          boxShadow: 'none',
+          border: '1px solid rgba(255, 255, 255, 0.12)',
           borderRadius: '16px',
           overflow: 'hidden',
           display: 'none',
