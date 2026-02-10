@@ -47,6 +47,14 @@
 }
 
 :root {
+  /* FloatingChat */
+  --floating-chat-right: 20px;
+  --floating-chat-btn-width: 35px;
+  --floating-chat-btn-height: 115px;
+  --floating-chat-widget-width: 360px;
+  --floating-chat-widget-height: 480px;
+  --floating-chat-widget-right: calc(20px + 35px + 5px);
+
   --radius: 0.625rem;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
@@ -121,6 +129,15 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --floating-chat-right: 30px;
+    --floating-chat-widget-width: 380px;
+    --floating-chat-widget-height: 500px;
+    --floating-chat-widget-right: calc(30px + 35px + 5px);
   }
 }
 

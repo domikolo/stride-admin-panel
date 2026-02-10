@@ -1,8 +1,9 @@
 /**
- * Dashboard Layout with Sidebar
+ * Dashboard Layout with Sidebar + Floating Chat
  */
 
 import Sidebar from '@/components/layout/Sidebar';
+import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 
 export default function DashboardLayout({
   children,
@@ -17,6 +18,7 @@ export default function DashboardLayout({
           {children}
         </div>
       </main>
+      <FloatingChatWrapper />
     </div>
   );
 }

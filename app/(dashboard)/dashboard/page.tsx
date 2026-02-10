@@ -1,6 +1,6 @@
 /**
  * Dashboard Page - AI Hub
- * Central dashboard with AI briefing, chat assistant, and quick insights
+ * Central dashboard with AI briefing, insights, activity, and charts
  */
 
 'use client';
@@ -18,10 +18,9 @@ import {
 import { ClientStats, DailyStat, Topic, Activity, DailyBriefing } from '@/lib/types';
 import StatsCard from '@/components/dashboard/StatsCard';
 import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
-import AIChatAssistant from '@/components/dashboard/AIChatAssistant';
 import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
-import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight, Calendar as CalendarIcon, Lightbulb } from 'lucide-react';
+import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -76,7 +75,7 @@ export default function DashboardPage() {
       setError(null);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
-      setError('Nie udało się załadować danych.');
+      setError('Nie udalo sie zaladowac danych.');
     } finally {
       setLoading(false);
     }
@@ -120,7 +119,7 @@ export default function DashboardPage() {
           </h1>
           <p className="text-zinc-400 mt-2 flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            AI Hub - centralny panel zarządzania
+            AI Hub - centralny panel zarzadzania
           </p>
         </div>
       </div>
@@ -146,10 +145,10 @@ export default function DashboardPage() {
           value={stats?.conversationsCount || 0}
           icon={MessageSquare}
           iconColor="text-blue-400"
-          description="Liczba rozmów w ostatnich 30 dniach"
+          description="Liczba rozmow w ostatnich 30 dniach"
         />
         <StatsCard
-          title="Całkowity Koszt"
+          title="Calkowity Koszt"
           value={`$${stats?.totalCostUsd.toFixed(2) || '0.00'}`}
           icon={DollarSign}
           iconColor="text-amber-400"
@@ -161,7 +160,7 @@ export default function DashboardPage() {
             value={gapsCount}
             icon={AlertTriangle}
             iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
-            description="Kliknij, aby zobaczyć brakujące odpowiedzi"
+            description="Kliknij, aby zobaczyc brakujace odpowiedzi"
           />
         </Link>
         <StatsCard
@@ -169,24 +168,21 @@ export default function DashboardPage() {
           value={topics[0]?.topicName || '-'}
           icon={Flame}
           iconColor="text-orange-400"
-          description="Najczęściej zadawane pytanie"
+          description="Najczesciej zadawane pytanie"
         />
       </div>
 
-      {/* Main Content: Chat + Insights */}
+      {/* Main Content: Insights + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AIChatAssistant clientId={getClientId()} />
         <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
+        <RecentActivityFeed activities={activities} loading={loading} />
       </div>
 
-      {/* Bottom Row: Activity + Chart + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Activity */}
-        <RecentActivityFeed activities={activities} loading={loading} />
-
-        {/* Activity Chart - BarChart without animation (fixes auto-scroll) */}
-        <Card className="glass-card p-4 lg:col-span-1">
-          <h3 className="text-lg font-semibold text-white mb-4">Aktywność (7 dni)</h3>
+      {/* Bottom Row: Chart + Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Activity Chart */}
+        <Card className="glass-card p-4">
+          <h3 className="text-lg font-semibold text-white mb-4">Aktywnosc (7 dni)</h3>
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={dailyStats}>
               <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
@@ -219,7 +215,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </Card>
 
-        {/* Quick Actions - Fitts's Law: larger touch targets */}
+        {/* Quick Actions */}
         <Card className="glass-card p-5">
           <h3 className="text-lg font-semibold text-white mb-5">Szybkie akcje</h3>
           <div className="space-y-3">
