@@ -48,12 +48,12 @@
 
 :root {
   /* FloatingChat */
-  --floating-chat-right: 16px;
-  --floating-chat-btn-width: 44px;
-  --floating-chat-btn-height: 44px;
-  --floating-chat-widget-width: 400px;
+  --floating-chat-right: 20px;
+  --floating-chat-btn-width: 35px;
+  --floating-chat-btn-height: 115px;
+  --floating-chat-widget-width: 420px;
   --floating-chat-widget-height: 560px;
-  --floating-chat-widget-right: calc(16px + 44px + 10px);
+  --floating-chat-widget-right: calc(20px + 35px + 5px);
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -134,10 +134,10 @@
 
 @media (min-width: 1280px) {
   :root {
-    --floating-chat-right: 24px;
-    --floating-chat-widget-width: 440px;
+    --floating-chat-right: 30px;
+    --floating-chat-widget-width: 450px;
     --floating-chat-widget-height: 620px;
-    --floating-chat-widget-right: calc(24px + 44px + 12px);
+    --floating-chat-widget-right: calc(30px + 35px + 5px);
   }
 }
 
