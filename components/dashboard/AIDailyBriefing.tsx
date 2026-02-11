@@ -33,14 +33,27 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     if (loading) {
         return (
-            <Card className="glass-card p-6 border-2 border-white/10 relative overflow-hidden">
-                <div className="flex items-start gap-6">
-                    <Skeleton className="w-16 h-16 rounded-2xl flex-shrink-0" />
-                    <div className="flex-1 space-y-4">
-                        <Skeleton className="h-8 w-64" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-full" />
-                        <Skeleton className="h-4 w-3/4" />
+            <Card className="glass-card p-0 border-2 border-white/10 overflow-hidden relative">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-64 h-64 bg-purple-500/5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 pointer-events-none" />
+                <div className="p-6 md:p-8 relative z-10">
+                    <div className="flex items-center gap-4 mb-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-white/10 to-white/5 flex items-center justify-center shadow-inner border border-white/10">
+                            <Sparkles size={24} className="text-blue-400 animate-pulse" />
+                        </div>
+                        <div>
+                            <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-white bg-clip-text text-transparent">
+                                AI Daily Briefing
+                            </h2>
+                            <p className="text-xs text-zinc-500">Generowanie briefingu...</p>
+                        </div>
+                    </div>
+                    <div className="bg-white/5 rounded-2xl p-5 border border-white/5">
+                        <div className="space-y-3">
+                            <Skeleton className="h-4 w-full" />
+                            <Skeleton className="h-4 w-[90%]" />
+                            <Skeleton className="h-4 w-3/4" />
+                        </div>
                     </div>
                 </div>
             </Card>

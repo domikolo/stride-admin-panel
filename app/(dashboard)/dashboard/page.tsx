@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
 
   const [loading, setLoading] = useState(true);
+  const [briefingLoading, setBriefingLoading] = useState(true);
   const [briefingRefreshing, setBriefingRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -52,17 +53,24 @@ export default function DashboardPage() {
   }, [user]);
 
   const loadAllData = async () => {
+    const clientId = getClientId();
+
+    // Load briefing independently (slow - AI generation)
+    setBriefingLoading(true);
+    getDailyBriefing(clientId)
+      .then((data) => setBriefing(data))
+      .catch(() => setBriefing(null))
+      .finally(() => setBriefingLoading(false));
+
+    // Load everything else (fast - DB queries)
     try {
       setLoading(true);
-      const clientId = getClientId();
-
-      const [statsData, dailyData, topicsData, gapsData, activityData, briefingData] = await Promise.all([
+      const [statsData, dailyData, topicsData, gapsData, activityData] = await Promise.all([
         getClientStats(clientId, 'MONTHLY').catch(() => null),
         getClientDailyStats(clientId, 7).catch(() => ({ dailyStats: [] })),
         getTrendingTopics(clientId, 'yesterday').catch(() => ({ topics: [] })),
         getGaps(clientId, 'month').catch(() => ({ gaps: [] })),
         getRecentActivity(clientId, 10).catch(() => ({ activities: [] })),
-        getDailyBriefing(clientId).catch(() => null),
       ]);
 
       setStats(statsData);
@@ -70,7 +78,6 @@ export default function DashboardPage() {
       setTopics(topicsData.topics);
       setGapsCount(gapsData.gaps?.length || 0);
       setActivities(activityData.activities);
-      setBriefing(briefingData);
       setError(null);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -131,7 +138,7 @@ export default function DashboardPage() {
       {/* AI Daily Briefing - Hero */}
       <AIDailyBriefing
         briefing={briefing}
-        loading={loading}
+        loading={briefingLoading}
         onRefresh={handleRefreshBriefing}
         refreshing={briefingRefreshing}
       />
