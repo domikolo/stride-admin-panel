@@ -63,7 +63,7 @@ export default function StatsCard({
             </Tooltip>
           )}
         </div>
-        <div className={`p-2 rounded-lg bg-white/5 ${iconColor}`}>
+        <div className={`p-2 rounded-lg bg-zinc-800 ${iconColor}`}>
           <Icon size={18} />
         </div>
       </CardHeader>

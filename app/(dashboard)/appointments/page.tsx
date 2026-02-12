@@ -126,7 +126,7 @@ export default function AppointmentsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-bold text-white">
             Appointments
           </h1>
           <p className="text-zinc-400 mt-1">
@@ -416,7 +416,7 @@ export default function AppointmentsPage() {
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#18181b',
-                      border: '1px solid #27272a',
+                      border: '1px solid #3f3f46',
                       borderRadius: '8px',
                     }}
                   />

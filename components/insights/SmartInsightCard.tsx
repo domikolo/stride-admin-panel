@@ -10,7 +10,7 @@ export default function SmartInsightCard({ insight, topicName }: SmartInsightCar
     if (!insight) return null;
 
     return (
-        <Card className="glass-card p-5 border-purple-500/30 bg-gradient-to-br from-purple-500/10 to-transparent relative overflow-hidden group">
+        <Card className="glass-card p-5 border-purple-500/30 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                 <Sparkles size={80} />
             </div>

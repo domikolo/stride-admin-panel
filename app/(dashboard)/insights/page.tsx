@@ -277,7 +277,7 @@ export default function InsightsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent flex items-center gap-3">
+        <h1 className="text-4xl font-bold text-white flex items-center gap-3">
           <Flame className="text-orange-500" />
           Trending Questions
         </h1>
@@ -295,16 +295,16 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-        <TabsList className="bg-zinc-800/50 mb-6">
-          <TabsTrigger value="daily" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+        <TabsList className="bg-zinc-800 mb-6">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
             <Clock size={16} />
             Wczoraj (24h)
           </TabsTrigger>
-          <TabsTrigger value="weekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
             <Calendar size={16} />
             Tydzien (7 dni)
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+          <TabsTrigger value="monthly" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
             <Calendar size={16} />
             Miesiac (30 dni)
           </TabsTrigger>

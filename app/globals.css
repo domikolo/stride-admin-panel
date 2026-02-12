@@ -90,36 +90,36 @@
 }
 
 .dark {
-  --background: oklch(0 0 0); /* Pure black */
+  --background: #09090b;     /* zinc-950 */
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.05 0 0); /* Very dark gray */
+  --card: #18181b;           /* zinc-900 */
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.05 0 0);
+  --popover: #18181b;        /* zinc-900 */
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0); /* White */
-  --primary-foreground: oklch(0 0 0); /* Black text on white */
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
+  --muted: #27272a;          /* zinc-800 */
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 8%); /* More subtle border */
-  --input: oklch(1 0 0 / 5%);
+  --border: #3f3f4680;       /* zinc-700/50 */
+  --input: #27272a;          /* zinc-800 */
   --ring: oklch(1 0 0 / 20%);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.05 0 0);
+  --sidebar: #18181b;        /* zinc-900 */
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.922 0 0);
   --sidebar-primary-foreground: oklch(0 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 8%);
+  --sidebar-border: #27272a; /* zinc-800 */
   --sidebar-ring: oklch(1 0 0 / 20%);
 }
 
@@ -141,13 +141,11 @@
   }
 }
 
-/* Custom glass card effect (from "nowa strona") */
+/* Solid card style (zinc aesthetic) */
 .glass-card {
-  background: rgba(20, 20, 20, 0.2);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  background: #18181b;
+  border: 1px solid rgba(63, 63, 70, 0.5);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
 }
 
 /* Custom scrollbar */
@@ -161,10 +159,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: #3f3f46;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: #52525b;
 }

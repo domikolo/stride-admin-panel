@@ -17,15 +17,17 @@ import {
   LogOut,
   Flame,
   AlertCircle,
+  Search,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface SidebarProps {
   open?: boolean;
   onClose?: () => void;
+  onSearchOpen?: () => void;
 }
 
-export default function Sidebar({ open, onClose }: SidebarProps) {
+export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const [gapsCount, setGapsCount] = useState<number>(0);
@@ -88,6 +90,22 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
           </Link>
         </div>
 
+        {/* Search trigger */}
+        <div className="px-4 pt-4 pb-1">
+          <button
+            onClick={() => { onClose?.(); onSearchOpen?.(); }}
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/5 transition-colors border border-zinc-800 text-sm"
+          >
+            <div className="flex items-center gap-3">
+              <Search size={16} />
+              <span>Search...</span>
+            </div>
+            <kbd className="text-[10px] bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+
         {/* Navigation */}
         <nav className="flex-1 p-4 space-y-1">
           {links.map((link) => {
@@ -102,7 +120,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 className={cn(
                   'flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200',
                   isActive
-                    ? 'bg-white text-black font-semibold'
+                    ? 'bg-white/10 text-white font-semibold'
                     : 'text-zinc-400 hover:text-white hover:bg-white/5'
                 )}
               >
@@ -113,7 +131,7 @@ export default function Sidebar({ open, onClose }: SidebarProps) {
                 {link.badge && (
                   <span className={cn(
                     'text-xs px-2 py-0.5 rounded-full',
-                    isActive ? 'bg-red-500 text-white' : 'bg-red-500/20 text-red-400'
+                    'bg-red-500/20 text-red-400'
                   )}>
                     {link.badge}
                   </span>

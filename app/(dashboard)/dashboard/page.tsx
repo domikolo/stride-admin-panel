@@ -118,7 +118,7 @@ export default function DashboardPage() {
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+        <h1 className="text-4xl font-bold text-white">
           Dashboard
         </h1>
         <p className="text-zinc-400 mt-2 flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function DashboardPage() {
             <Tooltip
               contentStyle={{
                 backgroundColor: '#18181b',
-                border: '1px solid #27272a',
+                border: '1px solid #3f3f46',
                 borderRadius: '8px',
                 color: '#fff',
               }}
