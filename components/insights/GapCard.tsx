@@ -4,7 +4,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Lightbulb, CheckCircle } from 'lucide-react';
+import { AlertTriangle, Lightbulb, CheckCircle, Loader2 } from 'lucide-react';
 
 interface GapCardProps {
     topicId: string;
@@ -14,6 +14,7 @@ interface GapCardProps {
     gapReason: string;
     suggestion: string;
     onResolve?: (topicId: string) => void;
+    resolving?: boolean;
 }
 
 // Polish grammar helper for "pytanie"
@@ -31,6 +32,7 @@ export default function GapCard({
     gapReason,
     suggestion,
     onResolve,
+    resolving,
 }: GapCardProps) {
     return (
         <Card className="glass-card border-yellow-500/30">
@@ -48,10 +50,11 @@ export default function GapCard({
                             variant="ghost"
                             size="sm"
                             onClick={() => onResolve(topicId)}
+                            disabled={resolving}
                             className="text-green-400 hover:text-green-300 hover:bg-green-500/10 gap-1"
                         >
-                            <CheckCircle size={14} />
-                            Rozwiązane
+                            {resolving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />}
+                            Rozwiazane
                         </Button>
                     )}
                 </div>

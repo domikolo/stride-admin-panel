@@ -21,7 +21,7 @@ import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
 import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
 import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
@@ -37,6 +37,7 @@ export default function AppointmentsPage() {
   const [view, setView] = useState<ViewType>('table');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
 
   const getClientId = () =>
     user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
@@ -430,13 +431,28 @@ export default function AppointmentsPage() {
             )}
           </div>
 
-          {/* Second Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && (
-              <DropOffChart data={stats.dropOffByLength} />
-            )}
-            {stats.conversationLengthHistogram && Object.keys(stats.conversationLengthHistogram).length > 0 && (
-              <ConversationLengthChart data={stats.conversationLengthHistogram} />
+          {/* Advanced Analytics Toggle */}
+          <div>
+            <button
+              onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
+              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors py-2"
+            >
+              <ChevronDown
+                size={16}
+                className={`transition-transform duration-200 ${showAdvancedAnalytics ? 'rotate-180' : ''}`}
+              />
+              Zaawansowana analityka
+            </button>
+
+            {showAdvancedAnalytics && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+                {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && (
+                  <DropOffChart data={stats.dropOffByLength} />
+                )}
+                {stats.conversationLengthHistogram && Object.keys(stats.conversationLengthHistogram).length > 0 && (
+                  <ConversationLengthChart data={stats.conversationLengthHistogram} />
+                )}
+              </div>
             )}
           </div>
         </>

@@ -20,11 +20,9 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
 import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
-import { MessageSquare, DollarSign, AlertTriangle, Flame, ArrowRight, Calendar as CalendarIcon } from 'lucide-react';
+import { MessageSquare, DollarSign, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
@@ -105,8 +103,8 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-48" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-          {[1, 2, 3, 4].map((i) => <Skeleton key={i} className="h-28" />)}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton className="h-80" />
@@ -143,8 +141,8 @@ export default function DashboardPage() {
         refreshing={briefingRefreshing}
       />
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* Quick Stats - 3 cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         <StatsCard
           title="Rozmowy"
           value={stats?.conversationsCount || 0}
@@ -166,15 +164,7 @@ export default function DashboardPage() {
           icon={AlertTriangle}
           iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
           description="Luki w bazie wiedzy (30 dni)"
-          valueHref="/insights?period=monthly&tab=gaps"
-        />
-        <StatsCard
-          title="Top Pytanie"
-          value={topics[0]?.topicName || '-'}
-          icon={Flame}
-          iconColor="text-orange-400"
-          description="Najczesciej zadawane pytanie"
-          valueHref="/insights?period=daily"
+          valueHref="/insights?period=monthly"
         />
       </div>
 
@@ -184,86 +174,40 @@ export default function DashboardPage() {
         <RecentActivityFeed activities={activities} loading={loading} />
       </div>
 
-      {/* Bottom Row: Chart + Quick Actions */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Activity Chart */}
-        <Card className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Aktywnosc (7 dni)</h3>
-          <ResponsiveContainer width="100%" height={240}>
-            <BarChart data={dailyStats}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-              <XAxis
-                dataKey="date"
-                stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 11 }}
-                tickFormatter={(value: string) => {
-                  const date = new Date(value);
-                  return `${date.getDate()}/${date.getMonth() + 1}`;
-                }}
-              />
-              <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 11 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #27272a',
-                  borderRadius: '8px',
-                  color: '#fff',
-                }}
-              />
-              <Bar
-                dataKey="conversations"
-                fill="#3b82f6"
-                radius={[4, 4, 0, 0]}
-                name="Rozmowy"
-                isAnimationActive={false}
-              />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Quick Actions */}
-        <Card className="glass-card p-6">
-          <h3 className="text-lg font-semibold text-white mb-6">Szybkie akcje</h3>
-          <div className="space-y-3">
-            <Link href="/conversations" className="block">
-              <Button
-                variant="ghost"
-                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
-              >
-                <span className="flex items-center gap-3">
-                  <MessageSquare size={20} className="text-blue-400" />
-                  Zobacz rozmowy
-                </span>
-                <ArrowRight size={20} />
-              </Button>
-            </Link>
-            <Link href="/insights" className="block">
-              <Button
-                variant="ghost"
-                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
-              >
-                <span className="flex items-center gap-3">
-                  <Flame size={20} className="text-orange-400" />
-                  Trending Topics
-                </span>
-                <ArrowRight size={20} />
-              </Button>
-            </Link>
-            <Link href="/appointments" className="block">
-              <Button
-                variant="ghost"
-                className="w-full h-14 justify-between text-zinc-300 hover:text-white hover:bg-white/10 text-base px-5"
-              >
-                <span className="flex items-center gap-3">
-                  <CalendarIcon size={20} className="text-purple-400" />
-                  Spotkania
-                </span>
-                <ArrowRight size={20} />
-              </Button>
-            </Link>
-          </div>
-        </Card>
-      </div>
+      {/* Activity Chart - Full Width */}
+      <Card className="glass-card p-6">
+        <h3 className="text-lg font-semibold text-white mb-6">Aktywnosc (7 dni)</h3>
+        <ResponsiveContainer width="100%" height={240}>
+          <BarChart data={dailyStats}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+            <XAxis
+              dataKey="date"
+              stroke="#71717a"
+              tick={{ fill: '#71717a', fontSize: 11 }}
+              tickFormatter={(value: string) => {
+                const date = new Date(value);
+                return `${date.getDate()}/${date.getMonth() + 1}`;
+              }}
+            />
+            <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 11 }} />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#18181b',
+                border: '1px solid #27272a',
+                borderRadius: '8px',
+                color: '#fff',
+              }}
+            />
+            <Bar
+              dataKey="conversations"
+              fill="#3b82f6"
+              radius={[4, 4, 0, 0]}
+              name="Rozmowy"
+              isAnimationActive={false}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </Card>
     </div>
   );
 }

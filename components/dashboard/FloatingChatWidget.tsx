@@ -6,6 +6,7 @@ import { sendChatMessage, getChatHistory } from '@/lib/api';
 interface ChatMessage {
   text: string;
   type: 'user' | 'assistant';
+  timestamp: string;
 }
 
 interface FloatingChatWidgetProps {
@@ -17,6 +18,58 @@ const SUGGESTED_QUESTIONS = [
   'Ile kosztowaly rozmowy w tym tygodniu?',
   'Pokaz luki w bazie wiedzy',
 ];
+
+/** Format timestamp to HH:mm */
+function formatChatTime(timestamp: string): string {
+  try {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return '';
+  }
+}
+
+/** Return day separator label or null if same day as previous */
+function formatChatDaySeparator(current: string, previous: string | null): string | null {
+  try {
+    const curr = new Date(current);
+    const now = new Date();
+
+    if (previous) {
+      const prev = new Date(previous);
+      if (
+        curr.getFullYear() === prev.getFullYear() &&
+        curr.getMonth() === prev.getMonth() &&
+        curr.getDate() === prev.getDate()
+      ) {
+        return null;
+      }
+    }
+
+    if (
+      curr.getFullYear() === now.getFullYear() &&
+      curr.getMonth() === now.getMonth() &&
+      curr.getDate() === now.getDate()
+    ) {
+      return 'Dzisiaj';
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (
+      curr.getFullYear() === yesterday.getFullYear() &&
+      curr.getMonth() === yesterday.getMonth() &&
+      curr.getDate() === yesterday.getDate()
+    ) {
+      return 'Wczoraj';
+    }
+
+    const months = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paz', 'lis', 'gru'];
+    return `${curr.getDate()} ${months[curr.getMonth()]}`;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Simple markdown renderer for AI responses.
@@ -112,6 +165,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
             data.messages.map((msg) => ({
               text: msg.content,
               type: msg.role,
+              timestamp: msg.timestamp || new Date().toISOString(),
             }))
           );
         }
@@ -271,17 +325,19 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     if (!inputValue.trim() || isTyping || !clientId) return;
 
     const userMessage = inputValue.trim();
-    setMessages(prev => [...prev, { text: userMessage, type: 'user' }]);
+    const now = new Date().toISOString();
+    setMessages(prev => [...prev, { text: userMessage, type: 'user', timestamp: now }]);
     setInputValue('');
     setIsTyping(true);
 
     try {
       const response = await sendChatMessage(clientId, userMessage);
-      setMessages(prev => [...prev, { text: response.message, type: 'assistant' }]);
+      setMessages(prev => [...prev, { text: response.message, type: 'assistant', timestamp: new Date().toISOString() }]);
     } catch {
       setMessages(prev => [...prev, {
         text: 'Przepraszam, wystapil blad. Sprobuj ponownie.',
-        type: 'assistant'
+        type: 'assistant',
+        timestamp: new Date().toISOString(),
       }]);
     } finally {
       setIsTyping(false);
@@ -418,58 +474,80 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
               </div>
             )}
 
-            {messages.map((msg, idx) => (
-              <div
-                key={idx}
-                className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed transition-all duration-200 ${
-                  msg.type === 'user'
-                    ? 'self-end text-white rounded-br max-w-[80%]'
-                    : 'self-start text-gray-100 rounded-bl max-w-[85%]'
-                }`}
-                style={{
-                  lineHeight: '1.5',
-                  background: msg.type === 'user'
-                    ? 'linear-gradient(135deg, rgba(60, 60, 65, 0.9) 0%, rgba(45, 45, 50, 0.95) 100%)'
-                    : 'linear-gradient(135deg, rgba(30, 30, 35, 0.85) 0%, rgba(22, 22, 26, 0.9) 100%)',
-                  backdropFilter: 'blur(15px) saturate(150%)',
-                  border: msg.type === 'user'
-                    ? '1px solid rgba(80, 80, 85, 0.5)'
-                    : '1px solid rgba(50, 50, 55, 0.4)',
-                  boxShadow: msg.type === 'user'
-                    ? '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(45, 45, 50, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-                    : '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-                  animation: 'fadeInSlideFloat 0.3s ease-out forwards',
-                  animationDelay: `${Math.min(idx, 5) * 0.05}s`,
-                  opacity: 0,
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  if (msg.type === 'user') {
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
-                    e.currentTarget.style.borderColor = 'rgba(120, 120, 125, 0.7)';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(70, 70, 75, 1) 0%, rgba(55, 55, 60, 1) 100%)';
-                  } else {
-                    e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(255, 255, 255, 0.06)';
-                    e.currentTarget.style.borderColor = 'rgba(60, 60, 65, 0.6)';
-                    e.currentTarget.style.background = 'linear-gradient(135deg, rgba(35, 35, 40, 0.95) 0%, rgba(25, 25, 30, 1) 100%)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.borderColor = msg.type === 'user'
-                    ? 'rgba(80, 80, 85, 0.5)'
-                    : 'rgba(50, 50, 55, 0.4)';
-                  e.currentTarget.style.background = msg.type === 'user'
-                    ? 'linear-gradient(135deg, rgba(60, 60, 65, 0.9) 0%, rgba(45, 45, 50, 0.95) 100%)'
-                    : 'linear-gradient(135deg, rgba(30, 30, 35, 0.85) 0%, rgba(22, 22, 26, 0.9) 100%)';
-                  e.currentTarget.style.boxShadow = msg.type === 'user'
-                    ? '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(45, 45, 50, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
-                    : '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)';
-                }}
-              >
-                {msg.type === 'assistant' ? renderMarkdown(msg.text) : msg.text}
-              </div>
-            ))}
+            {messages.map((msg, idx) => {
+              const daySep = formatChatDaySeparator(
+                msg.timestamp,
+                idx > 0 ? messages[idx - 1].timestamp : null
+              );
+
+              return (
+                <React.Fragment key={idx}>
+                  {/* Day separator */}
+                  {daySep && (
+                    <div className="flex items-center gap-3 my-2">
+                      <div className="h-px flex-1 bg-white/10" />
+                      <span className="text-[10px] text-zinc-500 font-medium">{daySep}</span>
+                      <div className="h-px flex-1 bg-white/10" />
+                    </div>
+                  )}
+
+                  <div>
+                    <div
+                      className={`rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed transition-all duration-200 ${
+                        msg.type === 'user'
+                          ? 'self-end text-white rounded-br max-w-[80%]'
+                          : 'self-start text-gray-100 rounded-bl max-w-[85%]'
+                      }`}
+                      style={{
+                        lineHeight: '1.5',
+                        background: msg.type === 'user'
+                          ? 'linear-gradient(135deg, rgba(60, 60, 65, 0.9) 0%, rgba(45, 45, 50, 0.95) 100%)'
+                          : 'linear-gradient(135deg, rgba(30, 30, 35, 0.85) 0%, rgba(22, 22, 26, 0.9) 100%)',
+                        backdropFilter: 'blur(15px) saturate(150%)',
+                        border: msg.type === 'user'
+                          ? '1px solid rgba(80, 80, 85, 0.5)'
+                          : '1px solid rgba(50, 50, 55, 0.4)',
+                        boxShadow: msg.type === 'user'
+                          ? '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(45, 45, 50, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                          : '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
+                        animation: 'fadeInSlideFloat 0.3s ease-out forwards',
+                        animationDelay: `${Math.min(idx, 5) * 0.05}s`,
+                        opacity: 0,
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        if (msg.type === 'user') {
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(255, 255, 255, 0.12), 0 4px 12px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.15)';
+                          e.currentTarget.style.borderColor = 'rgba(120, 120, 125, 0.7)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(70, 70, 75, 1) 0%, rgba(55, 55, 60, 1) 100%)';
+                        } else {
+                          e.currentTarget.style.boxShadow = '0 8px 20px rgba(0, 0, 0, 0.5), 0 4px 12px rgba(255, 255, 255, 0.06)';
+                          e.currentTarget.style.borderColor = 'rgba(60, 60, 65, 0.6)';
+                          e.currentTarget.style.background = 'linear-gradient(135deg, rgba(35, 35, 40, 0.95) 0%, rgba(25, 25, 30, 1) 100%)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.borderColor = msg.type === 'user'
+                          ? 'rgba(80, 80, 85, 0.5)'
+                          : 'rgba(50, 50, 55, 0.4)';
+                        e.currentTarget.style.background = msg.type === 'user'
+                          ? 'linear-gradient(135deg, rgba(60, 60, 65, 0.9) 0%, rgba(45, 45, 50, 0.95) 100%)'
+                          : 'linear-gradient(135deg, rgba(30, 30, 35, 0.85) 0%, rgba(22, 22, 26, 0.9) 100%)';
+                        e.currentTarget.style.boxShadow = msg.type === 'user'
+                          ? '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(45, 45, 50, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.08)'
+                          : '0 2px 8px rgba(0, 0, 0, 0.4), 0 1px 4px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.04)';
+                      }}
+                    >
+                      {msg.type === 'assistant' ? renderMarkdown(msg.text) : msg.text}
+                    </div>
+                    <p className={`text-[10px] text-zinc-600 mt-0.5 px-1 ${msg.type === 'user' ? 'text-right' : ''}`}>
+                      {formatChatTime(msg.timestamp)}
+                    </p>
+                  </div>
+                </React.Fragment>
+              );
+            })}
 
             {isTyping && (
               <div

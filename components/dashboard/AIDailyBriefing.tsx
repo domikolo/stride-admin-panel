@@ -166,7 +166,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                             <AlertTriangle size={20} className={briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-400'} />
                         </div>
                         <div>
-                            <Link href="/insights?period=daily&tab=gaps">
+                            <Link href="/insights?period=daily">
                                 <p className={`text-2xl font-bold hover:text-blue-400 transition-colors cursor-pointer ${briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-500'}`}>
                                     {briefing.stats.gapsCount}
                                 </p>

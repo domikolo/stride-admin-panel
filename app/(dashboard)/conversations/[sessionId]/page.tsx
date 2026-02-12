@@ -1,11 +1,11 @@
 /**
- * Conversation Detail Page - Improved with chat bubbles style
+ * Conversation Detail Page - With breadcrumb navigation
  */
 
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter, useSearchParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getConversationDetails } from '@/lib/api';
 import { ConversationMessage } from '@/lib/types';
@@ -14,13 +14,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/ui/empty-state';
-import { ArrowLeft, User, Bot, MessageSquare, Copy, Check } from 'lucide-react';
+import Link from 'next/link';
+import { User, Bot, MessageSquare, Copy, Check, ChevronRight } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import toast from 'react-hot-toast';
 
 export default function ConversationDetailPage() {
   const params = useParams();
-  const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
   const sessionId = params.sessionId as string;
@@ -96,25 +96,29 @@ export default function ConversationDetailPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
+      {/* Breadcrumb + Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            className="text-zinc-400 hover:text-white"
-          >
-            <ArrowLeft size={20} />
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
-              Conversation {conversationNumber && `#${conversationNumber}`}
-            </h1>
-            <p className="text-sm text-zinc-400 mt-1 flex items-center gap-2">
-              <span className="font-mono">{sessionId.slice(0, 16)}...</span>
-              <Badge variant="secondary">{messages.length} messages</Badge>
-            </p>
+        <div>
+          {/* Breadcrumb */}
+          <nav className="flex items-center gap-1.5 text-sm mb-2">
+            <Link href="/conversations" className="text-zinc-400 hover:text-white transition-colors">
+              Rozmowy
+            </Link>
+            <ChevronRight size={14} className="text-zinc-600" />
+            <span className="text-zinc-400">{sessionId.slice(0, 12)}...</span>
+            {conversationNumber && (
+              <>
+                <ChevronRight size={14} className="text-zinc-600" />
+                <span className="text-zinc-300">#{conversationNumber}</span>
+              </>
+            )}
+          </nav>
+
+          <h1 className="text-3xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+            Rozmowa {conversationNumber ? `#${conversationNumber}` : ''}
+          </h1>
+          <div className="mt-1">
+            <Badge variant="secondary">{messages.length} messages</Badge>
           </div>
         </div>
 

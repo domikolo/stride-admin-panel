@@ -71,6 +71,21 @@ class ApiClient {
     const responseData = await response.json();
     return camelCaseKeys(responseData) as T;
   }
+
+  async delete<T>(endpoint: string): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'DELETE',
+      headers: await this.getHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    return camelCaseKeys(responseData) as T;
+  }
 }
 
 export const api = new ApiClient();
@@ -197,4 +212,29 @@ export const sendChatMessage = (
 export const getChatHistory = (clientId: string, limit = 50) =>
   api.get<{ messages: ChatHistoryMessage[]; count: number }>(
     `/clients/${clientId}/chat/history?limit=${limit}`
+  );
+
+/**
+ * Resolve a knowledge base gap
+ */
+export const resolveGap = (clientId: string, topicId: string, topicName: string) =>
+  api.post<{ status: string; topicId: string }>(
+    `/clients/${clientId}/gaps/resolve`,
+    { topic_id: topicId, topic_name: topicName }
+  );
+
+/**
+ * Unresolve a knowledge base gap
+ */
+export const unresolveGap = (clientId: string, topicId: string) =>
+  api.delete<{ status: string; topicId: string }>(
+    `/clients/${clientId}/gaps/resolve?topic_id=${encodeURIComponent(topicId)}`
+  );
+
+/**
+ * Get all resolved gap IDs
+ */
+export const getResolvedGaps = (clientId: string) =>
+  api.get<{ resolvedGapIds: string[]; count: number }>(
+    `/clients/${clientId}/gaps/resolved`
   );

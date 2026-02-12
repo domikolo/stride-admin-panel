@@ -1,6 +1,6 @@
 /**
  * Insights Page - Trending Questions & Knowledge Gaps
- * With Daily / Weekly period tabs
+ * With Daily / Weekly / Monthly period tabs, gaps shown inline
  */
 
 'use client';
@@ -8,7 +8,7 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getTrendingTopics, Timeframe } from '@/lib/api';
+import { getTrendingTopics, Timeframe, resolveGap, getResolvedGaps } from '@/lib/api';
 import { Topic, Gap } from '@/lib/types';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
@@ -21,622 +21,353 @@ import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from 'lucide-react';
 
+interface PeriodData {
+  topics: Topic[];
+  gaps: Gap[];
+  summary: { totalTopics: number; totalQuestions: number; gapsCount: number };
+}
 
 export default function InsightsPage() {
-    const { user } = useAuth();
-    const searchParams = useSearchParams();
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
 
-    const [dailyTopics, setDailyTopics] = useState<Topic[]>([]);
-    const [weeklyTopics, setWeeklyTopics] = useState<Topic[]>([]);
-    const [biweeklyTopics, setBiweeklyTopics] = useState<Topic[]>([]);
-    const [monthlyTopics, setMonthlyTopics] = useState<Topic[]>([]);
+  const [daily, setDaily] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
+  const [weekly, setWeekly] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
+  const [monthly, setMonthly] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
 
-    // Per-period gaps (derived from topics where isGap=true)
-    const [dailyGaps, setDailyGaps] = useState<Gap[]>([]);
-    const [weeklyGaps, setWeeklyGaps] = useState<Gap[]>([]);
-    const [biweeklyGaps, setBiweeklyGaps] = useState<Gap[]>([]);
-    const [monthlyGaps, setMonthlyGaps] = useState<Gap[]>([]);
+  const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
+  const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
 
-    const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
+  const periodParam = searchParams.get('period');
+  const initialPeriod = (['daily', 'weekly', 'monthly'] as const).includes(periodParam as any)
+    ? (periodParam as 'daily' | 'weekly' | 'monthly')
+    : 'daily';
 
-    const [dailySummary, setDailySummary] = useState({
-        totalTopics: 0,
-        totalQuestions: 0,
-        gapsCount: 0,
-    });
-    const [weeklySummary, setWeeklySummary] = useState({
-        totalTopics: 0,
-        totalQuestions: 0,
-        gapsCount: 0,
-    });
-    const [biweeklySummary, setBiweeklySummary] = useState({
-        totalTopics: 0,
-        totalQuestions: 0,
-        gapsCount: 0,
-    });
-    const [monthlySummary, setMonthlySummary] = useState({
-        totalTopics: 0,
-        totalQuestions: 0,
-        gapsCount: 0,
-    });
+  const [activePeriod, setActivePeriod] = useState<'daily' | 'weekly' | 'monthly'>(initialPeriod);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-    // URL params: ?period=daily|weekly|biweekly|monthly&tab=topics|gaps
-    const periodParam = searchParams.get('period');
-    const tabParam = searchParams.get('tab');
-    const initialPeriod = (['daily', 'weekly', 'biweekly', 'monthly'] as const).includes(periodParam as any)
-        ? (periodParam as 'daily' | 'weekly' | 'biweekly' | 'monthly')
-        : 'daily';
-    const initialTab = tabParam === 'gaps' ? 'gaps' : 'topics';
+  const getClientId = () =>
+    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-    const [activePeriod, setActivePeriod] = useState<'daily' | 'weekly' | 'biweekly' | 'monthly'>(initialPeriod);
-    const [activeTab, setActiveTab] = useState<'topics' | 'gaps'>(initialTab);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+  // Load resolved gaps from API
+  useEffect(() => {
+    if (user) {
+      getResolvedGaps(getClientId())
+        .then(data => setResolvedGaps(data.resolvedGapIds || []))
+        .catch(() => {
+          // Fallback to localStorage
+          const stored = localStorage.getItem('resolvedGaps');
+          if (stored) {
+            try { setResolvedGaps(JSON.parse(stored)); } catch { }
+          }
+        });
+    }
+  }, [user]);
 
-    // Load resolved gaps from localStorage
-    useEffect(() => {
-        const stored = localStorage.getItem('resolvedGaps');
-        if (stored) {
-            try {
-                setResolvedGaps(JSON.parse(stored));
-            } catch { }
-        }
-    }, []);
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
 
-    useEffect(() => {
-        if (user) {
-            loadData();
-        }
-    }, [user]);
+  const topicsToGaps = (topics: Topic[]): Gap[] =>
+    topics.filter(t => t.isGap).map(t => ({
+      topicId: t.topicId,
+      topicName: t.topicName,
+      count: t.count,
+      questionExamples: t.questionExamples,
+      gapReason: t.gapReason || '',
+      suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`
+    }));
 
-    const loadData = async () => {
-        try {
-            setLoading(true);
-            const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-
-            // Load all periods with gaps included
-            const [dailyData, weeklyData, biweeklyData, monthlyData] = await Promise.all([
-                getTrendingTopics(clientId, 'yesterday', true),
-                getTrendingTopics(clientId, 'week', true),
-                getTrendingTopics(clientId, '2weeks', true),
-                getTrendingTopics(clientId, 'month', true),
-            ]);
-
-            // Helper to convert Topic with isGap to Gap format for GapCard
-            const topicsToGaps = (topics: Topic[]): Gap[] =>
-                topics.filter(t => t.isGap).map(t => ({
-                    topicId: t.topicId,
-                    topicName: t.topicName,
-                    count: t.count,
-                    questionExamples: t.questionExamples,
-                    gapReason: t.gapReason || '',
-                    suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`
-                }));
-
-            // Daily
-            setDailyTopics(dailyData.topics);
-            const dGaps = topicsToGaps(dailyData.topics);
-            setDailyGaps(dGaps);
-            setDailySummary({
-                totalTopics: dailyData.topics.length,
-                totalQuestions: dailyData.topics.reduce((sum, t) => sum + t.count, 0),
-                gapsCount: dGaps.length
-            });
-
-            // Weekly
-            setWeeklyTopics(weeklyData.topics);
-            const wGaps = topicsToGaps(weeklyData.topics);
-            setWeeklyGaps(wGaps);
-            setWeeklySummary({
-                totalTopics: weeklyData.topics.length,
-                totalQuestions: weeklyData.topics.reduce((sum, t) => sum + t.count, 0),
-                gapsCount: wGaps.length
-            });
-
-            // Biweekly
-            setBiweeklyTopics(biweeklyData.topics);
-            const bGaps = topicsToGaps(biweeklyData.topics);
-            setBiweeklyGaps(bGaps);
-            setBiweeklySummary({
-                totalTopics: biweeklyData.topics.length,
-                totalQuestions: biweeklyData.topics.reduce((sum, t) => sum + t.count, 0),
-                gapsCount: bGaps.length
-            });
-
-            // Monthly
-            setMonthlyTopics(monthlyData.topics);
-            const mGaps = topicsToGaps(monthlyData.topics);
-            setMonthlyGaps(mGaps);
-            setMonthlySummary({
-                totalTopics: monthlyData.topics.length,
-                totalQuestions: monthlyData.topics.reduce((sum, t) => sum + t.count, 0),
-                gapsCount: mGaps.length
-            });
-
-            setError(null);
-        } catch (err) {
-            console.error('Failed to load insights:', err);
-            setError('Nie udało się załadować danych. Spróbuj ponownie.');
-        } finally {
-            setLoading(false);
-        }
+  const buildPeriodData = (data: { topics: Topic[] }): PeriodData => {
+    const gaps = topicsToGaps(data.topics);
+    return {
+      topics: data.topics,
+      gaps,
+      summary: {
+        totalTopics: data.topics.length,
+        totalQuestions: data.topics.reduce((sum, t) => sum + t.count, 0),
+        gapsCount: gaps.length,
+      },
     };
+  };
 
-    const handleResolveGap = (topicId: string) => {
-        const updated = [...resolvedGaps, topicId];
-        setResolvedGaps(updated);
-        localStorage.setItem('resolvedGaps', JSON.stringify(updated));
-    };
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      const cid = getClientId();
 
-    // Get current period gaps
-    const currentGaps = activePeriod === 'daily' ? dailyGaps
-        : activePeriod === 'weekly' ? weeklyGaps
-            : activePeriod === 'biweekly' ? biweeklyGaps
-                : monthlyGaps;
-    const activeGaps = currentGaps.filter(gap => !resolvedGaps.includes(gap.topicId));
+      const [dailyData, weeklyData, monthlyData] = await Promise.all([
+        getTrendingTopics(cid, 'yesterday', true),
+        getTrendingTopics(cid, 'week', true),
+        getTrendingTopics(cid, 'month', true),
+      ]);
 
-    // Get current period data
-    const currentTopics = activePeriod === 'daily' ? dailyTopics
-        : activePeriod === 'weekly' ? weeklyTopics
-            : activePeriod === 'biweekly' ? biweeklyTopics
-                : monthlyTopics;
-    const currentSummary = activePeriod === 'daily' ? dailySummary
-        : activePeriod === 'weekly' ? weeklySummary
-            : activePeriod === 'biweekly' ? biweeklySummary
-                : monthlySummary;
+      setDaily(buildPeriodData(dailyData));
+      setWeekly(buildPeriodData(weeklyData));
+      setMonthly(buildPeriodData(monthlyData));
+      setError(null);
+    } catch (err) {
+      console.error('Failed to load insights:', err);
+      setError('Nie udalo sie zaladowac danych. Sprobuj ponownie.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    // Calculate top buying intent for current period
-    const topBuyingTopic = [...currentTopics]
-        .sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0];
+  const handleResolveGap = async (topicId: string) => {
+    // Optimistic update
+    const previousResolved = [...resolvedGaps];
+    setResolvedGaps(prev => [...prev, topicId]);
+    setResolvingGaps(prev => new Set(prev).add(topicId));
 
-    if (loading) {
-        return (
-            <div className="space-y-8">
-                <h1 className="text-4xl font-bold text-white">Insights</h1>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {[1, 2, 3].map((i) => (
-                        <Skeleton key={i} className="h-32" />
-                    ))}
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                        <Skeleton key={i} className="h-64" />
-                    ))}
-                </div>
-            </div>
-        );
+    const gap = current.gaps.find(g => g.topicId === topicId);
+
+    try {
+      await resolveGap(getClientId(), topicId, gap?.topicName || '');
+    } catch (err) {
+      // Rollback on failure
+      console.error('Failed to resolve gap:', err);
+      setResolvedGaps(previousResolved);
+    } finally {
+      setResolvingGaps(prev => {
+        const next = new Set(prev);
+        next.delete(topicId);
+        return next;
+      });
+    }
+  };
+
+  const current = activePeriod === 'daily' ? daily : activePeriod === 'weekly' ? weekly : monthly;
+  const activeGaps = current.gaps.filter(gap => !resolvedGaps.includes(gap.topicId));
+
+  // Calculate top buying intent for current period
+  const topBuyingTopic = [...current.topics]
+    .sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0];
+
+  const renderPeriodContent = (data: PeriodData, periodKey: string) => {
+    const filteredGaps = data.gaps.filter(g => !resolvedGaps.includes(g.topicId));
+    const isDaily = periodKey === 'daily';
+
+    if (data.topics.length === 0) {
+      return (
+        <Card className="glass-card p-8 text-center">
+          <p className="text-zinc-400">
+            Brak danych. Poczekaj na pierwsza analize (codziennie o 2:00 w nocy).
+          </p>
+        </Card>
+      );
     }
 
     return (
-        <div className="space-y-8">
-            {/* Header */}
-            <div>
-                <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent flex items-center gap-3">
-                    <Flame className="text-orange-500" />
-                    Trending Questions
-                </h1>
-                <p className="text-zinc-400 mt-2">
-                    Analiza pytań użytkowników chatbota
-                </p>
+      <div className="space-y-6">
+        {/* Smart Insight for daily top topic */}
+        {isDaily && data.topics.length > 0 && data.topics[0].smartInsight && (
+          <SmartInsightCard
+            insight={data.topics[0].smartInsight}
+            topicName={data.topics[0].topicName}
+          />
+        )}
+
+        {/* Topics */}
+        {isDaily ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {data.topics.map((topic) => (
+              <TrendingTopicCard
+                key={topic.topicId}
+                rank={topic.rank}
+                topicName={topic.topicName}
+                count={topic.count}
+                totalQuestions={data.summary.totalQuestions}
+                examples={topic.questionExamples}
+                trend={topic.trend}
+                intentBreakdown={topic.intentBreakdown}
+                isGap={topic.isGap}
+                gapReason={topic.gapReason}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+              {data.topics.some(t => t.trend === 'up') && (
+                <TopMoverCard
+                  topicName={data.topics.find(t => t.trend === 'up')?.topicName || ''}
+                  count={data.topics.find(t => t.trend === 'up')?.count || 0}
+                  trend="up"
+                />
+              )}
+              <WeeklyCategoryChart
+                topics={data.topics}
+                totalQuestions={data.summary.totalQuestions}
+              />
+            </div>
+            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+              {data.topics.map((topic) => (
+                <TrendingTopicCard
+                  key={topic.topicId}
+                  rank={topic.rank}
+                  topicName={topic.topicName}
+                  count={topic.count}
+                  totalQuestions={data.summary.totalQuestions}
+                  examples={topic.questionExamples}
+                  trend={topic.trend}
+                  intentBreakdown={topic.intentBreakdown}
+                  isGap={topic.isGap}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Gaps Section - Inline below topics */}
+        {filteredGaps.length > 0 && (
+          <>
+            <div className="flex items-center gap-4 pt-4">
+              <div className="h-px flex-1 bg-yellow-500/30" />
+              <span className="text-sm font-medium text-yellow-400 flex items-center gap-2">
+                <AlertTriangle size={14} />
+                Luki w bazie wiedzy ({filteredGaps.length})
+              </span>
+              <div className="h-px flex-1 bg-yellow-500/30" />
             </div>
 
-            {/* Error */}
-            {error && (
-                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-                    {error}
-                </div>
-            )}
-
-            {/* Period Tabs - Main Navigation */}
-            <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-                <TabsList className="bg-zinc-800/50 mb-6">
-                    <TabsTrigger value="daily" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                        <Clock size={16} />
-                        Wczoraj (24h)
-                    </TabsTrigger>
-                    <TabsTrigger value="weekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                        <Calendar size={16} />
-                        Tydzień (7 dni)
-                    </TabsTrigger>
-                    <TabsTrigger value="biweekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                        <Calendar size={16} />
-                        2 tygodnie (14 dni)
-                    </TabsTrigger>
-                    <TabsTrigger value="monthly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                        <Calendar size={16} />
-                        Miesiąc (30 dni)
-                    </TabsTrigger>
-                </TabsList>
-
-                {/* Period info */}
-                <p className="text-zinc-500 text-sm mb-4">
-                    {activePeriod === 'daily'
-                        ? 'Dane z wczoraj (ostatnie pełne 24h) • Trend: zmiana vs poprzedni dzień'
-                        : activePeriod === 'weekly'
-                            ? 'Dane z ostatnich 7 dni • Trend: zmiana vs poprzedni tydzień'
-                            : activePeriod === 'biweekly'
-                                ? 'Dane z ostatnich 14 dni • Trend: zmiana vs poprzednie 2 tygodnie'
-                                : 'Dane z ostatnich 30 dni • Trend: zmiana vs poprzedni miesiąc'
-                    }
-                </p>
-
-                {/* Summary Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                    <StatsCard
-                        title="Unikalne tematy"
-                        value={currentSummary.totalTopics}
-                        icon={MessageSquare}
-                    />
-                    <StatsCard
-                        title="Łączne pytania"
-                        value={currentSummary.totalQuestions}
-                        icon={TrendingUp}
-                    />
-                    {activePeriod === 'daily' && (
-                        <StatsCard
-                            title="Luki w bazie wiedzy"
-                            value={currentSummary.gapsCount}
-                            icon={AlertTriangle}
-                            trend={currentSummary.gapsCount > 0 ? 'down' : 'neutral'}
-                        />
-                    )}
-                    {activePeriod !== 'daily' && (
-                        <StatsCard
-                            title="Luki w bazie wiedzy"
-                            value={currentSummary.gapsCount}
-                            icon={AlertTriangle}
-                        />
-                    )}
-                </div>
-
-                {/* Buying Intent Highlight (only if significant) */}
-                {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
-                    <Card className="glass-card p-4 border-green-500/30 mb-6">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl">💰</span>
-                            <div>
-                                <p className="text-white font-medium">
-                                    Hot Lead Alert: "{topBuyingTopic.topicName}"
-                                </p>
-                                <p className="text-sm text-zinc-400">
-                                    {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
-                                </p>
-                            </div>
-                        </div>
-                    </Card>
-                )}
-
-                {/* Content based on period */}
-                <TabsContent value="daily" className="mt-0">
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
-                        <TabsList className="bg-zinc-800/50">
-                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <Flame size={16} className={activePeriod === 'daily' ? "text-orange-500" : ""} />
-                                Top Pytania ({dailyTopics.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <AlertTriangle size={16} className="text-yellow-500" />
-                                Luki w KB ({dailyGaps.length})
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="topics" className="mt-6">
-                            {dailyTopics.length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        Brak danych. Poczekaj na pierwszą analizę (codziennie o 2:00 w nocy).
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-6">
-                                    {/* Smart Insight for Top Topic */}
-                                    {dailyTopics.length > 0 && dailyTopics[0].smartInsight && (
-                                        <SmartInsightCard
-                                            insight={dailyTopics[0].smartInsight}
-                                            topicName={dailyTopics[0].topicName}
-                                        />
-                                    )}
-
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                        {dailyTopics.map((topic) => (
-                                            <TrendingTopicCard
-                                                key={topic.topicId}
-                                                rank={topic.rank}
-                                                topicName={topic.topicName}
-                                                count={topic.count}
-                                                totalQuestions={dailySummary.totalQuestions}
-                                                examples={topic.questionExamples}
-                                                trend={topic.trend}
-                                                intentBreakdown={topic.intentBreakdown}
-                                                isGap={topic.isGap}
-                                                gapReason={topic.gapReason}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="gaps" className="mt-6">
-                            {activeGaps.length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {activeGaps.map((gap) => (
-                                        <GapCard
-                                            key={gap.topicId}
-                                            topicId={gap.topicId}
-                                            topicName={gap.topicName}
-                                            count={gap.count}
-                                            examples={gap.questionExamples}
-                                            gapReason={gap.gapReason}
-                                            suggestion={gap.suggestion}
-                                            onResolve={handleResolveGap}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-                </TabsContent>
-
-                <TabsContent value="weekly" className="mt-0">
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
-                        <TabsList className="bg-zinc-800/50">
-                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <Flame size={16} />
-                                Top Pytania ({weeklyTopics.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <AlertTriangle size={16} className="text-yellow-500" />
-                                Luki w KB ({weeklyGaps.length})
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="topics" className="mt-6">
-                            {weeklyTopics.length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        Brak danych. Poczekaj na więcej danych.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        {/* Left Column: Top Mover & Category Chart */}
-                                        <div className="lg:col-span-1 space-y-6">
-                                            {weeklyTopics.some(t => t.trend === 'up') && (
-                                                <TopMoverCard
-                                                    topicName={weeklyTopics.find(t => t.trend === 'up')?.topicName || ''}
-                                                    count={weeklyTopics.find(t => t.trend === 'up')?.count || 0}
-                                                    trend="up"
-                                                />
-                                            )}
-
-                                            <WeeklyCategoryChart
-                                                topics={weeklyTopics}
-                                                totalQuestions={weeklySummary.totalQuestions}
-                                            />
-                                        </div>
-
-                                        {/* Right Column: List of Topics */}
-                                        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
-                                            {weeklyTopics.map((topic) => (
-                                                <TrendingTopicCard
-                                                    key={topic.topicId}
-                                                    rank={topic.rank}
-                                                    topicName={topic.topicName}
-                                                    count={topic.count}
-                                                    totalQuestions={weeklySummary.totalQuestions}
-                                                    examples={topic.questionExamples}
-                                                    trend={topic.trend}
-                                                    intentBreakdown={topic.intentBreakdown}
-                                                    isGap={topic.isGap}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="gaps" className="mt-6">
-                            {weeklyGaps.filter(g => !resolvedGaps.includes(g.topicId)).length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy w tym okresie.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {weeklyGaps.filter(g => !resolvedGaps.includes(g.topicId)).map((gap) => (
-                                        <GapCard
-                                            key={gap.topicId}
-                                            topicId={gap.topicId}
-                                            topicName={gap.topicName}
-                                            count={gap.count}
-                                            examples={gap.questionExamples}
-                                            gapReason={gap.gapReason}
-                                            suggestion={gap.suggestion}
-                                            onResolve={handleResolveGap}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-                </TabsContent>
-
-                <TabsContent value="biweekly" className="mt-0">
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
-                        <TabsList className="bg-zinc-800/50">
-                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <Flame size={16} />
-                                Top Pytania ({biweeklyTopics.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <AlertTriangle size={16} className="text-yellow-500" />
-                                Luki w KB ({biweeklyGaps.length})
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="topics" className="mt-6">
-                            {biweeklyTopics.length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        Brak danych z 2 tygodni.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div className="lg:col-span-1 space-y-6">
-                                            {biweeklyTopics.some(t => t.trend === 'up') && (
-                                                <TopMoverCard
-                                                    topicName={biweeklyTopics.find(t => t.trend === 'up')?.topicName || ''}
-                                                    count={biweeklyTopics.find(t => t.trend === 'up')?.count || 0}
-                                                    trend="up"
-                                                />
-                                            )}
-                                            <WeeklyCategoryChart
-                                                topics={biweeklyTopics}
-                                                totalQuestions={biweeklySummary.totalQuestions}
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
-                                            {biweeklyTopics.map((topic) => (
-                                                <TrendingTopicCard
-                                                    key={topic.topicId}
-                                                    rank={topic.rank}
-                                                    topicName={topic.topicName}
-                                                    count={topic.count}
-                                                    totalQuestions={biweeklySummary.totalQuestions}
-                                                    examples={topic.questionExamples}
-                                                    trend={topic.trend}
-                                                    intentBreakdown={topic.intentBreakdown}
-                                                    isGap={topic.isGap}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="gaps" className="mt-6">
-                            {biweeklyGaps.filter(g => !resolvedGaps.includes(g.topicId)).length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy w tym okresie.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {biweeklyGaps.filter(g => !resolvedGaps.includes(g.topicId)).map((gap) => (
-                                        <GapCard
-                                            key={gap.topicId}
-                                            topicId={gap.topicId}
-                                            topicName={gap.topicName}
-                                            count={gap.count}
-                                            examples={gap.questionExamples}
-                                            gapReason={gap.gapReason}
-                                            suggestion={gap.suggestion}
-                                            onResolve={handleResolveGap}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-                </TabsContent>
-
-                <TabsContent value="monthly" className="mt-0">
-                    <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'topics' | 'gaps')} className="w-full">
-                        <TabsList className="bg-zinc-800/50">
-                            <TabsTrigger value="topics" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <Flame size={16} />
-                                Top Pytania ({monthlyTopics.length})
-                            </TabsTrigger>
-                            <TabsTrigger value="gaps" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
-                                <AlertTriangle size={16} className="text-yellow-500" />
-                                Luki w KB ({monthlyGaps.length})
-                            </TabsTrigger>
-                        </TabsList>
-
-                        <TabsContent value="topics" className="mt-6">
-                            {monthlyTopics.length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        Brak danych z miesiąca.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                                        <div className="lg:col-span-1 space-y-6">
-                                            {monthlyTopics.some(t => t.trend === 'up') && (
-                                                <TopMoverCard
-                                                    topicName={monthlyTopics.find(t => t.trend === 'up')?.topicName || ''}
-                                                    count={monthlyTopics.find(t => t.trend === 'up')?.count || 0}
-                                                    trend="up"
-                                                />
-                                            )}
-                                            <WeeklyCategoryChart
-                                                topics={monthlyTopics}
-                                                totalQuestions={monthlySummary.totalQuestions}
-                                            />
-                                        </div>
-                                        <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
-                                            {monthlyTopics.map((topic) => (
-                                                <TrendingTopicCard
-                                                    key={topic.topicId}
-                                                    rank={topic.rank}
-                                                    topicName={topic.topicName}
-                                                    count={topic.count}
-                                                    totalQuestions={monthlySummary.totalQuestions}
-                                                    examples={topic.questionExamples}
-                                                    trend={topic.trend}
-                                                    intentBreakdown={topic.intentBreakdown}
-                                                    isGap={topic.isGap}
-                                                />
-                                            ))}
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </TabsContent>
-
-                        <TabsContent value="gaps" className="mt-6">
-                            {monthlyGaps.filter(g => !resolvedGaps.includes(g.topicId)).length === 0 ? (
-                                <Card className="glass-card p-8 text-center">
-                                    <p className="text-zinc-400">
-                                        🎉 Świetnie! Nie wykryto żadnych luk w bazie wiedzy w tym okresie.
-                                    </p>
-                                </Card>
-                            ) : (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    {monthlyGaps.filter(g => !resolvedGaps.includes(g.topicId)).map((gap) => (
-                                        <GapCard
-                                            key={gap.topicId}
-                                            topicId={gap.topicId}
-                                            topicName={gap.topicName}
-                                            count={gap.count}
-                                            examples={gap.questionExamples}
-                                            gapReason={gap.gapReason}
-                                            suggestion={gap.suggestion}
-                                            onResolve={handleResolveGap}
-                                        />
-                                    ))}
-                                </div>
-                            )}
-                        </TabsContent>
-                    </Tabs>
-                </TabsContent>
-            </Tabs>
-        </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {filteredGaps.map((gap) => (
+                <GapCard
+                  key={gap.topicId}
+                  topicId={gap.topicId}
+                  topicName={gap.topicName}
+                  count={gap.count}
+                  examples={gap.questionExamples}
+                  gapReason={gap.gapReason}
+                  suggestion={gap.suggestion}
+                  onResolve={handleResolveGap}
+                  resolving={resolvingGaps.has(gap.topicId)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     );
+  };
+
+  if (loading) {
+    return (
+      <div className="space-y-8">
+        <h1 className="text-4xl font-bold text-white">Insights</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <Skeleton key={i} className="h-64" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div>
+        <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent flex items-center gap-3">
+          <Flame className="text-orange-500" />
+          Trending Questions
+        </h1>
+        <p className="text-zinc-400 mt-2">
+          Analiza pytan uzytkownikow chatbota
+        </p>
+      </div>
+
+      {/* Error */}
+      {error && (
+        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Period Tabs */}
+      <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
+        <TabsList className="bg-zinc-800/50 mb-6">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+            <Clock size={16} />
+            Wczoraj (24h)
+          </TabsTrigger>
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+            <Calendar size={16} />
+            Tydzien (7 dni)
+          </TabsTrigger>
+          <TabsTrigger value="monthly" className="data-[state=active]:bg-white data-[state=active]:text-black flex items-center gap-2">
+            <Calendar size={16} />
+            Miesiac (30 dni)
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Period info */}
+        <p className="text-zinc-500 text-sm mb-4">
+          {activePeriod === 'daily'
+            ? 'Dane z wczoraj (ostatnie pelne 24h) - Trend: zmiana vs poprzedni dzien'
+            : activePeriod === 'weekly'
+              ? 'Dane z ostatnich 7 dni - Trend: zmiana vs poprzedni tydzien'
+              : 'Dane z ostatnich 30 dni - Trend: zmiana vs poprzedni miesiac'
+          }
+        </p>
+
+        {/* Summary Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          <StatsCard
+            title="Unikalne tematy"
+            value={current.summary.totalTopics}
+            icon={MessageSquare}
+          />
+          <StatsCard
+            title="Laczne pytania"
+            value={current.summary.totalQuestions}
+            icon={TrendingUp}
+          />
+          <StatsCard
+            title="Luki w bazie wiedzy"
+            value={current.summary.gapsCount}
+            icon={AlertTriangle}
+            trend={activePeriod === 'daily' && current.summary.gapsCount > 0 ? 'down' : undefined}
+          />
+        </div>
+
+        {/* Buying Intent Highlight */}
+        {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
+          <Card className="glass-card p-4 border-green-500/30 mb-6">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">💰</span>
+              <div>
+                <p className="text-white font-medium">
+                  Hot Lead Alert: &quot;{topBuyingTopic.topicName}&quot;
+                </p>
+                <p className="text-sm text-zinc-400">
+                  {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytajacych wyraza zamiar zakupu
+                </p>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Content for each period */}
+        <TabsContent value="daily" className="mt-0">
+          {renderPeriodContent(daily, 'daily')}
+        </TabsContent>
+        <TabsContent value="weekly" className="mt-0">
+          {renderPeriodContent(weekly, 'weekly')}
+        </TabsContent>
+        <TabsContent value="monthly" className="mt-0">
+          {renderPeriodContent(monthly, 'monthly')}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
 }
