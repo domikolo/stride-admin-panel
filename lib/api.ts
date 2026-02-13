@@ -190,11 +190,38 @@ export const getRecentActivity = (clientId: string, limit = 10) =>
 
 /**
  * Get daily briefing (AI summary)
+ * Cached in sessionStorage for 1 hour to avoid re-generation on tab switches
  */
-export const getDailyBriefing = (clientId: string, refresh = false) =>
-  api.get<DailyBriefing>(
+const BRIEFING_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export const getDailyBriefing = async (clientId: string, refresh = false): Promise<DailyBriefing> => {
+  const cacheKey = `briefing_${clientId}`;
+
+  if (!refresh && typeof window !== 'undefined') {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < BRIEFING_CACHE_TTL) {
+          return data as DailyBriefing;
+        }
+        sessionStorage.removeItem(cacheKey);
+      }
+    } catch { /* ignore parse errors */ }
+  }
+
+  const data = await api.get<DailyBriefing>(
     `/clients/${clientId}/daily-briefing${refresh ? '?refresh=true' : ''}`
   );
+
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch { /* storage full, ignore */ }
+  }
+
+  return data;
+};
 
 /**
  * Send chat message to AI assistant
