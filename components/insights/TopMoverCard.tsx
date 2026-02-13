@@ -5,21 +5,22 @@ interface TopMoverCardProps {
     topicName: string;
     count: number;
     trend: 'up' | 'down' | 'stable' | 'new';
-    percentageChange?: number; // Approximate
+    percentageChange?: number;
 }
 
 export default function TopMoverCard({ topicName, count, trend }: TopMoverCardProps) {
-    // Determine visuals
-    const icon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-    const color = trend === 'up' ? 'text-green-500' : trend === 'down' ? 'text-red-500' : 'text-zinc-500';
     const bg = trend === 'up' ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30';
+    const iconBg = trend === 'up' ? 'bg-green-500/20' : 'bg-red-500/20';
 
     return (
         <Card className={`glass-card p-4 flex items-center justify-between ${bg} mb-6`}>
             <div>
-                <p className="text-xs text-zinc-400 uppercase tracking-wider mb-1">
-                    {trend === 'up' ? '📈 Największy Wzrost' : '📉 Największy Spadek'}
-                </p>
+                <div className="flex items-center gap-2 mb-1">
+                    {trend === 'up' ? <TrendingUp size={14} className="text-green-400" /> : <TrendingDown size={14} className="text-red-400" />}
+                    <p className="text-xs text-zinc-400 uppercase tracking-wider">
+                        {trend === 'up' ? 'Największy Wzrost' : 'Największy Spadek'}
+                    </p>
+                </div>
                 <div className="flex items-center gap-2">
                     <h3 className="text-lg font-bold text-white max-w-[200px] truncate" title={topicName}>
                         {topicName}
@@ -28,7 +29,7 @@ export default function TopMoverCard({ topicName, count, trend }: TopMoverCardPr
                 </div>
             </div>
 
-            <div className={`p-3 rounded-full bg-white/5`}>
+            <div className={`p-3 rounded-full ${iconBg}`}>
                 {trend === 'up' ? <TrendingUp size={24} className="text-green-400" /> : <TrendingDown size={24} className="text-red-400" />}
             </div>
         </Card>

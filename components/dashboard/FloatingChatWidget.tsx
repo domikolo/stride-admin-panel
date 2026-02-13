@@ -144,6 +144,13 @@ function inlineMd(text: string): string {
   return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
 }
 
+const NOTIFICATION_MESSAGES = [
+  'W czym mogę Ci pomóc?',
+  'Zapytaj mnie o statystyki',
+  'Sprawdź dzisiejsze rozmowy',
+  'Masz pytanie? Napisz!',
+];
+
 export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -151,6 +158,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [notificationText, setNotificationText] = useState<string | null>(null);
+  const notificationCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Load chat history on first open
@@ -199,6 +208,36 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
       return () => clearInterval(tadaInterval);
     }
+  }, [isOpen]);
+
+  // Escalating notification bubble: 30s, 60s, 120s, 240s then stop
+  useEffect(() => {
+    if (isOpen) return;
+
+    const MAX_NOTIFICATIONS = 4;
+    const BASE_DELAY = 30000; // 30s
+
+    const scheduleNext = () => {
+      if (notificationCount.current >= MAX_NOTIFICATIONS) return;
+
+      const delay = BASE_DELAY * Math.pow(2, notificationCount.current);
+      const timeout = setTimeout(() => {
+        const msgIndex = notificationCount.current % NOTIFICATION_MESSAGES.length;
+        setNotificationText(NOTIFICATION_MESSAGES[msgIndex]);
+        notificationCount.current += 1;
+
+        // Auto-hide after 5s
+        setTimeout(() => setNotificationText(null), 5000);
+
+        // Schedule next
+        scheduleNext();
+      }, delay);
+
+      return timeout;
+    };
+
+    const timeout = scheduleNext();
+    return () => { if (timeout) clearTimeout(timeout); };
   }, [isOpen]);
 
   const animateOpen = () => {
@@ -387,6 +426,33 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         </div>
       </button>
 
+      {/* Notification bubble */}
+      {notificationText && !isOpen && !isAnimating && (
+        <div
+          className="fixed pointer-events-none"
+          style={{
+            top: '50%',
+            right: 'calc(var(--floating-chat-right) + var(--floating-chat-btn-width) + 12px)',
+            transform: 'translateY(-50%)',
+            zIndex: 2004,
+            animation: 'fadeInSlideFloat 0.3s ease-out',
+          }}
+        >
+          <div
+            className="bg-[#141414] text-zinc-300 text-sm px-4 py-2.5 rounded-xl whitespace-nowrap pointer-events-auto cursor-pointer"
+            style={{
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)',
+            }}
+            onClick={() => {
+              setNotificationText(null);
+              animateOpen();
+            }}
+          >
+            {notificationText}
+          </div>
+        </div>
+      )}
+
       {/* Chat Widget */}
       <div
         id="chat-widget-floating"
@@ -410,7 +476,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         <div
           className="widget-header px-5 py-3 transition-opacity duration-300 flex items-center justify-between"
           style={{
-            background: '#0e0e0e',
+            background: '#0a0a0a',
             borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
@@ -427,8 +493,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
               </svg>
             </div>
             <div>
-              <span className="text-[13px] font-semibold text-white">AI Assistant</span>
-              <span className="text-[10px] text-zinc-600 block leading-tight">Zapytaj o dane</span>
+              <span className="text-sm font-semibold text-white">AI Assistant</span>
+              <span className="text-xs text-zinc-600 block leading-tight">Zapytaj o dane</span>
             </div>
           </div>
         </div>
@@ -453,7 +519,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                     <button
                       key={i}
                       onClick={() => handleSuggestionClick(q)}
-                      className="text-[12px] bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/[0.1] text-zinc-400 hover:text-zinc-300 px-3 py-2 rounded-lg transition-all duration-200 text-left"
+                      className="text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.12] text-zinc-400 hover:text-zinc-300 px-3 py-2 rounded-lg transition-all duration-200 text-left"
                     >
                       {q}
                     </button>
@@ -473,22 +539,22 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                   {/* Day separator */}
                   {daySep && (
                     <div className="flex items-center gap-3 my-2">
-                      <div className="h-px flex-1 bg-white/[0.06]" />
-                      <span className="text-[10px] text-zinc-600 font-medium">{daySep}</span>
-                      <div className="h-px flex-1 bg-white/[0.06]" />
+                      <div className="h-px flex-1 bg-white/[0.08]" />
+                      <span className="text-xs text-zinc-600 font-medium">{daySep}</span>
+                      <div className="h-px flex-1 bg-white/[0.08]" />
                     </div>
                   )}
 
                   <div className={`flex flex-col ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
                     <div
-                      className={`rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
+                      className={`rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
                         msg.type === 'user'
                           ? 'text-white max-w-[80%]'
                           : 'text-zinc-200 max-w-[85%]'
                       }`}
                       style={{
                         lineHeight: '1.5',
-                        background: msg.type === 'user' ? '#222222' : '#1a1a1a',
+                        background: msg.type === 'user' ? '#1e1e1e' : '#1e1e1e',
                         border: msg.type === 'user'
                           ? '1px solid rgba(255, 255, 255, 0.08)'
                           : '1px solid rgba(255, 255, 255, 0.04)',
@@ -496,7 +562,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                     >
                       {msg.type === 'assistant' ? renderMarkdown(msg.text) : msg.text}
                     </div>
-                    <p className={`text-[10px] text-zinc-700 mt-0.5 px-1 ${msg.type === 'user' ? 'text-right' : ''}`}>
+                    <p className={`text-xs text-zinc-700 mt-0.5 px-1 ${msg.type === 'user' ? 'text-right' : ''}`}>
                       {formatChatTime(msg.timestamp)}
                     </p>
                   </div>
@@ -508,7 +574,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
               <div
                 className="self-start rounded-xl px-3 py-2 max-w-[75%] flex gap-1.5"
                 style={{
-                  background: '#1a1a1a',
+                  background: '#1e1e1e',
                   border: '1px solid rgba(255, 255, 255, 0.04)',
                 }}
               >
@@ -530,7 +596,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         <div
           className="widget-footer p-4 xl:p-5 transition-opacity duration-300"
           style={{
-            background: '#0e0e0e',
+            background: '#0a0a0a',
             borderTop: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
@@ -547,8 +613,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 padding: '10px 14px',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
                 borderRadius: '10px',
-                fontSize: '13px',
-                background: '#1a1a1a',
+                fontSize: '14px',
+                background: '#1e1e1e',
                 color: '#ffffff',
               }}
               onFocus={(e) => {
@@ -569,7 +635,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 height: '40px',
                 borderRadius: '10px',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
-                background: '#1a1a1a',
+                background: '#1e1e1e',
                 color: '#a1a1aa',
                 cursor: 'pointer',
               }}
@@ -581,7 +647,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#1a1a1a';
+                e.currentTarget.style.background = '#1e1e1e';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
                 e.currentTarget.style.color = '#a1a1aa';
               }}
@@ -598,17 +664,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           onClick={animateClose}
           className="close-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center z-10 transition-all duration-200"
           style={{
-            background: '#1a1a1a',
+            background: '#1e1e1e',
             border: '1px solid rgba(255, 255, 255, 0.06)',
             cursor: 'pointer',
             opacity: 0,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#222222';
+            e.currentTarget.style.background = '#1e1e1e';
             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#1a1a1a';
+            e.currentTarget.style.background = '#1e1e1e';
             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
           }}
         >

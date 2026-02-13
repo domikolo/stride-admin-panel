@@ -1,6 +1,6 @@
 /**
- * Dashboard Page - AI Hub
- * Central dashboard with AI briefing, insights, activity, and charts
+ * Dashboard Page
+ * Central dashboard with AI briefing, stats, chart, insights, and activity
  */
 
 'use client';
@@ -20,8 +20,10 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
 import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
+import { Card } from '@/components/ui/card';
 import { MessageSquare, DollarSign, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -96,6 +98,16 @@ export default function DashboardPage() {
     }
   };
 
+  // Format chart dates
+  const chartData = dailyStats.map(d => {
+    const date = new Date(d.date);
+    return {
+      label: date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' }),
+      rozmowy: d.conversations,
+      wiadomosci: d.messages,
+    };
+  });
+
   if (loading) {
     return (
       <div className="space-y-8">
@@ -113,7 +125,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-white">
@@ -127,7 +139,7 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* AI Daily Briefing - Hero */}
+      {/* AI Daily Briefing */}
       <AIDailyBriefing
         briefing={briefing}
         loading={briefingLoading}
@@ -162,6 +174,59 @@ export default function DashboardPage() {
           valueHref="/insights?period=monthly"
         />
       </div>
+
+      {/* 7-day Activity Chart */}
+      {chartData.length > 0 && (
+        <Card className="glass-card p-5">
+          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-4">
+            Aktywność (ostatnie 7 dni)
+          </h3>
+          <div className="h-[200px]">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData}>
+                <defs>
+                  <linearGradient id="colorRozmowy" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                <XAxis
+                  dataKey="label"
+                  stroke="#71717a"
+                  tick={{ fill: '#71717a', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                />
+                <YAxis
+                  stroke="#71717a"
+                  tick={{ fill: '#71717a', fontSize: 12 }}
+                  axisLine={false}
+                  tickLine={false}
+                  allowDecimals={false}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#141414',
+                    border: '1px solid #1e1e1e',
+                    borderRadius: '8px',
+                    fontSize: '13px',
+                  }}
+                  labelStyle={{ color: '#a1a1aa' }}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="rozmowy"
+                  stroke="#3b82f6"
+                  strokeWidth={2}
+                  fill="url(#colorRozmowy)"
+                  name="Rozmowy"
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
 
       {/* Main Content: Insights + Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

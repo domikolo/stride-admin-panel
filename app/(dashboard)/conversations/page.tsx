@@ -105,7 +105,7 @@ export default function ConversationsPage() {
       setError(null);
     } catch (error) {
       console.error('Failed to load conversations:', error);
-      setError('Failed to load conversations. Please try again.');
+      setError('Nie udało się załadować rozmów. Spróbuj ponownie.');
     } finally {
       setLoading(false);
     }
@@ -150,9 +150,9 @@ export default function ConversationsPage() {
       return { label: 'Test', variant: 'outline' as const, icon: FlaskConical, className: 'text-zinc-400 border-zinc-600' };
     }
     if (statusRaw === 'in_progress') {
-      return { label: 'In Progress', variant: 'outline' as const, icon: Clock, className: 'text-yellow-400 border-yellow-600 bg-yellow-500/10' };
+      return { label: 'W trakcie', variant: 'outline' as const, icon: Clock, className: 'text-yellow-400 border-yellow-600 bg-yellow-500/10' };
     }
-    return { label: 'Completed', variant: 'outline' as const, icon: CheckCircle2, className: 'text-green-400 border-green-600 bg-green-500/10' };
+    return { label: 'Zakończona', variant: 'outline' as const, icon: CheckCircle2, className: 'text-green-400 border-green-600 bg-green-500/10' };
   };
 
   // Filter, search, group and sort logic
@@ -292,7 +292,7 @@ export default function ConversationsPage() {
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#141414] border border-white/[0.03] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 bg-[#141414] border border-white/[0.04] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
           />
         </div>
 
@@ -328,7 +328,7 @@ export default function ConversationsPage() {
               <TableHeader>
                 <TableRow>
                   <SortableHeader
-                    label="Session/User ID"
+                    label="ID Sesji"
                     sortKey="sessionId"
                     currentSort={sortKey}
                     direction={sortDirection}
@@ -362,7 +362,7 @@ export default function ConversationsPage() {
                     direction={sortDirection}
                     onSort={handleSort}
                   />
-                  <TableHead>Podgląd</TableHead>
+                  <TableHead>Podglad</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -378,7 +378,7 @@ export default function ConversationsPage() {
                       {/* Parent Group Row */}
                       <TableRow
                         className={`
-                          transition-colors border-b border-white/[0.04] relative cursor-pointer hover:bg-white/[0.02]
+                          transition-colors border-b border-white/[0.04] relative cursor-pointer hover:bg-white/[0.04]
                         `}
                         onClick={() => {
                           if (isSingleSession) {
@@ -443,7 +443,7 @@ export default function ConversationsPage() {
                         return (
                           <TableRow
                             key={`${conv.sessionId}-${conv.conversationNumber}`}
-                            className={`bg-white/[0.02] hover:bg-white/[0.04] transition-colors cursor-pointer ${isLast ? 'border-b-2 border-white/5' : 'border-b-0'}`}
+                            className={`bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer ${isLast ? 'border-b-2 border-white/[0.04]' : 'border-b-0'}`}
                             onClick={() => router.push(`/conversations/${conv.sessionId}?conversation_number=${conv.conversationNumber}`)}
                           >
                             <TableCell className="py-2">

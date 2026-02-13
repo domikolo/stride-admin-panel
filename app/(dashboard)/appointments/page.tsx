@@ -60,7 +60,7 @@ export default function AppointmentsPage() {
       setError(null);
     } catch (err) {
       console.error('Failed to load data:', err);
-      setError('Failed to load data. Please try again.');
+      setError('Nie udało się załadować danych. Spróbuj ponownie.');
     } finally {
       setLoading(false);
     }
@@ -130,29 +130,29 @@ export default function AppointmentsPage() {
             Appointments
           </h1>
           <p className="text-zinc-400 mt-1">
-            {filteredAppointments.length} appointment{filteredAppointments.length !== 1 ? 's' : ''}
+            {filteredAppointments.length} wizyt
           </p>
         </div>
 
         {/* View Toggle */}
-        <div className="flex gap-1 bg-white/5 p-1 rounded-lg">
+        <div className="flex gap-1 bg-[#141414] p-1 rounded-lg border border-white/[0.04]">
           <Button
-            variant={view === 'table' ? 'default' : 'ghost'}
+            variant="ghost"
             size="sm"
             onClick={() => setView('table')}
-            className={view === 'table' ? '' : 'text-zinc-400'}
+            className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}
           >
             <List size={16} className="mr-2" />
-            Table
+            Tabela
           </Button>
           <Button
-            variant={view === 'calendar' ? 'default' : 'ghost'}
+            variant="ghost"
             size="sm"
             onClick={() => setView('calendar')}
-            className={view === 'calendar' ? '' : 'text-zinc-400'}
+            className={view === 'calendar' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}
           >
             <Calendar size={16} className="mr-2" />
-            Calendar
+            Kalendarz
           </Button>
         </div>
       </div>
@@ -173,7 +173,7 @@ export default function AppointmentsPage() {
             onClick={() => setStatusFilter(status)}
             className={statusFilter === status ? '' : 'text-zinc-400 hover:text-white'}
           >
-            {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)}
+            {status === 'all' ? 'Wszystkie' : status === 'verified' ? 'Potwierdzone' : status === 'pending' ? 'Oczekujące' : 'Anulowane'}
             {status !== 'all' && (
               <span className="ml-2 text-xs opacity-60">
                 ({appointments.filter(a => a.status === status).length})
@@ -190,19 +190,19 @@ export default function AppointmentsPage() {
           {filteredAppointments.length === 0 ? (
             <EmptyState
               icon={Calendar}
-              title="No appointments found"
+              title="Brak wizyt"
               description={statusFilter !== 'all'
-                ? `No ${statusFilter} appointments`
-                : "Appointments will appear here when users book through the chatbot"}
+                ? "Brak wizyt o wybranym statusie"
+                : "Wizyty pojawią się tutaj gdy użytkownicy umówią się przez chatbota"}
             />
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date & Time</TableHead>
-                  <TableHead>Contact</TableHead>
+                  <TableHead>Data i godzina</TableHead>
+                  <TableHead>Kontakt</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Session</TableHead>
+                  <TableHead>Sesja</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -244,7 +244,7 @@ export default function AppointmentsPage() {
                           </div>
                         )}
                         {!appt.contactInfo.name && !appt.contactInfo.email && !appt.contactInfo.phone && (
-                          <span className="text-zinc-500 text-sm">No contact info</span>
+                          <span className="text-zinc-500 text-sm">Brak danych kontaktowych</span>
                         )}
                       </div>
                     </TableCell>
@@ -260,7 +260,7 @@ export default function AppointmentsPage() {
                         onClick={() => router.push(`/conversations/${appt.sessionId}`)}
                         className="text-zinc-400 hover:text-white gap-1"
                       >
-                        View chat
+                        Zobacz czat
                         <ExternalLink size={14} />
                       </Button>
                     </TableCell>
@@ -293,7 +293,7 @@ export default function AppointmentsPage() {
                 onClick={() => setCurrentMonth(new Date())}
                 className="text-zinc-400 hover:text-white"
               >
-                Today
+                Dziś
               </Button>
               <Button
                 variant="ghost"
@@ -308,7 +308,7 @@ export default function AppointmentsPage() {
 
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-1 mb-2">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+            {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].map(day => (
               <div key={day} className="text-center text-sm text-zinc-500 py-2">
                 {day}
               </div>
@@ -350,7 +350,7 @@ export default function AppointmentsPage() {
                     ))}
                     {dayAppointments.length > 2 && (
                       <div className="text-xs text-zinc-500 px-1">
-                        +{dayAppointments.length - 2} more
+                        +{dayAppointments.length - 2} więcej
                       </div>
                     )}
                   </div>
@@ -410,13 +410,13 @@ export default function AppointmentsPage() {
                   ]}
                   layout="vertical"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#141414" />
                   <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
                   <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: '#141414',
-                      border: '1px solid #222',
+                      border: '1px solid #1e1e1e',
                       borderRadius: '8px',
                     }}
                   />

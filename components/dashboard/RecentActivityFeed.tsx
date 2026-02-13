@@ -9,7 +9,7 @@ import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity } from '@/lib/types';
-import { MessageSquare, Calendar, Clock } from 'lucide-react';
+import { MessageSquare, Calendar, Clock, CheckCircle2 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -86,7 +86,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                     <div
                         key={`${activity.type}-${activity.id}-${index}`}
                         onClick={() => handleClick(activity)}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.02] transition-colors duration-200 cursor-pointer border border-transparent hover:border-white/[0.06]"
+                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.04] transition-colors duration-200 cursor-pointer border border-transparent hover:border-white/[0.08]"
                     >
                         {/* Icon */}
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'conversation'
@@ -118,11 +118,11 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                                 {activity.type === 'conversation' ? (
                                     activity.preview || `${activity.messageCount || 0} wiadomości`
                                 ) : (
-                                    <span className={`inline-flex items-center gap-1 ${activity.status === 'verified' ? 'text-emerald-400' :
+                                    <span className={`inline-flex items-center gap-1.5 ${activity.status === 'verified' ? 'text-emerald-400' :
                                         activity.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'
                                         }`}>
-                                        {activity.status === 'verified' ? '✓ Zweryfikowane' :
-                                            activity.status === 'pending' ? '⏳ Oczekuje' : activity.status}
+                                        {activity.status === 'verified' ? <><CheckCircle2 size={12} /> Zweryfikowane</> :
+                                            activity.status === 'pending' ? <><Clock size={12} /> Oczekuje</> : activity.status}
                                     </span>
                                 )}
                             </p>

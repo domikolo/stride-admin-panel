@@ -105,8 +105,8 @@
   --accent: #1e1e1e;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.03);
-  --input: #1a1a1a;
+  --border: rgba(255, 255, 255, 0.04);
+  --input: #1e1e1e;
   --ring: rgba(59, 130, 246, 0.3);
   --chart-1: #3b82f6;
   --chart-2: #22d3ee;
@@ -119,7 +119,7 @@
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1e1e1e;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: rgba(255, 255, 255, 0.03);
+  --sidebar-border: rgba(255, 255, 255, 0.04);
   --sidebar-ring: rgba(59, 130, 246, 0.3);
 }
 
@@ -141,11 +141,11 @@
   }
 }
 
-/* Lifted card style */
+/* Lifted card style — 3 bg levels: #0a0a0a (page), #141414 (card), #1e1e1e (inset) */
 .glass-card {
   background: #141414;
   border: none;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 /* Custom scrollbar */
@@ -159,10 +159,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #262626;
+  background: #1e1e1e;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #333333;
+  background: #2a2a2a;
 }

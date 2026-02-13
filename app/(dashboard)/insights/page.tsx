@@ -19,7 +19,7 @@ import StatsCard from '@/components/dashboard/StatsCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock } from 'lucide-react';
+import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock, DollarSign } from 'lucide-react';
 
 interface PeriodData {
   topics: Topic[];
@@ -295,16 +295,16 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-        <TabsList className="bg-[#1a1a1a] mb-6">
-          <TabsTrigger value="daily" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
+        <TabsList className="bg-[#141414] mb-6 border border-white/[0.04]">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
             <Clock size={16} />
             Wczoraj (24h)
           </TabsTrigger>
-          <TabsTrigger value="weekly" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
             <Calendar size={16} />
             Tydzien (7 dni)
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
+          <TabsTrigger value="monthly" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
             <Calendar size={16} />
             Miesiac (30 dni)
           </TabsTrigger>
@@ -344,7 +344,9 @@ export default function InsightsPage() {
         {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
           <Card className="glass-card p-4 border-green-500/30 mb-6">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">💰</span>
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <DollarSign size={20} className="text-green-400" />
+              </div>
               <div>
                 <p className="text-white font-medium">
                   Hot Lead Alert: &quot;{topBuyingTopic.topicName}&quot;

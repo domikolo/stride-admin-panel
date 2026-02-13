@@ -87,7 +87,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         }}
       >
         {/* Logo */}
-        <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.03]">
+        <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.04]">
           <Link href="/dashboard" className="flex items-center gap-3 md:justify-center lg:justify-start" onClick={handleLinkClick}>
             <img
               src="/logo.png"
@@ -103,13 +103,13 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             <TooltipTrigger asChild>
               <button
                 onClick={() => { onClose?.(); onSearchOpen?.(); }}
-                className="w-full flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-2.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-colors border border-white/[0.06] text-sm"
+                className="w-full flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-2.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-colors border border-white/[0.08] text-sm"
               >
                 <div className="flex items-center gap-3 md:gap-0 lg:gap-3">
                   <Search size={16} />
                   <span className="md:hidden lg:inline">Search...</span>
                 </div>
-                <kbd className="text-[10px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.06] md:hidden lg:inline-block">
+                <kbd className="text-[10px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.08] md:hidden lg:inline-block">
                   ⌘K
                 </kbd>
               </button>
@@ -133,16 +133,20 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                     href={link.href}
                     onClick={handleLinkClick}
                     className={cn(
-                      'flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-3 rounded-lg transition-all duration-200',
+                      'flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-3 rounded-lg transition-all duration-200 relative',
                       isActive
-                        ? 'bg-blue-500/[0.08] text-white font-semibold border-l-2 md:border-l-0 lg:border-l-2 border-blue-500'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03] border-l-2 md:border-l-0 lg:border-l-2 border-transparent'
+                        ? 'bg-blue-500/[0.08] text-blue-400 md:text-blue-400 lg:text-white font-semibold border-l-2 md:border-l-0 lg:border-l-2 border-blue-500'
+                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border-l-2 md:border-l-0 lg:border-l-2 border-transparent'
                     )}
                   >
                     <div className="flex items-center gap-3 md:gap-0 lg:gap-3">
                       <Icon size={20} />
                       <span className="md:hidden lg:inline">{link.label}</span>
                     </div>
+                    {/* Active indicator dot for collapsed sidebar */}
+                    {isActive && (
+                      <span className="hidden md:block lg:hidden absolute -right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
+                    )}
                     {link.badge && (
                       <span className={cn(
                         'text-xs px-2 py-0.5 rounded-full md:hidden lg:inline-block',
@@ -162,10 +166,10 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </nav>
 
         {/* User section */}
-        <div className="p-4 md:p-2 lg:p-4 border-t border-white/[0.03]">
+        <div className="p-4 md:p-2 lg:p-4 border-t border-white/[0.04]">
           <div className="mb-3 px-4 py-2 md:px-0 md:text-center lg:px-4 lg:text-left">
             <p className="font-medium text-white text-sm truncate md:hidden lg:block">{user?.email}</p>
-            <span className="text-[10px] text-zinc-500 capitalize border border-white/[0.06] px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mt-0.5 md:hidden lg:inline-flex">
+            <span className="text-[10px] text-zinc-500 capitalize border border-white/[0.08] px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mt-0.5 md:hidden lg:inline-flex">
               {user?.role === 'owner' && <AlertCircle size={10} className="text-amber-500" />}
               {user?.role}
             </span>

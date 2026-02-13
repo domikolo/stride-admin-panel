@@ -10,7 +10,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Topic } from '@/lib/types';
-import { Flame, TrendingUp, TrendingDown, Minus, ArrowRight, Lightbulb, DollarSign } from 'lucide-react';
+import { Flame, TrendingUp, TrendingDown, Minus, ArrowRight, Lightbulb, DollarSign, AlertTriangle } from 'lucide-react';
 
 interface InsightsPreviewProps {
     topics: Topic[];
@@ -102,7 +102,7 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                     {topTopics.map((topic, index) => (
                         <div
                             key={topic.topicId}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.02] transition-colors duration-200"
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.04] transition-colors duration-200"
                         >
                             {/* Rank */}
                             <span className="text-lg font-bold text-zinc-500 w-6 text-center">
@@ -133,8 +133,9 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                 <Link href="/insights?tab=gaps">
                     <div className="mt-4 p-3 rounded-lg bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 transition-colors cursor-pointer">
                         <div className="flex items-center justify-between">
-                            <span className="text-sm text-red-300">
-                                ⚠️ {gapsCount} luk w bazie wiedzy
+                            <span className="text-sm text-red-300 flex items-center gap-2">
+                                <AlertTriangle size={14} />
+                                {gapsCount} luk w bazie wiedzy
                             </span>
                             <ArrowRight size={14} className="text-red-400" />
                         </div>

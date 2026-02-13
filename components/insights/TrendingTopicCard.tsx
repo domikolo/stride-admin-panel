@@ -3,7 +3,7 @@
  */
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
 
 interface TrendingTopicCardProps {
     rank: number;
@@ -83,7 +83,7 @@ export default function TrendingTopicCard({
                         <span>Udział w pytaniach</span>
                         <span className="font-medium text-white">{percentage.toFixed(1)}%</span>
                     </div>
-                    <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
+                    <div className="h-2 bg-[#1e1e1e] rounded-full overflow-hidden">
                         <div
                             className={`h-full ${trendBgColor} rounded-full transition-all duration-500`}
                             style={{ width: `${percentage}%` }}
@@ -106,7 +106,8 @@ export default function TrendingTopicCard({
                 {/* Buying intent highlight if significant */}
                 {intentBreakdown.buying > 30 && (
                     <div className="flex items-center gap-2 text-xs p-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                        <span className="text-green-400">💰 {intentBreakdown.buying.toFixed(0)}% wyraża zamiar zakupu</span>
+                        <DollarSign size={14} className="text-green-400 flex-shrink-0" />
+                        <span className="text-green-400">{intentBreakdown.buying.toFixed(0)}% wyraża zamiar zakupu</span>
                     </div>
                 )}
 

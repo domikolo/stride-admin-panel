@@ -40,14 +40,14 @@ export default function DashboardLayout({
         <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
+            className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
           >
             <Menu size={22} />
           </button>
           <img src="/logo.png" alt="Stride" className="h-6 w-auto" />
           <button
             onClick={() => setSearchOpen(true)}
-            className="ml-auto p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.04] transition-colors"
+            className="ml-auto p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
           >
             <Search size={20} />
           </button>
