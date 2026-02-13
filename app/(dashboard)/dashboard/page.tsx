@@ -121,10 +121,6 @@ export default function DashboardPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-white">
           Dashboard
         </h1>
-        <p className="text-zinc-400 mt-2 flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          AI Hub - centralny panel zarzadzania
-        </p>
       </div>
 
       {error && (

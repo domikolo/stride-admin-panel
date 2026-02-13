@@ -479,12 +479,12 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                     </div>
                   )}
 
-                  <div>
+                  <div className={`flex flex-col ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
                     <div
                       className={`rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${
                         msg.type === 'user'
-                          ? 'self-end text-white max-w-[80%]'
-                          : 'self-start text-zinc-200 max-w-[85%]'
+                          ? 'text-white max-w-[80%]'
+                          : 'text-zinc-200 max-w-[85%]'
                       }`}
                       style={{
                         lineHeight: '1.5',
