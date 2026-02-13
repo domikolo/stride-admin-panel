@@ -38,6 +38,7 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
 
   const getClientId = () =>
     user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
@@ -105,6 +106,24 @@ export default function AppointmentsPage() {
       case 'pending': return 'bg-amber-500';
       case 'cancelled': return 'bg-red-500';
       default: return 'bg-zinc-500';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'verified': return 'Potwierdzone';
+      case 'pending': return 'Oczekujące';
+      case 'cancelled': return 'Anulowane';
+      default: return status;
+    }
+  };
+
+  const getStatusTextColor = (status: string) => {
+    switch (status) {
+      case 'verified': return 'text-emerald-400';
+      case 'pending': return 'text-amber-400';
+      case 'cancelled': return 'text-red-400';
+      default: return 'text-zinc-400';
     }
   };
 
@@ -329,8 +348,8 @@ export default function AppointmentsPage() {
               return (
                 <div
                   key={day.toISOString()}
-                  className={`h-24 p-2 rounded-lg border transition-colors ${isCurrentMonth
-                    ? 'border-white/5 bg-white/[0.02] hover:bg-white/5'
+                  className={`min-h-24 p-2 rounded-lg border transition-colors ${isCurrentMonth
+                    ? 'border-white/[0.04] bg-white/[0.04] hover:bg-white/[0.08]'
                     : 'border-transparent opacity-40'
                     } ${isToday ? 'ring-1 ring-white/20' : ''}`}
                 >
@@ -339,13 +358,16 @@ export default function AppointmentsPage() {
                   </div>
                   <div className="space-y-1 overflow-hidden">
                     {dayAppointments.slice(0, 2).map((appt) => (
-                      <div
-                        key={appt.appointmentId}
-                        onClick={() => router.push(`/conversations/${appt.sessionId}`)}
-                        className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-zinc-300 truncate cursor-pointer hover:bg-white/20 transition-colors flex items-center gap-1"
-                      >
-                        <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusColor(appt.status)}`} />
-                        {format(new Date(appt.datetime), 'HH:mm')}
+                      <div key={appt.appointmentId}>
+                        <div
+                          onClick={() => setExpandedAppointmentId(
+                            expandedAppointmentId === appt.appointmentId ? null : appt.appointmentId
+                          )}
+                          className="text-xs px-1.5 py-0.5 rounded bg-white/[0.08] text-zinc-300 truncate cursor-pointer hover:bg-white/[0.12] transition-colors flex items-center gap-1"
+                        >
+                          <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${getStatusColor(appt.status)}`} />
+                          {format(new Date(appt.datetime), 'HH:mm')}
+                        </div>
                       </div>
                     ))}
                     {dayAppointments.length > 2 && (
@@ -358,6 +380,75 @@ export default function AppointmentsPage() {
               );
             })}
           </div>
+
+          {/* Expanded appointment detail panel */}
+          {expandedAppointmentId && (() => {
+            const appt = filteredAppointments.find(a => a.appointmentId === expandedAppointmentId);
+            if (!appt) return null;
+            return (
+              <div className="mt-4 p-4 bg-[#1e1e1e] rounded-xl border border-white/[0.04]">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                      <Clock size={18} className="text-purple-400" />
+                    </div>
+                    <div>
+                      <p className="text-white font-medium">
+                        {format(new Date(appt.datetime), 'd MMMM yyyy, HH:mm')}
+                      </p>
+                      <p className={`text-sm ${getStatusTextColor(appt.status)}`}>
+                        {getStatusLabel(appt.status)}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setExpandedAppointmentId(null)}
+                    className="text-zinc-500 hover:text-zinc-300 transition-colors p-1"
+                  >
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                      <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
+                    </svg>
+                  </button>
+                </div>
+
+                {/* Contact info */}
+                <div className="space-y-2 mb-4">
+                  <p className="text-xs text-zinc-500 uppercase tracking-wide">Dane kontaktowe</p>
+                  {appt.contactInfo.name && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <User size={14} className="text-zinc-500" />
+                      <span className="text-zinc-200">{appt.contactInfo.name}</span>
+                    </div>
+                  )}
+                  {appt.contactInfo.email && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Mail size={14} className="text-zinc-500" />
+                      <span className="text-zinc-300">{appt.contactInfo.email}</span>
+                    </div>
+                  )}
+                  {appt.contactInfo.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone size={14} className="text-zinc-500" />
+                      <span className="text-zinc-300">{appt.contactInfo.phone}</span>
+                    </div>
+                  )}
+                  {!appt.contactInfo.name && !appt.contactInfo.email && !appt.contactInfo.phone && (
+                    <p className="text-sm text-zinc-500">Brak danych kontaktowych</p>
+                  )}
+                </div>
+
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => router.push(`/conversations/${appt.sessionId}`)}
+                  className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 gap-1.5"
+                >
+                  <ExternalLink size={14} />
+                  Zobacz rozmowę
+                </Button>
+              </div>
+            );
+          })()}
         </Card>
       )}
 
