@@ -292,7 +292,7 @@ export default function ConversationsPage() {
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#111118] border border-white/[0.06] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2 bg-[#141414] border border-white/[0.03] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
           />
         </div>
 

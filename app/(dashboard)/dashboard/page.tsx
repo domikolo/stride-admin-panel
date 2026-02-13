@@ -22,8 +22,6 @@ import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
 import { MessageSquare, DollarSign, AlertTriangle } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card } from '@/components/ui/card';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -146,6 +144,7 @@ export default function DashboardPage() {
           iconColor="text-blue-400"
           description="Liczba rozmow w ostatnich 30 dniach"
           valueHref="/conversations"
+          sparklineData={dailyStats.map(d => d.conversations)}
         />
         <StatsCard
           title="Calkowity Koszt"
@@ -169,41 +168,6 @@ export default function DashboardPage() {
         <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
         <RecentActivityFeed activities={activities} loading={loading} />
       </div>
-
-      {/* Activity Chart - Full Width */}
-      <Card className="glass-card p-6">
-        <h3 className="text-lg font-semibold text-white mb-6">Aktywnosc (7 dni)</h3>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={dailyStats}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
-            <XAxis
-              dataKey="date"
-              stroke="#71717a"
-              tick={{ fill: '#71717a', fontSize: 11 }}
-              tickFormatter={(value: string) => {
-                const date = new Date(value);
-                return `${date.getDate()}/${date.getMonth() + 1}`;
-              }}
-            />
-            <YAxis stroke="#71717a" tick={{ fill: '#71717a', fontSize: 11 }} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#18181b',
-                border: '1px solid #3f3f46',
-                borderRadius: '8px',
-                color: '#fff',
-              }}
-            />
-            <Bar
-              dataKey="conversations"
-              fill="#3b82f6"
-              radius={[4, 4, 0, 0]}
-              name="Rozmowy"
-              isAnimationActive={false}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </Card>
     </div>
   );
 }

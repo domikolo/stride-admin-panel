@@ -35,7 +35,7 @@ export default function StatsCard({
 }: StatsCardProps) {
   const trendColor = trend === 'up' ? 'text-emerald-400' : trend === 'down' ? 'text-red-400' : 'text-zinc-400';
   const TrendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : Minus;
-  const sparklineColor = trend === 'up' ? '#34d399' : trend === 'down' ? '#f87171' : '#71717a';
+  const sparklineColor = trend === 'up' ? '#34d399' : trend === 'down' ? '#f87171' : '#3b82f6';
 
   const valueElement = valueHref ? (
     <Link href={valueHref}>
@@ -48,7 +48,7 @@ export default function StatsCard({
   );
 
   return (
-    <Card className="glass-card hover:border-zinc-700 transition-colors duration-200">
+    <Card className="glass-card transition-shadow duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.05)]">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{title}</CardTitle>

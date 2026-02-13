@@ -295,16 +295,16 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-        <TabsList className="bg-zinc-800 mb-6">
-          <TabsTrigger value="daily" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
+        <TabsList className="bg-[#1a1a1a] mb-6">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
             <Clock size={16} />
             Wczoraj (24h)
           </TabsTrigger>
-          <TabsTrigger value="weekly" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
             <Calendar size={16} />
             Tydzien (7 dni)
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="data-[state=active]:bg-zinc-700 data-[state=active]:text-white flex items-center gap-2">
+          <TabsTrigger value="monthly" className="data-[state=active]:bg-[#222] data-[state=active]:text-white flex items-center gap-2">
             <Calendar size={16} />
             Miesiac (30 dni)
           </TabsTrigger>

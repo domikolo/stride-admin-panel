@@ -410,13 +410,13 @@ export default function AppointmentsPage() {
                   ]}
                   layout="vertical"
                 >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
                   <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
                   <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#18181b',
-                      border: '1px solid #3f3f46',
+                      backgroundColor: '#141414',
+                      border: '1px solid #222',
                       borderRadius: '8px',
                     }}
                   />

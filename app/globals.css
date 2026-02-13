@@ -90,37 +90,37 @@
 }
 
 .dark {
-  --background: #09090b;     /* zinc-950 */
+  --background: #0a0a0a;
   --foreground: oklch(0.985 0 0);
-  --card: #111118;           /* dark gray-blue */
+  --card: #141414;
   --card-foreground: oklch(0.985 0 0);
-  --popover: #111118;        /* dark gray-blue */
+  --popover: #141414;
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0.269 0 0);
+  --primary: #3b82f6;
+  --primary-foreground: #ffffff;
+  --secondary: #1e1e1e;
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: #27272a;          /* zinc-800 */
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --muted: #1e1e1e;
+  --muted-foreground: #71717a;
+  --accent: #1e1e1e;
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: rgba(255, 255, 255, 0.06);
-  --input: #27272a;          /* zinc-800 */
-  --ring: oklch(1 0 0 / 20%);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #0f0f14;        /* slightly lighter than bg */
+  --border: rgba(255, 255, 255, 0.03);
+  --input: #1a1a1a;
+  --ring: rgba(59, 130, 246, 0.3);
+  --chart-1: #3b82f6;
+  --chart-2: #22d3ee;
+  --chart-3: #10b981;
+  --chart-4: #f97316;
+  --chart-5: #8b5cf6;
+  --sidebar: #0a0a0a;
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.922 0 0);
-  --sidebar-primary-foreground: oklch(0 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-primary: #3b82f6;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #1e1e1e;
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: rgba(255, 255, 255, 0.06);
-  --sidebar-ring: oklch(1 0 0 / 20%);
+  --sidebar-border: rgba(255, 255, 255, 0.03);
+  --sidebar-ring: rgba(59, 130, 246, 0.3);
 }
 
 @layer base {
@@ -141,11 +141,11 @@
   }
 }
 
-/* Solid card style (zinc aesthetic) */
+/* Lifted card style */
 .glass-card {
-  background: #111118;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
+  background: #141414;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.03);
 }
 
 /* Custom scrollbar */
@@ -159,10 +159,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #3f3f46;
+  background: #262626;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #52525b;
+  background: #333333;
 }

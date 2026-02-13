@@ -83,7 +83,7 @@ export default function TrendingTopicCard({
                         <span>Udział w pytaniach</span>
                         <span className="font-medium text-white">{percentage.toFixed(1)}%</span>
                     </div>
-                    <div className="h-2 bg-zinc-800 rounded-full overflow-hidden">
+                    <div className="h-2 bg-[#1a1a1a] rounded-full overflow-hidden">
                         <div
                             className={`h-full ${trendBgColor} rounded-full transition-all duration-500`}
                             style={{ width: `${percentage}%` }}
