@@ -29,7 +29,7 @@ export default function StatsCard({
   change,
   trend,
   sparklineData,
-  iconColor = 'text-zinc-400',
+  iconColor = 'text-zinc-600',
   description,
   valueHref,
 }: StatsCardProps) {
@@ -39,23 +39,23 @@ export default function StatsCard({
 
   const valueElement = valueHref ? (
     <Link href={valueHref}>
-      <span className="text-4xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer">
+      <span className="text-2xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer">
         {value}
       </span>
     </Link>
   ) : (
-    <span className="text-4xl font-bold text-white tracking-tight">{value}</span>
+    <span className="text-2xl font-bold text-white tracking-tight">{value}</span>
   );
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card hover:border-zinc-700 transition-colors duration-200">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-sm font-medium text-zinc-400">{title}</CardTitle>
+          <CardTitle className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{title}</CardTitle>
           {description && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info size={14} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                <Info size={14} className="text-zinc-700 hover:text-zinc-500 transition-colors cursor-help" />
               </TooltipTrigger>
               <TooltipContent className="max-w-[250px]">
                 <p>{description}</p>
@@ -63,9 +63,7 @@ export default function StatsCard({
             </Tooltip>
           )}
         </div>
-        <div className={`p-2 rounded-lg bg-zinc-800 ${iconColor}`}>
-          <Icon size={18} />
-        </div>
+        <Icon size={18} className={iconColor} />
       </CardHeader>
       <CardContent>
         <div className="flex items-end justify-between">
@@ -78,7 +76,7 @@ export default function StatsCard({
                   <div className={`flex items-center gap-1 text-sm mt-2 cursor-help ${trendColor}`}>
                     <TrendIcon size={14} />
                     <span>{change > 0 ? '+' : ''}{change}%</span>
-                    <span className="text-zinc-500 text-xs">vs last period</span>
+                    <span className="text-zinc-600 text-xs">vs last period</span>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>

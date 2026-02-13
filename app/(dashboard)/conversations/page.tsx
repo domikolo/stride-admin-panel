@@ -268,7 +268,7 @@ export default function ConversationsPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-white">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">
           Rozmowy
         </h1>
         <p className="text-zinc-400 mt-1">
@@ -292,7 +292,7 @@ export default function ConversationsPage() {
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-zinc-800 border border-zinc-700/50 rounded-lg text-white placeholder:text-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-600"
+            className="w-full pl-10 pr-4 py-2 bg-[#111118] border border-white/[0.06] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
           />
         </div>
 
@@ -378,7 +378,7 @@ export default function ConversationsPage() {
                       {/* Parent Group Row */}
                       <TableRow
                         className={`
-                          transition-colors border-b border-white/5 relative cursor-pointer hover:bg-white/5
+                          transition-colors border-b border-white/[0.04] relative cursor-pointer hover:bg-white/[0.02]
                         `}
                         onClick={() => {
                           if (isSingleSession) {

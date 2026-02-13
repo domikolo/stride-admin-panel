@@ -102,7 +102,7 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                     {topTopics.map((topic, index) => (
                         <div
                             key={topic.topicId}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 transition-colors"
+                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.02] transition-colors duration-200"
                         >
                             {/* Rank */}
                             <span className="text-lg font-bold text-zinc-500 w-6 text-center">

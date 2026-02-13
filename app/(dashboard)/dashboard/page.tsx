@@ -118,7 +118,7 @@ export default function DashboardPage() {
     <div className="space-y-10">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-white">
+        <h1 className="text-2xl font-semibold tracking-tight text-white">
           Dashboard
         </h1>
         <p className="text-zinc-400 mt-2 flex items-center gap-2">

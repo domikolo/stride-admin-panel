@@ -86,7 +86,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                     <div
                         key={`${activity.type}-${activity.id}-${index}`}
                         onClick={() => handleClick(activity)}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-white/[0.02] hover:bg-white/5 transition-colors cursor-pointer border border-transparent hover:border-zinc-700/50"
+                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.02] transition-colors duration-200 cursor-pointer border border-transparent hover:border-white/[0.06]"
                     >
                         {/* Icon */}
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'conversation'

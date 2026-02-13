@@ -258,7 +258,7 @@ export default function InsightsPage() {
   if (loading) {
     return (
       <div className="space-y-8">
-        <h1 className="text-4xl font-bold text-white">Insights</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
             <Skeleton key={i} className="h-32" />
@@ -277,7 +277,7 @@ export default function InsightsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div>
-        <h1 className="text-4xl font-bold text-white flex items-center gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
           <Flame className="text-orange-500" />
           Trending Questions
         </h1>

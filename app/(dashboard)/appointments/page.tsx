@@ -126,7 +126,7 @@ export default function AppointmentsPage() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-white">
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
             Appointments
           </h1>
           <p className="text-zinc-400 mt-1">

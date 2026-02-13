@@ -33,20 +33,20 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     if (loading) {
         return (
-            <Card className="glass-card p-0 border border-zinc-700/50 overflow-hidden">
+            <Card className="glass-card p-0 border border-white/[0.06] overflow-hidden">
                 <div className="p-6 md:p-8">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
+                        <div className="w-12 h-12 rounded-xl bg-[#111118] flex items-center justify-center border border-white/[0.06]">
                             <Sparkles size={24} className="text-blue-400 animate-pulse" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-white">
+                            <h2 className="text-lg font-semibold text-white">
                                 AI Daily Briefing
                             </h2>
                             <p className="text-xs text-zinc-500">Generowanie briefingu...</p>
                         </div>
                     </div>
-                    <div className="bg-zinc-800 rounded-2xl p-5 border border-zinc-700/50">
+                    <div className="bg-[#111118] rounded-2xl p-5 border border-white/[0.06]">
                         <div className="space-y-3">
                             <Skeleton className="h-4 w-full" />
                             <Skeleton className="h-4 w-[90%]" />
@@ -60,8 +60,8 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     if (!briefing) {
         return (
-            <Card className="glass-card p-8 border border-zinc-700/50 flex items-center gap-6">
-                <div className="w-16 h-16 rounded-2xl bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
+            <Card className="glass-card p-8 border border-white/[0.06] flex items-center gap-6">
+                <div className="w-16 h-16 rounded-2xl bg-[#111118] flex items-center justify-center border border-white/[0.06]">
                     <Sparkles size={32} className="text-blue-400" />
                 </div>
                 <div>
@@ -75,16 +75,16 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
     }
 
     return (
-        <Card className="glass-card p-0 border border-zinc-700/50 overflow-hidden group">
+        <Card className="glass-card p-0 border border-white/[0.06] overflow-hidden group">
             <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8">
                 {/* Left Column: Icon + Summary */}
                 <div className="flex-1">
                     <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 rounded-xl bg-zinc-800 flex items-center justify-center border border-zinc-700/50">
+                        <div className="w-12 h-12 rounded-xl bg-[#111118] flex items-center justify-center border border-white/[0.06]">
                             <Sparkles size={24} className="text-blue-400" />
                         </div>
                         <div>
-                            <h2 className="text-2xl font-bold text-white">
+                            <h2 className="text-lg font-semibold text-white">
                                 AI Daily Briefing
                             </h2>
                             <p className="text-xs text-zinc-500">
@@ -93,7 +93,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         </div>
                     </div>
 
-                    <div className="bg-zinc-800 rounded-2xl p-5 border border-zinc-700/50">
+                    <div className="bg-[#111118] rounded-2xl p-5 border border-white/[0.06]">
                         <p className="text-zinc-200 leading-relaxed text-base">
                             {briefing.briefing}
                         </p>
@@ -101,10 +101,10 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
                     {/* Top Question */}
                     {briefing.stats.topQuestion && (
-                        <div className="mt-4 flex items-start gap-3 px-2">
+                        <div className="mt-4 pt-3 border-t border-white/5 flex items-start gap-3 px-2">
                             <HelpCircle className="text-zinc-500 mt-1 flex-shrink-0" size={16} />
                             <div>
-                                <span className="text-xs text-zinc-500 uppercase tracking-wider font-semibold">Top Pytanie</span>
+                                <span className="text-[10px] text-zinc-600 uppercase tracking-widest font-semibold">Top Pytanie</span>
                                 <p className="text-sm text-zinc-300 italic">&quot;{briefing.stats.topQuestion}&quot;</p>
                             </div>
                         </div>
@@ -120,7 +120,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                                 size="sm"
                                 onClick={onRefresh}
                                 disabled={refreshing}
-                                className="text-zinc-500 hover:text-white h-8 text-xs gap-1.5"
+                                className="text-zinc-500 hover:text-zinc-300 h-8 text-xs gap-1.5"
                             >
                                 <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
                                 Odswiez
@@ -129,7 +129,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                     )}
 
                     {/* Conversations - value links to /conversations */}
-                    <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700/50 flex items-center gap-4">
+                    <div className="bg-[#111118] p-4 rounded-xl border border-white/[0.06] flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-blue-500/20 flex items-center justify-center">
                             <MessageSquare size={20} className="text-blue-400" />
                         </div>
@@ -139,23 +139,23 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                                     {briefing.stats.conversations}
                                 </p>
                             </Link>
-                            <p className="text-xs text-zinc-400">rozmow (24h)</p>
+                            <p className="text-xs text-zinc-500 uppercase tracking-wide">rozmow (24h)</p>
                         </div>
                     </div>
 
                     {/* Cost - no link */}
-                    <div className="bg-zinc-800 p-4 rounded-xl border border-zinc-700/50 flex items-center gap-4">
+                    <div className="bg-[#111118] p-4 rounded-xl border border-white/[0.06] flex items-center gap-4">
                         <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                             <DollarSign size={20} className="text-emerald-400" />
                         </div>
                         <div>
                             <p className="text-2xl font-bold text-white">${briefing.stats.totalCostUsd.toFixed(2)}</p>
-                            <p className="text-xs text-zinc-400">koszt (24h)</p>
+                            <p className="text-xs text-zinc-500 uppercase tracking-wide">koszt (24h)</p>
                         </div>
                     </div>
 
                     {/* Gaps - value links to /insights?period=daily&tab=gaps */}
-                    <div className={`bg-zinc-800 p-4 rounded-xl border flex items-center gap-4 ${briefing.stats.gapsCount > 0 ? 'border-amber-500/20' : 'border-zinc-700/50'}`}>
+                    <div className={`bg-[#111118] p-4 rounded-xl border flex items-center gap-4 ${briefing.stats.gapsCount > 0 ? 'border-amber-500/20' : 'border-zinc-700/50'}`}>
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${briefing.stats.gapsCount > 0 ? 'bg-amber-500/20' : 'bg-zinc-500/20'}`}>
                             <AlertTriangle size={20} className={briefing.stats.gapsCount > 0 ? 'text-amber-400' : 'text-zinc-400'} />
                         </div>
@@ -165,7 +165,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                                     {briefing.stats.gapsCount}
                                 </p>
                             </Link>
-                            <p className="text-xs text-zinc-400">luki KB</p>
+                            <p className="text-xs text-zinc-500 uppercase tracking-wide">luki KB</p>
                         </div>
                     </div>
                 </div>

@@ -120,8 +120,8 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                 className={cn(
                   'flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200',
                   isActive
-                    ? 'bg-white/10 text-white font-semibold'
-                    : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-blue-500/[0.08] text-white font-semibold border-l-2 border-blue-500'
+                    : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.03] border-l-2 border-transparent'
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -145,15 +145,15 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         <div className="p-4 border-t border-border">
           <div className="mb-3 px-4 py-2">
             <p className="font-medium text-white text-sm truncate">{user?.email}</p>
-            <p className="text-xs text-zinc-500 capitalize flex items-center gap-1">
+            <span className="text-[10px] text-zinc-500 capitalize border border-zinc-700 px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mt-0.5">
               {user?.role === 'owner' && <AlertCircle size={10} className="text-amber-500" />}
               {user?.role}
-            </p>
+            </span>
           </div>
           <Button
             onClick={handleSignOut}
             variant="ghost"
-            className="w-full justify-start gap-3 text-zinc-400 hover:text-white hover:bg-white/5"
+            className="w-full justify-start gap-3 text-zinc-600 hover:text-zinc-400 hover:bg-transparent"
           >
             <LogOut size={18} />
             Sign Out

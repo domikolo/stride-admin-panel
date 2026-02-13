@@ -92,9 +92,9 @@
 .dark {
   --background: #09090b;     /* zinc-950 */
   --foreground: oklch(0.985 0 0);
-  --card: #18181b;           /* zinc-900 */
+  --card: #111118;           /* dark gray-blue */
   --card-foreground: oklch(0.985 0 0);
-  --popover: #18181b;        /* zinc-900 */
+  --popover: #111118;        /* dark gray-blue */
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0 0 0);
@@ -105,7 +105,7 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: #3f3f4680;       /* zinc-700/50 */
+  --border: rgba(255, 255, 255, 0.06);
   --input: #27272a;          /* zinc-800 */
   --ring: oklch(1 0 0 / 20%);
   --chart-1: oklch(0.488 0.243 264.376);
@@ -113,13 +113,13 @@
   --chart-3: oklch(0.769 0.188 70.08);
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: #18181b;        /* zinc-900 */
+  --sidebar: #0f0f14;        /* slightly lighter than bg */
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.922 0 0);
   --sidebar-primary-foreground: oklch(0 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: #27272a; /* zinc-800 */
+  --sidebar-border: rgba(255, 255, 255, 0.06);
   --sidebar-ring: oklch(1 0 0 / 20%);
 }
 
@@ -143,9 +143,9 @@
 
 /* Solid card style (zinc aesthetic) */
 .glass-card {
-  background: #18181b;
-  border: 1px solid rgba(63, 63, 70, 0.5);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  background: #111118;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
 /* Custom scrollbar */
