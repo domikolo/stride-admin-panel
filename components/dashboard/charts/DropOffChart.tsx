@@ -64,12 +64,15 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                 <h3 className="text-lg font-semibold text-white">Gdzie użytkownicy rezygnują?</h3>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                        <Info size={14} className="text-zinc-500 hover:text-zinc-400 transition-colors cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[300px]">
-                        <p className="font-semibold mb-1">Wskaźnik odrzuceń</p>
-                        <p>Procent rozmów zakończonych BEZ umówienia spotkania, według długości rozmowy (liczby wiadomości).</p>
-                        <p className="mt-2 text-xs text-zinc-400">🟢 Zielony = niska utrata, 🔴 Czerwony = wysoka utrata</p>
+                    <TooltipContent className="max-w-[280px]">
+                        <p className="font-medium mb-1">Wskaźnik odrzuceń</p>
+                        <p className="text-zinc-400">Procent rozmów zakończonych bez umówienia spotkania, według długości rozmowy.</p>
+                        <div className="flex items-center gap-3 mt-2 text-xs text-zinc-400">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" /> niska utrata</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-red-500 inline-block" /> wysoka utrata</span>
+                        </div>
                     </TooltipContent>
                 </Tooltip>
             </div>
@@ -140,10 +143,10 @@ export default function DropOffChart({ data, loading }: DropOffChartProps) {
                 <div className="mt-4 pt-3 border-t border-zinc-800">
                     <p className="text-xs text-zinc-400">
                         {chartData[0]?.dropRate >= 70
-                            ? '⚠️ Wysoki drop-off na początku — rozważ ulepszenie pierwszych odpowiedzi chatbota'
+                            ? 'Wysoki drop-off na początku — rozważ ulepszenie pierwszych odpowiedzi chatbota'
                             : chartData[chartData.length - 1]?.dropRate >= 70
-                                ? '💡 Długie rozmowy kończą się bez konwersji — chatbot może potrzebować wcześniejszego CTA'
-                                : '✅ Rozkład odrzuceń wygląda zdrowo'}
+                                ? 'Długie rozmowy kończą się bez konwersji — chatbot może potrzebować wcześniejszego CTA'
+                                : 'Rozkład odrzuceń wygląda zdrowo'}
                     </p>
                 </div>
             )}

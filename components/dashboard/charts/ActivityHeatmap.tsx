@@ -88,14 +88,14 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                     <h3 className="text-lg font-semibold text-white">Mapa Aktywności</h3>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                            <Info size={14} className="text-zinc-500 hover:text-zinc-400 transition-colors cursor-help" />
                         </TooltipTrigger>
-                        <TooltipContent className="max-w-[300px] z-50">
-                            <p className="font-semibold mb-1">Kiedy Twoi klienci są najbardziej aktywni?</p>
-                            <ul className="list-disc pl-4 space-y-1 text-sm">
-                                <li><strong>Ciemniejszy kolor</strong> = większa aktywność.</li>
-                                <li><span className="text-blue-400">Górna połówka (Niebieski)</span>: Wiadomości.</li>
-                                <li><span className="text-emerald-400">Dolna połówka (Zielony)</span>: Spotkania.</li>
+                        <TooltipContent className="max-w-[280px] z-50">
+                            <p className="font-medium mb-1">Kiedy Twoi klienci są najbardziej aktywni?</p>
+                            <ul className="list-disc pl-4 space-y-1 text-zinc-400">
+                                <li><strong className="text-zinc-300">Ciemniejszy kolor</strong> = większa aktywność</li>
+                                <li><span className="text-blue-400">Górna połówka</span> — wiadomości</li>
+                                <li><span className="text-emerald-400">Dolna połówka</span> — spotkania</li>
                             </ul>
                         </TooltipContent>
                     </Tooltip>
@@ -147,7 +147,6 @@ export default function ActivityHeatmap({ data, loading }: ActivityHeatmapProps)
                                                     </div>
                                                 </TooltipTrigger>
                                                 <TooltipContent
-                                                    className="bg-zinc-900 border-zinc-800 shadow-xl"
                                                     sideOffset={5}
                                                 >
                                                     {getTooltipContent(dayIndex, hour)}

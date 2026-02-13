@@ -4,7 +4,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getConversationDetails } from '@/lib/api';
@@ -15,9 +15,82 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import EmptyState from '@/components/ui/empty-state';
 import Link from 'next/link';
-import { User, Bot, MessageSquare, Copy, Check, ChevronRight } from 'lucide-react';
+import { MessageSquare, Copy, Check, ChevronRight } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import toast from 'react-hot-toast';
+
+// --- Markdown rendering ---
+
+function inlineMd(text: string): string {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
+    .replace(/\*(.+?)\*/g, '<em>$1</em>')
+    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/[0.08] text-zinc-300 text-[13px] font-mono">$1</code>');
+}
+
+function renderMarkdown(text: string): React.ReactElement {
+  const lines = text.split('\n');
+  const elements: React.ReactElement[] = [];
+  let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let key = 0;
+
+  const flushList = () => {
+    if (!currentList) return;
+    const items = currentList.items.map((item, i) => (
+      <li key={i} dangerouslySetInnerHTML={{ __html: inlineMd(item) }} />
+    ));
+    if (currentList.type === 'ul') {
+      elements.push(
+        <ul key={key++} className="list-disc pl-5 my-1.5 space-y-1 text-zinc-300 marker:text-zinc-600">
+          {items}
+        </ul>
+      );
+    } else {
+      elements.push(
+        <ol key={key++} className="list-decimal pl-5 my-1.5 space-y-1 text-zinc-300 marker:text-zinc-500">
+          {items}
+        </ol>
+      );
+    }
+    currentList = null;
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Bullet list
+    if (/^[-*]\s+/.test(trimmed)) {
+      const content = trimmed.replace(/^[-*]\s+/, '');
+      if (currentList?.type !== 'ul') { flushList(); currentList = { type: 'ul', items: [] }; }
+      currentList!.items.push(content);
+      continue;
+    }
+
+    // Numbered list
+    if (/^\d+\.\s+/.test(trimmed)) {
+      const content = trimmed.replace(/^\d+\.\s+/, '');
+      if (currentList?.type !== 'ol') { flushList(); currentList = { type: 'ol', items: [] }; }
+      currentList!.items.push(content);
+      continue;
+    }
+
+    flushList();
+
+    // Empty line
+    if (!trimmed) {
+      elements.push(<div key={key++} className="h-2" />);
+      continue;
+    }
+
+    // Paragraph
+    elements.push(
+      <p key={key++} dangerouslySetInnerHTML={{ __html: inlineMd(trimmed) }} />
+    );
+  }
+
+  flushList();
+  return <>{elements}</>;
+}
 
 export default function ConversationDetailPage() {
   const params = useParams();
@@ -47,7 +120,7 @@ export default function ConversationDetailPage() {
       setError(null);
     } catch (error) {
       console.error('Failed to load conversation:', error);
-      setError('Failed to load conversation. Please try again.');
+      setError('Nie udało się załadować rozmowy.');
     } finally {
       setLoading(false);
     }
@@ -59,15 +132,15 @@ export default function ConversationDetailPage() {
       .join('\n\n');
     navigator.clipboard.writeText(text);
     setCopied(true);
-    toast.success('Conversation copied to clipboard');
+    toast.success('Skopiowano do schowka');
     setTimeout(() => setCopied(false), 2000);
   };
 
   // Format date header
   const formatDateHeader = (date: Date) => {
-    if (isToday(date)) return 'Today';
-    if (isYesterday(date)) return 'Yesterday';
-    return format(date, 'EEEE, MMMM d, yyyy');
+    if (isToday(date)) return 'Dzisiaj';
+    if (isYesterday(date)) return 'Wczoraj';
+    return format(date, 'd MMMM yyyy');
   };
 
   // Check if we should show date header
@@ -114,11 +187,11 @@ export default function ConversationDetailPage() {
             )}
           </nav>
 
-          <h1 className="text-3xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-semibold text-white">
             Rozmowa {conversationNumber ? `#${conversationNumber}` : ''}
           </h1>
           <div className="mt-1">
-            <Badge variant="secondary">{messages.length} messages</Badge>
+            <Badge variant="secondary">{messages.length} wiadomości</Badge>
           </div>
         </div>
 
@@ -129,7 +202,7 @@ export default function ConversationDetailPage() {
           className="text-zinc-400 hover:text-white gap-2"
         >
           {copied ? <Check size={16} /> : <Copy size={16} />}
-          {copied ? 'Copied!' : 'Copy'}
+          {copied ? 'Skopiowano' : 'Kopiuj'}
         </Button>
       </div>
 
@@ -145,8 +218,8 @@ export default function ConversationDetailPage() {
           <Card className="glass-card">
             <EmptyState
               icon={MessageSquare}
-              title="No messages found"
-              description="This conversation appears to be empty"
+              title="Brak wiadomości"
+              description="Ta rozmowa jest pusta"
             />
           </Card>
         ) : (
@@ -163,34 +236,29 @@ export default function ConversationDetailPage() {
                 </div>
               )}
 
-              {/* Message Bubble */}
+              {/* Message */}
               <div className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                {/* Avatar */}
-                <div
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${message.role === 'user'
-                    ? 'bg-blue-500/20 text-blue-400'
-                    : 'bg-purple-500/20 text-purple-400'
-                    }`}
-                >
-                  {message.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                {/* Label */}
+                <div className="flex-shrink-0 pt-1">
+                  <span className={`text-[11px] font-medium uppercase tracking-wider ${
+                    message.role === 'user' ? 'text-blue-400' : 'text-zinc-500'
+                  }`}>
+                    {message.role === 'user' ? 'User' : 'AI'}
+                  </span>
                 </div>
 
                 {/* Bubble */}
-                <div
-                  className={`flex-1 max-w-[80%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'
-                    }`}
-                >
-                  <div
-                    className={`px-4 py-3 rounded-2xl ${message.role === 'user'
-                      ? 'bg-blue-500/10 border border-blue-500/20 rounded-tr-sm'
-                      : 'bg-white/5 border border-white/10 rounded-tl-sm'
-                      }`}
-                  >
-                    <p className="text-zinc-200 whitespace-pre-wrap break-words text-sm leading-relaxed">
-                      {message.text}
-                    </p>
+                <div className={`flex-1 max-w-[85%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
+                  <div className={`px-4 py-3 rounded-xl ${
+                    message.role === 'user'
+                      ? 'bg-blue-500/10 rounded-tr-sm'
+                      : 'bg-white/[0.04] rounded-tl-sm'
+                  }`}>
+                    <div className="text-zinc-300 break-words text-sm leading-relaxed">
+                      {renderMarkdown(message.text)}
+                    </div>
                   </div>
-                  <p className={`text-xs text-zinc-500 mt-1 ${message.role === 'user' ? 'text-right' : ''}`}>
+                  <p className={`text-[11px] text-zinc-600 mt-1.5 ${message.role === 'user' ? 'text-right' : ''}`}>
                     {format(new Date(message.timestamp), 'HH:mm')}
                   </p>
                 </div>

@@ -67,9 +67,9 @@ export default function StatsCard({
           {description && (
             <Tooltip>
               <TooltipTrigger asChild>
-                <Info size={14} className="text-zinc-600 hover:text-zinc-400 transition-colors cursor-help" />
+                <Info size={14} className="text-zinc-500 hover:text-zinc-400 transition-colors cursor-help" />
               </TooltipTrigger>
-              <TooltipContent className="max-w-[250px]">
+              <TooltipContent className="max-w-[280px]">
                 <p>{description}</p>
               </TooltipContent>
             </Tooltip>

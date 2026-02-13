@@ -38,14 +38,14 @@ export default function ConversationLengthChart({ data, loading }: ConversationL
                 <h3 className="text-lg font-semibold text-white">Długość Konwersacji</h3>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Info size={16} className="text-zinc-500 hover:text-white transition-colors cursor-help" />
+                        <Info size={14} className="text-zinc-500 hover:text-zinc-400 transition-colors cursor-help" />
                     </TooltipTrigger>
-                    <TooltipContent className="max-w-[300px]">
-                        <p className="font-semibold mb-1">Ile wiadomości wymieniają użytkownicy?</p>
-                        <p>Ten wykres pokazuje rozkład liczby wiadomości w ramach jednej sesji.</p>
-                        <ul className="list-disc pl-4 mt-2 space-y-1">
-                            <li><strong>Krótkie (1-2)</strong>: Często oznaczają "odrzucenia" lub proste pytania.</li>
-                            <li><strong>Długie (21+)</strong>: Mogą sugerować duże zaangażowanie lub problemy bota ze zrozumieniem intencji.</li>
+                    <TooltipContent className="max-w-[280px]">
+                        <p className="font-medium mb-1">Ile wiadomości wymieniają użytkownicy?</p>
+                        <p className="text-zinc-400">Rozkład liczby wiadomości w ramach jednej sesji.</p>
+                        <ul className="list-disc pl-4 mt-2 space-y-1 text-zinc-400">
+                            <li><strong className="text-zinc-300">Krótkie (1-2)</strong> — odrzucenia lub proste pytania</li>
+                            <li><strong className="text-zinc-300">Długie (21+)</strong> — duże zaangażowanie lub problemy ze zrozumieniem</li>
                         </ul>
                     </TooltipContent>
                 </Tooltip>

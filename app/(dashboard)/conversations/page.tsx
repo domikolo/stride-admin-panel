@@ -16,7 +16,8 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
 import { isToday, isThisWeek, isThisMonth, differenceInMinutes } from 'date-fns';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, HelpCircle, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 type SortKey = 'date' | 'messages' | 'sessionId' | 'status';
@@ -25,15 +26,17 @@ type SortDirection = 'asc' | 'desc';
 // Tooltip component for column headers
 function HeaderTooltip({ children, tooltip }: { children: React.ReactNode; tooltip: string }) {
   return (
-    <div className="group relative inline-flex items-center gap-1.5 cursor-help">
-      {children}
-      <HelpCircle size={14} className="text-zinc-500 group-hover:text-zinc-300 transition-colors" />
-      <div className="absolute left-0 top-full mt-2 z-50 hidden group-hover:block w-72">
-        <div className="bg-zinc-800 border border-zinc-700 text-zinc-200 text-xs px-3 py-2 rounded-lg shadow-xl whitespace-normal leading-relaxed">
-          {tooltip}
-        </div>
-      </div>
-    </div>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex items-center gap-1.5 cursor-help">
+          {children}
+          <Info size={14} className="text-zinc-500 hover:text-zinc-400 transition-colors" />
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-[280px]">
+        <p>{tooltip}</p>
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
