@@ -115,7 +115,7 @@ export default function ConversationDetailPage() {
     }
   }, [user, sessionId, conversationNumber]);
 
-  // Scroll to highlighted message when messages load
+  // Find highlighted message index when messages load
   useEffect(() => {
     if (!highlightText || messages.length === 0) return;
     const target = highlightText.toLowerCase();
@@ -124,15 +124,21 @@ export default function ConversationDetailPage() {
     );
     if (idx !== -1) {
       setHighlightedIndex(idx);
-      // Wait for DOM render then scroll
+    }
+  }, [messages, highlightText]);
+
+  // Scroll to highlighted message after ref is attached (next render)
+  useEffect(() => {
+    if (highlightedIndex === null) return;
+    // Double rAF ensures the ref is attached after React re-render
+    requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       });
-      // Clear highlight after animation
-      const timer = setTimeout(() => setHighlightedIndex(null), 2500);
-      return () => clearTimeout(timer);
-    }
-  }, [messages, highlightText]);
+    });
+    const timer = setTimeout(() => setHighlightedIndex(null), 2500);
+    return () => clearTimeout(timer);
+  }, [highlightedIndex]);
 
   const loadConversation = async () => {
     try {
