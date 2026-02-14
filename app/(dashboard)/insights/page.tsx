@@ -77,6 +77,7 @@ export default function InsightsPage() {
       topicName: t.topicName,
       count: t.count,
       questionExamples: t.questionExamples,
+      questionSources: t.questionSources,
       gapReason: t.gapReason || '',
       suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`
     }));
@@ -182,6 +183,7 @@ export default function InsightsPage() {
                 count={topic.count}
                 totalQuestions={data.summary.totalQuestions}
                 examples={topic.questionExamples}
+                questionSources={topic.questionSources}
                 trend={topic.trend}
                 intentBreakdown={topic.intentBreakdown}
                 isGap={topic.isGap}
@@ -213,6 +215,7 @@ export default function InsightsPage() {
                   count={topic.count}
                   totalQuestions={data.summary.totalQuestions}
                   examples={topic.questionExamples}
+                  questionSources={topic.questionSources}
                   trend={topic.trend}
                   intentBreakdown={topic.intentBreakdown}
                   isGap={topic.isGap}
@@ -242,6 +245,7 @@ export default function InsightsPage() {
                   topicName={gap.topicName}
                   count={gap.count}
                   examples={gap.questionExamples}
+                  questionSources={gap.questionSources}
                   gapReason={gap.gapReason}
                   suggestion={gap.suggestion}
                   onResolve={handleResolveGap}

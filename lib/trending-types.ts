@@ -7,6 +7,7 @@ export interface TrendingTopic {
     topic_name: string;
     count: number;
     question_examples: string[];
+    question_sources?: Record<string, { session_id: string; conversation_number: number }>;
     trend: 'up' | 'down' | 'stable' | 'new';
     intent_breakdown: {
         buying: number;

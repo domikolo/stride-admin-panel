@@ -2,6 +2,7 @@
  * Gap Card Component - shows knowledge base gaps
  */
 
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Lightbulb, CheckCircle, Loader2 } from 'lucide-react';
@@ -11,6 +12,7 @@ interface GapCardProps {
     topicName: string;
     count: number;
     examples: string[];
+    questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
     gapReason: string;
     suggestion: string;
     onResolve?: (topicId: string) => void;
@@ -29,6 +31,7 @@ export default function GapCard({
     topicName,
     count,
     examples,
+    questionSources,
     gapReason,
     suggestion,
     onResolve,
@@ -64,11 +67,23 @@ export default function GapCard({
                 <div>
                     <p className="text-xs text-zinc-500 mb-2">Przykładowe pytania:</p>
                     <ul className="space-y-1">
-                        {examples.slice(0, 2).map((example, idx) => (
-                            <li key={idx} className="text-sm text-zinc-300 italic">
-                                "{example}"
-                            </li>
-                        ))}
+                        {examples.slice(0, 2).map((example, idx) => {
+                            const source = questionSources?.[example];
+                            return source ? (
+                                <li key={idx}>
+                                    <Link
+                                        href={`/conversations/${source.sessionId}?conversation_number=${source.conversationNumber}&highlight=${encodeURIComponent(example)}`}
+                                        className="text-sm text-blue-400/80 italic hover:text-blue-300 hover:underline transition-colors"
+                                    >
+                                        &ldquo;{example}&rdquo;
+                                    </Link>
+                                </li>
+                            ) : (
+                                <li key={idx} className="text-sm text-zinc-300 italic">
+                                    &ldquo;{example}&rdquo;
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
 

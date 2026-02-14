@@ -2,6 +2,7 @@
  * Trending Topic Card Component
  */
 
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
 
@@ -11,6 +12,7 @@ interface TrendingTopicCardProps {
     count: number;
     totalQuestions: number;  // New prop for progress bar
     examples: string[];
+    questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
     trend: 'up' | 'down' | 'stable' | 'new';
     trendPercent?: number;   // Optional trend percentage
     intentBreakdown: {
@@ -35,6 +37,7 @@ export default function TrendingTopicCard({
     count,
     totalQuestions,
     examples,
+    questionSources,
     trend,
     trendPercent,
     intentBreakdown,
@@ -95,11 +98,23 @@ export default function TrendingTopicCard({
                 <div>
                     <p className="text-xs text-zinc-500 mb-2">Przykładowe pytania:</p>
                     <ul className="space-y-1">
-                        {examples.slice(0, 3).map((example, idx) => (
-                            <li key={idx} className="text-sm text-zinc-300 italic">
-                                "{example}"
-                            </li>
-                        ))}
+                        {examples.slice(0, 3).map((example, idx) => {
+                            const source = questionSources?.[example];
+                            return source ? (
+                                <li key={idx}>
+                                    <Link
+                                        href={`/conversations/${source.sessionId}?conversation_number=${source.conversationNumber}&highlight=${encodeURIComponent(example)}`}
+                                        className="text-sm text-blue-400/80 italic hover:text-blue-300 hover:underline transition-colors"
+                                    >
+                                        &ldquo;{example}&rdquo;
+                                    </Link>
+                                </li>
+                            ) : (
+                                <li key={idx} className="text-sm text-zinc-300 italic">
+                                    &ldquo;{example}&rdquo;
+                                </li>
+                            );
+                        })}
                     </ul>
                 </div>
 

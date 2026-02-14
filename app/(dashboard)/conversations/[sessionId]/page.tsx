@@ -4,7 +4,7 @@
 
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getConversationDetails } from '@/lib/api';
@@ -100,17 +100,39 @@ export default function ConversationDetailPage() {
   const conversationNumber = searchParams.get('conversation_number')
     ? parseInt(searchParams.get('conversation_number')!)
     : undefined;
+  const highlightText = searchParams.get('highlight');
 
   const [messages, setMessages] = useState<ConversationMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState<number | null>(null);
+  const highlightRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (user && sessionId) {
       loadConversation();
     }
   }, [user, sessionId, conversationNumber]);
+
+  // Scroll to highlighted message when messages load
+  useEffect(() => {
+    if (!highlightText || messages.length === 0) return;
+    const target = highlightText.toLowerCase();
+    const idx = messages.findIndex(
+      (m) => m.role === 'user' && m.text.toLowerCase().includes(target)
+    );
+    if (idx !== -1) {
+      setHighlightedIndex(idx);
+      // Wait for DOM render then scroll
+      requestAnimationFrame(() => {
+        highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      });
+      // Clear highlight after animation
+      const timer = setTimeout(() => setHighlightedIndex(null), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [messages, highlightText]);
 
   const loadConversation = async () => {
     try {
@@ -224,7 +246,7 @@ export default function ConversationDetailPage() {
           </Card>
         ) : (
           messages.map((message, index) => (
-            <div key={index}>
+            <div key={index} ref={index === highlightedIndex ? highlightRef : undefined}>
               {/* Date Header */}
               {shouldShowDateHeader(message, index) && (
                 <div className="flex items-center gap-4 my-6">
@@ -249,11 +271,11 @@ export default function ConversationDetailPage() {
 
                 {/* Bubble */}
                 <div className={`flex-1 max-w-[85%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
-                  <div className={`px-4 py-3 rounded-xl ${
+                  <div className={`px-4 py-3 rounded-xl transition-shadow ${
                     message.role === 'user'
                       ? 'bg-blue-500/10 rounded-tr-sm'
                       : 'bg-white/[0.04] rounded-tl-sm'
-                  }`}>
+                  } ${index === highlightedIndex ? 'animate-highlight-flash' : ''}`}>
                     <div className="text-zinc-300 break-words text-sm leading-relaxed">
                       {renderMarkdown(message.text)}
                     </div>
