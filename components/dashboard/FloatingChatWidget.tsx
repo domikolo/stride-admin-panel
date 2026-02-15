@@ -159,18 +159,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
   const [messages, setMessages] = useState<ChatHistoryMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
-  const [historyLoading, setHistoryLoading] = useState(false);
   const [notificationText, setNotificationText] = useState<string | null>(null);
   const notificationCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const historyLoaded = useRef(false);
 
-  // Load chat history on first open
+  // Load chat history on mount (background, ready before user opens)
   useEffect(() => {
-    if (!isOpen || historyLoaded || !clientId) return;
+    if (historyLoaded.current || !clientId) return;
+    historyLoaded.current = true;
 
-    const loadHistory = async () => {
-      setHistoryLoading(true);
+    (async () => {
       try {
         const data = await getChatHistory(clientId, 50);
         if (data.messages && data.messages.length > 0) {
@@ -178,14 +177,9 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         }
       } catch (err) {
         console.error('Failed to load chat history:', err);
-      } finally {
-        setHistoryLoaded(true);
-        setHistoryLoading(false);
       }
-    };
-
-    loadHistory();
-  }, [isOpen, historyLoaded, clientId]);
+    })();
+  }, [clientId]);
 
   // Auto-scroll
   useEffect(() => {
@@ -509,29 +503,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           }}
         >
           <div className="flex flex-col gap-3">
-            {/* Skeleton loader while loading history */}
-            {historyLoading && (
-              <div className="flex flex-col gap-3 py-2">
-                {[...Array(3)].map((_, i) => (
-                  <div key={i} className={`flex flex-col ${i % 2 === 0 ? 'items-end' : 'items-start'}`}>
-                    <div
-                      className="rounded-xl px-3.5 py-2.5 animate-pulse"
-                      style={{
-                        width: i % 2 === 0 ? '60%' : '75%',
-                        background: '#1e1e1e',
-                        border: '1px solid rgba(255, 255, 255, 0.04)',
-                      }}
-                    >
-                      <div className="h-3 bg-zinc-700 rounded w-full mb-1.5" />
-                      <div className="h-3 bg-zinc-700 rounded w-2/3" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-
             {/* Suggested questions when empty */}
-            {messages.length === 0 && !isTyping && !historyLoading && (
+            {messages.length === 0 && !isTyping && (
               <div className="flex flex-col items-center justify-center text-center py-6 gap-3">
                 <p className="text-zinc-600 text-xs">Zapytaj mnie o cokolwiek</p>
                 <div className="flex flex-col gap-1.5 w-full">
