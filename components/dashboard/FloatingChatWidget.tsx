@@ -474,17 +474,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           }}
         >
           <div className="flex items-center gap-2.5">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{
-                background: 'rgba(59, 130, 246, 0.1)',
-                border: '1px solid rgba(59, 130, 246, 0.15)',
-              }}
-            >
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3l1.912 5.813a2 2 0 001.275 1.275L21 12l-5.813 1.912a2 2 0 00-1.275 1.275L12 21l-1.912-5.813a2 2 0 00-1.275-1.275L3 12l5.813-1.912a2 2 0 001.275-1.275L12 3z" />
-              </svg>
-            </div>
+            <img src="/icon-logo-biale.png" alt="Stride" className="w-7 h-7 object-contain" />
             <div>
               <span className="text-sm font-semibold text-white">AI Assistant</span>
               <span className="text-xs text-zinc-600 block leading-tight">Zapytaj o dane</span>

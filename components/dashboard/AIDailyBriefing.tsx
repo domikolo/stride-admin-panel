@@ -9,7 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DailyBriefing } from '@/lib/types';
-import { Sparkles, RefreshCw, HelpCircle } from 'lucide-react';
+import { RefreshCw, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -34,8 +34,8 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
         return (
             <Card className="glass-card p-6 md:p-8">
                 <div className="flex items-center gap-4 mb-4">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <Sparkles size={20} className="text-blue-400 animate-pulse" />
+                    <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                        <img src="/icon-logo-biale.png" alt="Stride" className="w-6 h-6 object-contain animate-pulse" />
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
@@ -56,8 +56,8 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
     if (!briefing) {
         return (
             <Card className="glass-card p-6 md:p-8 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                    <Sparkles size={20} className="text-blue-400" />
+                <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                    <img src="/icon-logo-biale.png" alt="Stride" className="w-6 h-6 object-contain" />
                 </div>
                 <div>
                     <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
@@ -71,8 +71,8 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
         <Card className="glass-card p-6 md:p-8">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                        <Sparkles size={20} className="text-blue-400" />
+                    <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
+                        <img src="/icon-logo-biale.png" alt="Stride" className="w-6 h-6 object-contain" />
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>

@@ -22,6 +22,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="icon" href="/icon-logo-biale.png" media="(prefers-color-scheme: dark)" />
+        <link rel="icon" href="/icon-logo-czarne.png" media="(prefers-color-scheme: light)" />
+      </head>
       <body className={inter.className}>
         <AuthProvider>
           <TooltipProvider>
