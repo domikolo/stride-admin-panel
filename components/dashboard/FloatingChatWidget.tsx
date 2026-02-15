@@ -1,13 +1,9 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { sendChatMessage, getChatHistory } from '@/lib/api';
-
-interface ChatMessage {
-  text: string;
-  type: 'user' | 'assistant';
-  timestamp: string;
-}
+import { ChatHistoryMessage } from '@/lib/types';
 
 interface FloatingChatWidgetProps {
   clientId: string;
@@ -139,9 +135,14 @@ function renderMarkdown(text: string): React.ReactElement {
   return <>{elements}</>;
 }
 
-/** Inline markdown: **bold** */
+/** Inline markdown: **bold**, [[conv:...]] links */
 function inlineMd(text: string): string {
-  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(
+      /\[\[conv:([^:]+):(\d+):([^\]]+)\]\]/g,
+      '<a data-conv-link="true" href="/conversations/$1?conversation_number=$2" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 cursor-pointer">$3</a>'
+    );
 }
 
 const NOTIFICATION_MESSAGES = [
@@ -152,12 +153,14 @@ const NOTIFICATION_MESSAGES = [
 ];
 
 export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<ChatHistoryMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [notificationText, setNotificationText] = useState<string | null>(null);
   const notificationCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -167,21 +170,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     if (!isOpen || historyLoaded || !clientId) return;
 
     const loadHistory = async () => {
+      setHistoryLoading(true);
       try {
         const data = await getChatHistory(clientId, 50);
         if (data.messages && data.messages.length > 0) {
-          setMessages(
-            data.messages.map((msg) => ({
-              text: msg.content,
-              type: msg.role,
-              timestamp: msg.timestamp || new Date().toISOString(),
-            }))
-          );
+          setMessages(data.messages);
         }
       } catch (err) {
         console.error('Failed to load chat history:', err);
       } finally {
         setHistoryLoaded(true);
+        setHistoryLoading(false);
       }
     };
 
@@ -355,17 +354,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
     const userMessage = inputValue.trim();
     const now = new Date().toISOString();
-    setMessages(prev => [...prev, { text: userMessage, type: 'user', timestamp: now }]);
+    setMessages(prev => [...prev, { content: userMessage, role: 'user', timestamp: now }]);
     setInputValue('');
     setIsTyping(true);
 
     try {
       const response = await sendChatMessage(clientId, userMessage);
-      setMessages(prev => [...prev, { text: response.message, type: 'assistant', timestamp: new Date().toISOString() }]);
+      setMessages(prev => [...prev, { content: response.message, role: 'assistant', timestamp: new Date().toISOString() }]);
     } catch {
       setMessages(prev => [...prev, {
-        text: 'Przepraszam, wystapil blad. Sprobuj ponownie.',
-        type: 'assistant',
+        content: 'Przepraszam, wystapil blad. Sprobuj ponownie.',
+        role: 'assistant',
         timestamp: new Date().toISOString(),
       }]);
     } finally {
@@ -510,8 +509,29 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           }}
         >
           <div className="flex flex-col gap-3">
+            {/* Skeleton loader while loading history */}
+            {historyLoading && (
+              <div className="flex flex-col gap-3 py-2">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className={`flex flex-col ${i % 2 === 0 ? 'items-end' : 'items-start'}`}>
+                    <div
+                      className="rounded-xl px-3.5 py-2.5 animate-pulse"
+                      style={{
+                        width: i % 2 === 0 ? '60%' : '75%',
+                        background: '#1e1e1e',
+                        border: '1px solid rgba(255, 255, 255, 0.04)',
+                      }}
+                    >
+                      <div className="h-3 bg-zinc-700 rounded w-full mb-1.5" />
+                      <div className="h-3 bg-zinc-700 rounded w-2/3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Suggested questions when empty */}
-            {messages.length === 0 && !isTyping && (
+            {messages.length === 0 && !isTyping && !historyLoading && (
               <div className="flex flex-col items-center justify-center text-center py-6 gap-3">
                 <p className="text-zinc-600 text-xs">Zapytaj mnie o cokolwiek</p>
                 <div className="flex flex-col gap-1.5 w-full">
@@ -545,24 +565,32 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                     </div>
                   )}
 
-                  <div className={`flex flex-col ${msg.type === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div
                       className={`rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
-                        msg.type === 'user'
+                        msg.role === 'user'
                           ? 'text-white max-w-[80%]'
                           : 'text-zinc-200 max-w-[85%]'
                       }`}
                       style={{
                         lineHeight: '1.5',
-                        background: msg.type === 'user' ? '#1e1e1e' : '#1e1e1e',
-                        border: msg.type === 'user'
+                        background: msg.role === 'user' ? '#1e1e1e' : '#1e1e1e',
+                        border: msg.role === 'user'
                           ? '1px solid rgba(255, 255, 255, 0.08)'
                           : '1px solid rgba(255, 255, 255, 0.04)',
                       }}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        const link = target.closest('a[data-conv-link]') as HTMLAnchorElement;
+                        if (link) {
+                          e.preventDefault();
+                          router.push(link.getAttribute('href')!);
+                        }
+                      }}
                     >
-                      {msg.type === 'assistant' ? renderMarkdown(msg.text) : msg.text}
+                      {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
                     </div>
-                    <p className={`text-xs text-zinc-700 mt-0.5 px-1 ${msg.type === 'user' ? 'text-right' : ''}`}>
+                    <p className={`text-xs text-zinc-700 mt-0.5 px-1 ${msg.role === 'user' ? 'text-right' : ''}`}>
                       {formatChatTime(msg.timestamp)}
                     </p>
                   </div>
