@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   description: "Admin panel for Stride Services SaaS platform",
   icons: {
     icon: [
-      { url: '/icon-logo-biale.png', media: '(prefers-color-scheme: dark)' },
-      { url: '/icon-logo-czarne.png', media: '(prefers-color-scheme: light)' },
+      { url: '/favicon-biale.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/favicon-czarne.png', media: '(prefers-color-scheme: light)' },
     ],
   },
 };
