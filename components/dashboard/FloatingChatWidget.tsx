@@ -474,7 +474,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           }}
         >
           <div className="flex items-center gap-2.5">
-            <img src="/icon-logo-biale.png" alt="Stride" className="w-7 h-7 object-contain" />
+            <img src="/icon-logo-biale.png" alt="Stride" className="w-10 h-10 object-contain" />
             <div>
               <span className="text-sm font-semibold text-white">AI Assistant</span>
               <span className="text-xs text-zinc-600 block leading-tight">Zapytaj o dane</span>

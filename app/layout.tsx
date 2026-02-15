@@ -10,6 +10,12 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Stride Admin Panel",
   description: "Admin panel for Stride Services SaaS platform",
+  icons: {
+    icon: [
+      { url: '/icon-logo-biale.png', media: '(prefers-color-scheme: dark)' },
+      { url: '/icon-logo-czarne.png', media: '(prefers-color-scheme: light)' },
+    ],
+  },
 };
 
 // Force dynamic rendering to prevent Cognito initialization during build
@@ -22,10 +28,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="icon" href="/icon-logo-biale.png" media="(prefers-color-scheme: dark)" />
-        <link rel="icon" href="/icon-logo-czarne.png" media="(prefers-color-scheme: light)" />
-      </head>
       <body className={inter.className}>
         <AuthProvider>
           <TooltipProvider>
