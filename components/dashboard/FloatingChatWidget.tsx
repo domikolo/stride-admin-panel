@@ -9,19 +9,10 @@ interface FloatingChatWidgetProps {
   clientId: string;
 }
 
-type WidgetState = 'closed' | 'opening' | 'open' | 'closing';
-
 const SUGGESTED_QUESTIONS = [
   'Jakie byly najczestsze pytania wczoraj?',
   'Ile kosztowaly rozmowy w tym tygodniu?',
   'Pokaz luki w bazie wiedzy',
-];
-
-const NOTIFICATION_MESSAGES = [
-  'W czym mogę Ci pomóc?',
-  'Zapytaj mnie o statystyki',
-  'Sprawdź dzisiejsze rozmowy',
-  'Masz pytanie? Napisz!',
 ];
 
 /** Format timestamp to HH:mm */
@@ -102,6 +93,7 @@ function renderMarkdown(text: string): React.ReactElement {
   for (const line of lines) {
     const trimmed = line.trim();
 
+    // Bullet list
     if (/^[-*]\s+/.test(trimmed)) {
       const content = trimmed.replace(/^[-*]\s+/, '');
       if (currentList?.type !== 'ul') {
@@ -112,6 +104,7 @@ function renderMarkdown(text: string): React.ReactElement {
       continue;
     }
 
+    // Numbered list
     if (/^\d+\.\s+/.test(trimmed)) {
       const content = trimmed.replace(/^\d+\.\s+/, '');
       if (currentList?.type !== 'ol') {
@@ -122,19 +115,23 @@ function renderMarkdown(text: string): React.ReactElement {
       continue;
     }
 
+    // Not a list line - flush any open list
     flushList();
 
+    // Empty line
     if (!trimmed) {
       elements.push(<div key={key++} className="h-1.5" />);
       continue;
     }
 
+    // Regular paragraph
     elements.push(
       <p key={key++} dangerouslySetInnerHTML={{ __html: inlineMd(trimmed) }} />
     );
   }
 
   flushList();
+
   return <>{elements}</>;
 }
 
@@ -148,9 +145,17 @@ function inlineMd(text: string): string {
     );
 }
 
+const NOTIFICATION_MESSAGES = [
+  'W czym mogę Ci pomóc?',
+  'Zapytaj mnie o statystyki',
+  'Sprawdź dzisiejsze rozmowy',
+  'Masz pytanie? Napisz!',
+];
+
 export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
   const router = useRouter();
-  const [widgetState, setWidgetState] = useState<WidgetState>('closed');
+  const [isOpen, setIsOpen] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
   const [messages, setMessages] = useState<ChatHistoryMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
@@ -158,10 +163,6 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
   const notificationCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const historyLoaded = useRef(false);
-
-  const isOpen = widgetState === 'open';
-  const isClosed = widgetState === 'closed';
-  const isAnimating = widgetState === 'opening' || widgetState === 'closing';
 
   // Load chat history on mount (background, ready before user opens)
   useEffect(() => {
@@ -189,7 +190,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
   // Tada effect on button
   useEffect(() => {
-    if (isClosed) {
+    if (!isOpen) {
       const tadaInterval = setInterval(() => {
         const btn = document.getElementById('floating-chat-btn');
         if (btn) {
@@ -197,16 +198,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           setTimeout(() => btn.classList.remove('tada'), 1000);
         }
       }, 30000);
+
       return () => clearInterval(tadaInterval);
     }
-  }, [isClosed]);
+  }, [isOpen]);
 
   // Escalating notification bubble: 30s, 60s, 120s, 240s then stop
   useEffect(() => {
-    if (!isClosed) return;
+    if (isOpen) return;
 
     const MAX_NOTIFICATIONS = 4;
-    const BASE_DELAY = 30000;
+    const BASE_DELAY = 30000; // 30s
 
     const scheduleNext = () => {
       if (notificationCount.current >= MAX_NOTIFICATIONS) return;
@@ -216,7 +218,11 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         const msgIndex = notificationCount.current % NOTIFICATION_MESSAGES.length;
         setNotificationText(NOTIFICATION_MESSAGES[msgIndex]);
         notificationCount.current += 1;
+
+        // Auto-hide after 5s
         setTimeout(() => setNotificationText(null), 5000);
+
+        // Schedule next
         scheduleNext();
       }, delay);
 
@@ -225,20 +231,115 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
     const timeout = scheduleNext();
     return () => { if (timeout) clearTimeout(timeout); };
-  }, [isClosed]);
+  }, [isOpen]);
 
-  const toggleWidget = () => {
-    if (isAnimating) return;
-    if (isClosed) {
-      setWidgetState('opening');
-    } else if (isOpen) {
-      setWidgetState('closing');
-    }
+  const animateOpen = () => {
+    if (isAnimating || isOpen) return;
+    setIsAnimating(true);
+
+    const widget = document.getElementById('chat-widget-floating');
+    if (!widget) return;
+
+    widget.style.setProperty('height', '115px', 'important');
+    widget.style.setProperty('width', '35px', 'important');
+    widget.style.setProperty('transform', 'translateY(-50%) translateX(40px)', 'important');
+    widget.style.setProperty('transition', 'none', 'important');
+    widget.style.setProperty('z-index', '2002', 'important');
+    widget.style.setProperty('display', 'flex', 'important');
+    widget.style.setProperty('box-shadow', 'none', 'important');
+
+    const header = widget.querySelector('.widget-header') as HTMLElement;
+    const body = widget.querySelector('.widget-body') as HTMLElement;
+    const footer = widget.querySelector('.widget-footer') as HTMLElement;
+    if (header) header.style.opacity = '0';
+    if (body) body.style.opacity = '0';
+    if (footer) footer.style.opacity = '0';
+
+    void widget.offsetWidth;
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+      widget.style.setProperty('transform', 'translateY(-50%) translateX(0)', 'important');
+    }, 10);
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'width 0.5s cubic-bezier(0.77,0,0.18,1), transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+      widget.style.setProperty('width', 'var(--floating-chat-widget-width)', 'important');
+    }, 260);
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), width 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+      widget.style.setProperty('height', 'var(--floating-chat-widget-height)', 'important');
+    }, 510);
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), width 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.6s ease-out', 'important');
+      widget.style.setProperty('box-shadow', '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)', 'important');
+    }, 510);
+
+    setTimeout(() => {
+      setIsAnimating(false);
+      setIsOpen(true);
+
+      widget.style.setProperty('height', 'var(--floating-chat-widget-height)', 'important');
+      widget.style.setProperty('width', 'var(--floating-chat-widget-width)', 'important');
+      widget.style.setProperty('transform', 'translateY(-50%)', 'important');
+      widget.style.removeProperty('transition');
+      widget.style.setProperty('box-shadow', '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)', 'important');
+
+      if (header) header.style.opacity = '1';
+      if (body) body.style.opacity = '1';
+      if (footer) footer.style.opacity = '1';
+
+      const closeBtn = widget.querySelector('.close-btn') as HTMLElement;
+      if (closeBtn) closeBtn.style.opacity = '1';
+    }, 1010);
   };
 
-  const handleAnimationEnd = () => {
-    if (widgetState === 'opening') setWidgetState('open');
-    if (widgetState === 'closing') setWidgetState('closed');
+  const animateClose = () => {
+    if (isAnimating || !isOpen) return;
+    setIsAnimating(true);
+
+    const widget = document.getElementById('chat-widget-floating');
+    if (!widget) return;
+
+    const header = widget.querySelector('.widget-header') as HTMLElement;
+    const body = widget.querySelector('.widget-body') as HTMLElement;
+    const footer = widget.querySelector('.widget-footer') as HTMLElement;
+    const closeBtn = widget.querySelector('.close-btn') as HTMLElement;
+    if (header) header.style.opacity = '0';
+    if (body) body.style.opacity = '0';
+    if (footer) footer.style.opacity = '0';
+    if (closeBtn) closeBtn.style.opacity = '0';
+
+    widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.4s ease-out', 'important');
+    widget.style.setProperty('height', '115px', 'important');
+    widget.style.setProperty('box-shadow', 'none', 'important');
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'transform 0.5s cubic-bezier(0.77,0,0.18,1), height 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+      widget.style.setProperty('transform', 'translateY(-50%) translateX(40px)', 'important');
+    }, 250);
+
+    setTimeout(() => {
+      widget.style.setProperty('transition', 'width 0.5s cubic-bezier(0.77,0,0.18,1), transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
+      widget.style.setProperty('width', '35px', 'important');
+    }, 500);
+
+    setTimeout(() => {
+      setIsAnimating(false);
+      setIsOpen(false);
+      widget.style.setProperty('display', 'none', 'important');
+      widget.style.removeProperty('height');
+      widget.style.removeProperty('transform');
+      widget.style.removeProperty('transition');
+      widget.style.removeProperty('width');
+      widget.style.removeProperty('box-shadow');
+
+      if (header) header.style.removeProperty('opacity');
+      if (body) body.style.removeProperty('opacity');
+      if (footer) footer.style.removeProperty('opacity');
+    }, 1000);
   };
 
   const handleSendMessage = async (e: React.FormEvent) => {
@@ -265,13 +366,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     }
   };
 
-  const handleConvLinkClick = (e: React.MouseEvent) => {
-    const target = e.target as HTMLElement;
-    const link = target.closest('a[data-conv-link]') as HTMLAnchorElement;
-    if (link) {
-      e.preventDefault();
-      router.push(link.getAttribute('href')!);
-    }
+  const handleSuggestionClick = (question: string) => {
+    setInputValue(question);
   };
 
   return (
@@ -279,7 +375,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       {/* Open Button */}
       <button
         id="floating-chat-btn"
-        onClick={toggleWidget}
+        onClick={() => isOpen ? animateClose() : animateOpen()}
         className="group fixed overflow-visible pointer-events-auto"
         style={{
           top: '50%',
@@ -294,6 +390,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           fontSize: 0,
           zIndex: 2003,
           cursor: 'pointer',
+          opacity: 1,
           transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
         }}
       >
@@ -323,7 +420,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       </button>
 
       {/* Notification bubble */}
-      {notificationText && isClosed && (
+      {notificationText && !isOpen && !isAnimating && (
         <div
           className="fixed pointer-events-none"
           style={{
@@ -341,7 +438,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
             }}
             onClick={() => {
               setNotificationText(null);
-              setWidgetState('opening');
+              animateOpen();
             }}
           >
             {notificationText}
@@ -352,16 +449,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       {/* Chat Widget */}
       <div
         id="chat-widget-floating"
-        data-state={widgetState}
-        onAnimationEnd={handleAnimationEnd}
         className="fixed pointer-events-auto"
         style={{
           top: '50%',
           right: 'var(--floating-chat-widget-right)',
+          transform: 'translateY(-50%)',
           background: '#141414',
+          boxShadow: 'none',
           border: '1px solid rgba(255, 255, 255, 0.06)',
           borderRadius: '16px',
           overflow: 'hidden',
+          display: 'none',
           flexDirection: 'column',
           zIndex: 2000,
         }}
@@ -369,7 +467,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
         {/* Header */}
         <div
-          className="widget-header px-5 py-3 flex items-center justify-between"
+          className="widget-header px-5 py-3 transition-opacity duration-300 flex items-center justify-between"
           style={{
             background: '#0a0a0a',
             borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
@@ -386,11 +484,12 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
         {/* Body */}
         <div
-          className="widget-body px-5 xl:px-6 py-4"
+          className="widget-body px-5 xl:px-6 py-4 transition-opacity duration-300"
           style={{
             flex: 1,
             overflowY: 'auto',
             scrollBehavior: 'smooth',
+            background: 'transparent',
           }}
         >
           <div className="flex flex-col gap-3">
@@ -402,7 +501,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                   {SUGGESTED_QUESTIONS.map((q, i) => (
                     <button
                       key={i}
-                      onClick={() => setInputValue(q)}
+                      onClick={() => handleSuggestionClick(q)}
                       className="text-xs bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] hover:border-white/[0.12] text-zinc-400 hover:text-zinc-300 px-3 py-2 rounded-lg transition-all duration-200 text-left"
                     >
                       {q}
@@ -420,6 +519,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
               return (
                 <React.Fragment key={idx}>
+                  {/* Day separator */}
                   {daySep && (
                     <div className="flex items-center gap-3 my-2">
                       <div className="h-px flex-1 bg-white/[0.08]" />
@@ -430,12 +530,26 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
                   <div className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                     <div
-                      className={`chat-bubble rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
+                      className={`rounded-xl px-3.5 py-2.5 text-sm leading-relaxed ${
                         msg.role === 'user'
-                          ? 'chat-bubble-user text-white max-w-[80%]'
-                          : 'chat-bubble-assistant text-zinc-200 max-w-[85%]'
+                          ? 'text-white max-w-[80%]'
+                          : 'text-zinc-200 max-w-[85%]'
                       }`}
-                      onClick={msg.role === 'assistant' ? handleConvLinkClick : undefined}
+                      style={{
+                        lineHeight: '1.5',
+                        background: msg.role === 'user' ? '#1e1e1e' : '#1e1e1e',
+                        border: msg.role === 'user'
+                          ? '1px solid rgba(255, 255, 255, 0.08)'
+                          : '1px solid rgba(255, 255, 255, 0.04)',
+                      }}
+                      onClick={(e) => {
+                        const target = e.target as HTMLElement;
+                        const link = target.closest('a[data-conv-link]') as HTMLAnchorElement;
+                        if (link) {
+                          e.preventDefault();
+                          router.push(link.getAttribute('href')!);
+                        }
+                      }}
                     >
                       {msg.role === 'assistant' ? renderMarkdown(msg.content) : msg.content}
                     </div>
@@ -448,7 +562,13 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
             })}
 
             {isTyping && (
-              <div className="chat-bubble chat-bubble-assistant self-start rounded-xl px-3 py-2 max-w-[75%] flex gap-1.5">
+              <div
+                className="self-start rounded-xl px-3 py-2 max-w-[75%] flex gap-1.5"
+                style={{
+                  background: '#1e1e1e',
+                  border: '1px solid rgba(255, 255, 255, 0.04)',
+                }}
+              >
                 {[...Array(3)].map((_, i) => (
                   <div
                     key={i}
@@ -465,7 +585,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
         {/* Footer */}
         <div
-          className="widget-footer p-4 xl:p-5"
+          className="widget-footer p-4 xl:p-5 transition-opacity duration-300"
           style={{
             background: '#0a0a0a',
             borderTop: '1px solid rgba(255, 255, 255, 0.06)',
@@ -479,12 +599,49 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
               placeholder="Wpisz pytanie..."
               disabled={isTyping}
               autoComplete="off"
-              className="flex-1 outline-none bg-[#1e1e1e] text-white text-sm rounded-[10px] px-3.5 py-2.5 border border-white/[0.06] focus:border-blue-500/30 focus:shadow-[0_0_0_2px_rgba(59,130,246,0.1)] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex-1 outline-none disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              style={{
+                padding: '10px 14px',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                borderRadius: '10px',
+                fontSize: '14px',
+                background: '#1e1e1e',
+                color: '#ffffff',
+              }}
+              onFocus={(e) => {
+                e.target.style.borderColor = 'rgba(59, 130, 246, 0.3)';
+                e.target.style.boxShadow = '0 0 0 2px rgba(59, 130, 246, 0.1)';
+              }}
+              onBlur={(e) => {
+                e.target.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                e.target.style.boxShadow = 'none';
+              }}
             />
             <button
               type="submit"
               disabled={isTyping || !inputValue.trim()}
-              className="chat-send-btn flex items-center justify-center w-10 h-10 rounded-[10px] border border-white/[0.06] bg-[#1e1e1e] text-zinc-400 hover:bg-blue-500 hover:border-blue-500 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-[#1e1e1e] disabled:hover:border-white/[0.06] disabled:hover:text-zinc-400 transition-all duration-200"
+              className="flex items-center justify-center transition-all duration-200 disabled:opacity-30 disabled:cursor-not-allowed"
+              style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '10px',
+                border: '1px solid rgba(255, 255, 255, 0.06)',
+                background: '#1e1e1e',
+                color: '#a1a1aa',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => {
+                if (!isTyping && inputValue.trim()) {
+                  e.currentTarget.style.background = '#3b82f6';
+                  e.currentTarget.style.borderColor = '#3b82f6';
+                  e.currentTarget.style.color = '#ffffff';
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = '#1e1e1e';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+                e.currentTarget.style.color = '#a1a1aa';
+              }}
             >
               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
                 <path d="M2 21l21-9L2 3v7l15 2-15 2v7z" />
@@ -495,9 +652,22 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
         {/* Close button */}
         <button
-          onClick={() => { if (isOpen) setWidgetState('closing'); }}
-          className="close-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center z-10 bg-[#1e1e1e] border border-white/[0.06] hover:border-white/10 transition-all duration-200"
-          style={{ cursor: 'pointer' }}
+          onClick={animateClose}
+          className="close-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center z-10 transition-all duration-200"
+          style={{
+            background: '#1e1e1e',
+            border: '1px solid rgba(255, 255, 255, 0.06)',
+            cursor: 'pointer',
+            opacity: 0,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#1e1e1e';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#1e1e1e';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
+          }}
         >
           <svg viewBox="0 0 24 24" width="14" height="14" fill="#71717a">
             <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" />
@@ -507,8 +677,14 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
       <style jsx global>{`
         @keyframes fadeInSlideFloat {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
         }
 
         @keyframes tada {
@@ -522,128 +698,14 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           animation: tada 1s;
         }
 
-        /* ========== Widget animation states ========== */
-
-        #chat-widget-floating[data-state="closed"] {
-          display: none !important;
-        }
-
-        #chat-widget-floating[data-state="opening"] {
-          display: flex !important;
-          animation: widgetOpen 1s cubic-bezier(0.77, 0, 0.18, 1) forwards;
-        }
-
-        #chat-widget-floating[data-state="open"] {
-          display: flex !important;
-          width: var(--floating-chat-widget-width);
-          height: var(--floating-chat-widget-height);
-          transform: translateY(-50%);
-          box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
-        }
-
-        #chat-widget-floating[data-state="closing"] {
-          display: flex !important;
-          animation: widgetClose 0.8s cubic-bezier(0.77, 0, 0.18, 1) forwards;
-        }
-
-        /* Content fade during animations */
-        #chat-widget-floating[data-state="opening"] .widget-header,
-        #chat-widget-floating[data-state="opening"] .widget-body,
-        #chat-widget-floating[data-state="opening"] .widget-footer,
-        #chat-widget-floating[data-state="opening"] .close-btn {
-          opacity: 0;
-          animation: fadeIn 0.3s ease-out 0.7s forwards;
-        }
-
-        #chat-widget-floating[data-state="closing"] .widget-header,
-        #chat-widget-floating[data-state="closing"] .widget-body,
-        #chat-widget-floating[data-state="closing"] .widget-footer,
-        #chat-widget-floating[data-state="closing"] .close-btn {
-          animation: fadeOut 0.15s ease-out forwards;
-        }
-
-        @keyframes widgetOpen {
-          0% {
-            width: 35px;
-            height: 115px;
-            transform: translateY(-50%) translateX(40px);
-            box-shadow: none;
-          }
-          30% {
-            width: 35px;
-            height: 115px;
-            transform: translateY(-50%) translateX(0);
-            box-shadow: none;
-          }
-          60% {
-            width: var(--floating-chat-widget-width);
-            height: 115px;
-            transform: translateY(-50%);
-            box-shadow: none;
-          }
-          100% {
-            width: var(--floating-chat-widget-width);
-            height: var(--floating-chat-widget-height);
-            transform: translateY(-50%);
-            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
-          }
-        }
-
-        @keyframes widgetClose {
-          0% {
-            width: var(--floating-chat-widget-width);
-            height: var(--floating-chat-widget-height);
-            transform: translateY(-50%);
-            box-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
-          }
-          40% {
-            width: var(--floating-chat-widget-width);
-            height: 115px;
-            transform: translateY(-50%);
-            box-shadow: none;
-          }
-          70% {
-            width: 35px;
-            height: 115px;
-            transform: translateY(-50%);
-          }
-          100% {
-            width: 35px;
-            height: 115px;
-            transform: translateY(-50%) translateX(40px);
-            box-shadow: none;
-          }
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-
-        @keyframes fadeOut {
-          from { opacity: 1; }
-          to { opacity: 0; }
-        }
-
-        /* Chat bubble shared styles */
-        .chat-bubble {
-          line-height: 1.5;
-          background: #1e1e1e;
-        }
-
-        .chat-bubble-user {
-          border: 1px solid rgba(255, 255, 255, 0.08);
-        }
-
-        .chat-bubble-assistant {
-          border: 1px solid rgba(255, 255, 255, 0.04);
-        }
-
         /* Hardware acceleration */
         #chat-widget-floating {
           backface-visibility: hidden;
           perspective: 1000px;
-          will-change: width, height, transform;
+        }
+
+        #chat-widget-floating * {
+          backface-visibility: hidden;
         }
 
         /* Mobile responsive */
