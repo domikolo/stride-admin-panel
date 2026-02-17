@@ -42,30 +42,34 @@ export default function KBSection({
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
-  const isUserInputRef = useRef(false);
+  const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Resize in onChange handler — synchronous in event callback,
-  // browser doesn't scroll to caret because height is restored
-  // before the event handler returns.
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    isUserInputRef.current = true;
-    const el = e.target;
+  // Auto-resize: set wrapper height FIRST (anchors layout), then
+  // collapse textarea to measure, then set real height.
+  // Wrapper prevents page reflow → no scroll jump.
+  const resizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    const wrapper = wrapperRef.current;
+    if (!el || !wrapper) return;
+    // Lock wrapper height to current size (prevents layout shift)
+    wrapper.style.height = `${wrapper.offsetHeight}px`;
+    // Measure true content height
     el.style.height = '0';
-    el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-    setContent(el.value);
+    const newHeight = Math.max(el.scrollHeight, 120);
+    el.style.height = `${newHeight}px`;
+    // Update wrapper to new size
+    wrapper.style.height = `${newHeight}px`;
+  }, []);
+
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setContent(e.target.value);
+    resizeTextarea();
   };
 
-  // Only for programmatic content changes (AI Assist, initial load, sync)
+  // For programmatic content changes (AI Assist, initial load, sync)
   useLayoutEffect(() => {
-    if (isUserInputRef.current) {
-      isUserInputRef.current = false;
-      return;
-    }
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = '0';
-    el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-  }, [content]);
+    resizeTextarea();
+  }, [content, resizeTextarea]);
 
   // Sync with entry updates from parent
   useEffect(() => {
@@ -184,8 +188,8 @@ export default function KBSection({
         </div>
       )}
 
-      {/* Content textarea */}
-      <div className="px-4 py-3">
+      {/* Content textarea — wrapper div anchors layout to prevent scroll jump */}
+      <div ref={wrapperRef} className="px-4 py-3" style={{ minHeight: '120px' }}>
         <textarea
           ref={textareaRef}
           value={content}
