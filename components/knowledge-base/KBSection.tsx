@@ -42,11 +42,25 @@ export default function KBSection({
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
+  const isUserInputRef = useRef(false);
 
-  // Auto-resize textarea. overflow-hidden on textarea prevents browser
-  // from scrolling to caret. Height set to 0 → measure scrollHeight → set real height,
-  // all in useLayoutEffect (before paint) so no visual glitch.
+  // Resize in onChange handler — synchronous in event callback,
+  // browser doesn't scroll to caret because height is restored
+  // before the event handler returns.
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    isUserInputRef.current = true;
+    const el = e.target;
+    el.style.height = '0';
+    el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+    setContent(el.value);
+  };
+
+  // Only for programmatic content changes (AI Assist, initial load, sync)
   useLayoutEffect(() => {
+    if (isUserInputRef.current) {
+      isUserInputRef.current = false;
+      return;
+    }
     const el = textareaRef.current;
     if (!el) return;
     el.style.height = '0';
@@ -175,7 +189,7 @@ export default function KBSection({
         <textarea
           ref={textareaRef}
           value={content}
-          onChange={(e) => setContent(e.target.value)}
+          onChange={handleContentChange}
           className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none overflow-hidden leading-relaxed placeholder:text-zinc-600"
           placeholder="Wpisz tresc sekcji bazy wiedzy..."
           style={{ minHeight: '120px' }}
