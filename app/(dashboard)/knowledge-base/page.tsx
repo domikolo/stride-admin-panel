@@ -17,6 +17,7 @@ import {
   unpublishKBEntry,
   importKBFromS3,
   getGaps,
+  resolveGap,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
@@ -125,6 +126,14 @@ export default function KnowledgeBasePage() {
     setEntries(prev =>
       prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
     );
+
+    // Auto-resolve gap if this entry came from a gap
+    const entry = entries.find(e => e.kbEntryId === entryId);
+    if (entry?.sourceGapId) {
+      const gap = gaps.find(g => g.topicId === entry.sourceGapId);
+      resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => {});
+      setGaps(prev => prev.filter(g => g.topicId !== entry.sourceGapId));
+    }
   };
 
   const handleUnpublish = async (entryId: string) => {

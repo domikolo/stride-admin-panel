@@ -43,12 +43,14 @@ export default function KBSection({
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
 
-  // Auto-resize textarea
+  // Auto-resize textarea (preserve scroll position to avoid jump)
   const resizeTextarea = useCallback(() => {
     const el = textareaRef.current;
     if (el) {
+      const scrollY = window.scrollY;
       el.style.height = 'auto';
       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
+      window.scrollTo(0, scrollY);
     }
   }, []);
 
