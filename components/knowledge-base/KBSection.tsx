@@ -43,14 +43,14 @@ export default function KBSection({
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
 
-  // Auto-resize textarea — useLayoutEffect runs BEFORE browser paint,
-  // so height changes are invisible and don't cause scroll jumps
+  // Auto-resize textarea. overflow-hidden on textarea prevents browser
+  // from scrolling to caret. Height set to 0 → measure scrollHeight → set real height,
+  // all in useLayoutEffect (before paint) so no visual glitch.
   useLayoutEffect(() => {
     const el = textareaRef.current;
-    if (el) {
-      el.style.height = 'auto';
-      el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-    }
+    if (!el) return;
+    el.style.height = '0';
+    el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
   }, [content]);
 
   // Sync with entry updates from parent
@@ -176,7 +176,7 @@ export default function KBSection({
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
+          className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none overflow-hidden leading-relaxed placeholder:text-zinc-600"
           placeholder="Wpisz tresc sekcji bazy wiedzy..."
           style={{ minHeight: '120px' }}
         />
