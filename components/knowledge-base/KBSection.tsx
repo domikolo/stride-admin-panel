@@ -4,9 +4,9 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, Trash2, Loader2, Undo2 } from 'lucide-react';
+import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { KBEntry } from '@/lib/types';
 
 interface KBSectionProps {
@@ -43,20 +43,15 @@ export default function KBSection({
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
 
-  // Auto-resize textarea (preserve scroll position to avoid jump)
-  const resizeTextarea = useCallback(() => {
+  // Auto-resize textarea — useLayoutEffect runs BEFORE browser paint,
+  // so height changes are invisible and don't cause scroll jumps
+  useLayoutEffect(() => {
     const el = textareaRef.current;
     if (el) {
-      const scrollY = window.scrollY;
       el.style.height = 'auto';
       el.style.height = `${Math.max(el.scrollHeight, 120)}px`;
-      window.scrollTo(0, scrollY);
     }
-  }, []);
-
-  useEffect(() => {
-    resizeTextarea();
-  }, [content, resizeTextarea]);
+  }, [content]);
 
   // Sync with entry updates from parent
   useEffect(() => {
@@ -149,6 +144,31 @@ export default function KBSection({
           </Button>
         </div>
       </div>
+
+      {/* Gap context */}
+      {gapContext && isDraft && (gapContext.gapReason || gapContext.questionExamples.length > 0) && (
+        <div className="mx-4 mt-3 p-3 bg-yellow-500/[0.05] border border-yellow-500/15 rounded-lg space-y-2">
+          {gapContext.gapReason && (
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={13} className="text-yellow-400 mt-0.5 shrink-0" />
+              <p className="text-xs text-yellow-400">{gapContext.gapReason}</p>
+            </div>
+          )}
+          {gapContext.questionExamples.length > 0 && (
+            <div className="flex items-start gap-2">
+              <MessageSquare size={13} className="text-zinc-400 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[11px] text-zinc-500 mb-1">Pytania uzytkownikow:</p>
+                <ul className="space-y-0.5">
+                  {gapContext.questionExamples.slice(0, 5).map((q, i) => (
+                    <li key={i} className="text-xs text-zinc-400 italic">&ldquo;{q}&rdquo;</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Content textarea */}
       <div className="px-4 py-3">

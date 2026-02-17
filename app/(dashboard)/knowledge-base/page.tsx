@@ -18,6 +18,7 @@ import {
   importKBFromS3,
   getGaps,
   resolveGap,
+  getResolvedGaps,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
@@ -45,12 +46,15 @@ export default function KnowledgeBasePage() {
     if (!user) return;
     try {
       const cid = getClientId();
-      const [kbData, gapsData] = await Promise.all([
+      const [kbData, gapsData, resolvedData] = await Promise.all([
         getKBEntries(cid),
         getGaps(cid, 'week').catch(() => ({ gaps: [] as Gap[] })),
+        getResolvedGaps(cid).catch(() => ({ resolvedGapIds: [] as string[] })),
       ]);
+      const resolvedIds = resolvedData.resolvedGapIds || [];
+      const allGaps = (gapsData as { gaps: Gap[] }).gaps || [];
       setEntries(kbData.entries);
-      setGaps((gapsData as { gaps: Gap[] }).gaps || []);
+      setGaps(allGaps.filter(g => !resolvedIds.includes(g.topicId)));
       setError(null);
     } catch (err) {
       console.error('Failed to load KB:', err);
