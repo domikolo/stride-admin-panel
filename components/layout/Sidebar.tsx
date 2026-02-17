@@ -18,6 +18,7 @@ import {
   Flame,
   AlertCircle,
   Search,
+  BookOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -42,6 +43,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     { href: '/conversations', icon: MessageSquare, label: 'Conversations' },
     { href: '/appointments', icon: Calendar, label: 'Appointments' },
     { href: '/insights', icon: Flame, label: 'Insights', badge: gapsCount > 0 ? gapsCount : null },
+    { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
   ];
 
   const ownerLinks = [

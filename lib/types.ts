@@ -148,3 +148,17 @@ export interface ChatResponse {
 }
 
 export type ChatIntent = 'chat' | 'briefing' | 'smart_insight';
+
+// Knowledge Base Types
+export interface KBEntry {
+  kbEntryId: string;
+  sk: string;
+  clientId: string;
+  topic: string;
+  content: string;
+  status: 'draft' | 'published';
+  sourceGapId?: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}

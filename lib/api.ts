@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -59,6 +59,22 @@ class ApiClient {
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
+      headers: await this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API error: ${response.statusText}`);
+    }
+
+    const responseData = await response.json();
+    return camelCaseKeys(responseData) as T;
+  }
+
+  async put<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PUT',
       headers: await this.getHeaders(),
       body: JSON.stringify(data),
     });
@@ -264,4 +280,72 @@ export const unresolveGap = (clientId: string, topicId: string) =>
 export const getResolvedGaps = (clientId: string) =>
   api.get<{ resolvedGapIds: string[]; count: number }>(
     `/clients/${clientId}/gaps/resolved`
+  );
+
+// ─── Knowledge Base ──────────────────────────────────────────────
+
+export const getKBEntries = (clientId: string) =>
+  api.get<{ entries: KBEntry[]; count: number }>(
+    `/clients/${clientId}/knowledge-base`
+  );
+
+export const getKBEntry = (clientId: string, entryId: string) =>
+  api.get<KBEntry>(
+    `/clients/${clientId}/knowledge-base/${entryId}`
+  );
+
+export const createKBEntry = (
+  clientId: string,
+  data: { topic: string; content: string; source_gap_id?: string }
+) =>
+  api.post<KBEntry>(
+    `/clients/${clientId}/knowledge-base`,
+    data
+  );
+
+export const updateKBEntry = (
+  clientId: string,
+  entryId: string,
+  data: { topic?: string; content?: string }
+) =>
+  api.put<KBEntry>(
+    `/clients/${clientId}/knowledge-base/${entryId}`,
+    data
+  );
+
+export const deleteKBEntry = (clientId: string, entryId: string) =>
+  api.delete<{ status: string; entryId: string }>(
+    `/clients/${clientId}/knowledge-base/${entryId}`
+  );
+
+export const generateKBDraft = (
+  clientId: string,
+  data: {
+    topic: string;
+    question_examples?: string[];
+    gap_reason?: string;
+    existing_content?: string;
+  }
+) =>
+  api.post<{ content: string; tokensUsed: number; costUsd: number }>(
+    `/clients/${clientId}/knowledge-base/ai-generate`,
+    data
+  );
+
+export const publishKBEntry = (clientId: string, entryId: string) =>
+  api.post<KBEntry>(
+    `/clients/${clientId}/knowledge-base/${entryId}/publish`,
+    {}
+  );
+
+export const unpublishKBEntry = (clientId: string, entryId: string) =>
+  api.post<KBEntry>(
+    `/clients/${clientId}/knowledge-base/${entryId}/unpublish`,
+    {}
+  );
+
+export const importKBFromS3 = (clientId: string) =>
+  api.post<{ importedCount: number; entries: KBEntry[] }>(
+    `/clients/${clientId}/knowledge-base/import-s3`,
+    {}
   );

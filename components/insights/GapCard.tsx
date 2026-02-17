@@ -5,7 +5,7 @@
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Lightbulb, CheckCircle, Loader2 } from 'lucide-react';
+import { AlertTriangle, Lightbulb, CheckCircle, Loader2, Wrench } from 'lucide-react';
 
 interface GapCardProps {
     topicId: string;
@@ -94,12 +94,27 @@ export default function GapCard({
                     </p>
                 </div>
 
-                {/* Suggestion */}
-                <div className="p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-start gap-2">
-                    <Lightbulb className="text-green-400 mt-0.5" size={14} />
-                    <p className="text-xs text-green-400">
-                        {suggestion}
-                    </p>
+                {/* Suggestion + Fix button */}
+                <div className="flex items-center gap-2">
+                    <div className="flex-1 p-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-start gap-2">
+                        <Lightbulb className="text-green-400 mt-0.5" size={14} />
+                        <p className="text-xs text-green-400">
+                            {suggestion}
+                        </p>
+                    </div>
+                    <Link
+                        href={`/knowledge-base?fix_gap=${encodeURIComponent(topicId)}&topic=${encodeURIComponent(topicName)}&examples=${encodeURIComponent(examples.slice(0, 5).join('|||'))}&reason=${encodeURIComponent(gapReason)}`}
+                        className="shrink-0"
+                    >
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 gap-1 h-8"
+                        >
+                            <Wrench size={14} />
+                            Napraw
+                        </Button>
+                    </Link>
                 </div>
             </CardContent>
         </Card>
