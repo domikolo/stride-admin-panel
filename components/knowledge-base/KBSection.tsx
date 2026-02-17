@@ -4,7 +4,8 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
+import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { KBEntry } from '@/lib/types';
@@ -38,38 +39,9 @@ export default function KBSection({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // Auto-resize: set wrapper height FIRST (anchors layout), then
-  // collapse textarea to measure, then set real height.
-  // Wrapper prevents page reflow → no scroll jump.
-  const resizeTextarea = useCallback(() => {
-    const el = textareaRef.current;
-    const wrapper = wrapperRef.current;
-    if (!el || !wrapper) return;
-    // Lock wrapper height to current size (prevents layout shift)
-    wrapper.style.height = `${wrapper.offsetHeight}px`;
-    // Measure true content height
-    el.style.height = '0';
-    const newHeight = Math.max(el.scrollHeight, 120);
-    el.style.height = `${newHeight}px`;
-    // Update wrapper to new size
-    wrapper.style.height = `${newHeight}px`;
-  }, []);
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    resizeTextarea();
-  };
-
-  // For programmatic content changes (AI Assist, initial load, sync)
-  useLayoutEffect(() => {
-    resizeTextarea();
-  }, [content, resizeTextarea]);
 
   // Sync with entry updates from parent
   useEffect(() => {
@@ -188,15 +160,14 @@ export default function KBSection({
         </div>
       )}
 
-      {/* Content textarea — wrapper div anchors layout to prevent scroll jump */}
-      <div ref={wrapperRef} className="px-4 py-3" style={{ minHeight: '120px' }}>
-        <textarea
-          ref={textareaRef}
+      {/* Content textarea — react-textarea-autosize handles resize without scroll jump */}
+      <div className="px-4 py-3">
+        <TextareaAutosize
           value={content}
-          onChange={handleContentChange}
-          className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none overflow-hidden leading-relaxed placeholder:text-zinc-600"
+          onChange={(e) => setContent(e.target.value)}
+          minRows={5}
+          className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
           placeholder="Wpisz tresc sekcji bazy wiedzy..."
-          style={{ minHeight: '120px' }}
         />
       </div>
 
