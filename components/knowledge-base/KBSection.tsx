@@ -51,43 +51,64 @@ export default function KBSection({
   const containerRef = useRef<HTMLDivElement>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const closingRef = useRef(false);
+  const lastMouse = useRef({ x: 0, y: 0 });
 
-  const handleMouseUp = useCallback((e: React.MouseEvent) => {
+  // Track mouse position over textarea for popup placement
+  const handleMouseMove = useCallback((e: React.MouseEvent) => {
+    lastMouse.current = { x: e.clientX, y: e.clientY };
+  }, []);
+
+  // Fires on any selection change: mouse drag, double/triple click, Ctrl+A, Shift+arrows
+  const handleSelect = useCallback(() => {
     const ta = textareaRef.current;
     const container = containerRef.current;
     if (!ta || !container || isNew || !onAiInlineEdit) return;
-
-    // If popup was just closed via X, don't reopen
     if (closingRef.current) return;
 
-    // Clear any pending timer (handles double/triple click)
+    // Clear previous debounce
     if (selectionTimer.current) clearTimeout(selectionTimer.current);
 
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
 
-    // Debounce: wait 600ms after last mouseup before showing popup
-    selectionTimer.current = setTimeout(() => {
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      if (start !== end) {
-        const rect = container.getBoundingClientRect();
-        setSelection({ start, end });
-        setPopupPos({ x: mouseX - rect.left, y: mouseY - rect.top + 10 });
-        setInlineEditState('idle');
-      } else {
-        if (inlineEditState !== 'loading') {
-          setSelection(null);
-          setPopupPos(null);
-        }
+    // No selection → dismiss (unless loading)
+    if (start === end) {
+      if (inlineEditState !== 'loading') {
+        setSelection(null);
+        setPopupPos(null);
       }
+      return;
+    }
+
+    // Debounce 600ms — lets double/triple click settle
+    selectionTimer.current = setTimeout(() => {
+      // Re-check selection (may have changed during debounce)
+      const s = ta.selectionStart;
+      const e = ta.selectionEnd;
+      if (s === e) return;
+
+      const rect = container.getBoundingClientRect();
+      const popupWidth = 340;
+
+      // Position relative to container, clamped to stay within bounds
+      let px = lastMouse.current.x - rect.left;
+      let py = lastMouse.current.y - rect.top + 14;
+
+      // Clamp horizontal: keep popup fully inside container (or at least start at 0)
+      px = Math.max(0, Math.min(px, rect.width - popupWidth));
+      // Clamp vertical: don't go above container
+      py = Math.max(0, py);
+
+      setSelection({ start: s, end: e });
+      setPopupPos({ x: px, y: py });
+      setInlineEditState('idle');
     }, 600);
   }, [isNew, onAiInlineEdit, inlineEditState]);
 
   const handleInlineClose = useCallback(() => {
-    // Set closing guard so the mouseup from clicking X doesn't reopen
     closingRef.current = true;
-    setTimeout(() => { closingRef.current = false; }, 300);
+    setTimeout(() => { closingRef.current = false; }, 400);
+    if (selectionTimer.current) clearTimeout(selectionTimer.current);
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
@@ -261,7 +282,8 @@ export default function KBSection({
             ref={textareaRef}
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            onMouseUp={handleMouseUp}
+            onSelect={handleSelect}
+            onMouseMove={handleMouseMove}
             minRows={5}
             className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
             placeholder="Wpisz tresc sekcji bazy wiedzy..."
