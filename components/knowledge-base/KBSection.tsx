@@ -48,25 +48,46 @@ export default function KBSection({
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const closingRef = useRef(false);
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     const ta = textareaRef.current;
-    if (!ta || isNew || !onAiInlineEdit) return;
-    const start = ta.selectionStart;
-    const end = ta.selectionEnd;
-    if (start !== end) {
-      setSelection({ start, end });
-      setPopupPos({ x: e.clientX, y: e.clientY + 10 });
-      setInlineEditState('idle');
-    } else {
-      if (inlineEditState !== 'loading') {
-        setSelection(null);
-        setPopupPos(null);
+    const container = containerRef.current;
+    if (!ta || !container || isNew || !onAiInlineEdit) return;
+
+    // If popup was just closed via X, don't reopen
+    if (closingRef.current) return;
+
+    // Clear any pending timer (handles double/triple click)
+    if (selectionTimer.current) clearTimeout(selectionTimer.current);
+
+    const mouseX = e.clientX;
+    const mouseY = e.clientY;
+
+    // Debounce: wait 600ms after last mouseup before showing popup
+    selectionTimer.current = setTimeout(() => {
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      if (start !== end) {
+        const rect = container.getBoundingClientRect();
+        setSelection({ start, end });
+        setPopupPos({ x: mouseX - rect.left, y: mouseY - rect.top + 10 });
+        setInlineEditState('idle');
+      } else {
+        if (inlineEditState !== 'loading') {
+          setSelection(null);
+          setPopupPos(null);
+        }
       }
-    }
+    }, 600);
   }, [isNew, onAiInlineEdit, inlineEditState]);
 
   const handleInlineClose = useCallback(() => {
+    // Set closing guard so the mouseup from clicking X doesn't reopen
+    closingRef.current = true;
+    setTimeout(() => { closingRef.current = false; }, 300);
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
@@ -134,10 +155,13 @@ export default function KBSection({
   };
 
   return (
-    <div className={`rounded-lg border ${isDraft
-      ? 'border-dashed border-blue-500/30 bg-blue-500/[0.02]'
-      : 'border-white/[0.06] bg-white/[0.02]'
-    }`}>
+    <div
+      ref={containerRef}
+      className={`rounded-lg border relative ${isDraft
+        ? 'border-dashed border-blue-500/30 bg-blue-500/[0.02]'
+        : 'border-white/[0.06] bg-white/[0.02]'
+      }`}
+    >
       {/* Section header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
         <div className="flex items-center gap-2 flex-1 min-w-0">

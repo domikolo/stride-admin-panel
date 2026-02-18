@@ -98,15 +98,24 @@ export default function DashboardPage() {
     }
   };
 
-  // Format chart dates
-  const chartData = dailyStats.map(d => {
-    const date = new Date(d.date);
-    return {
-      label: date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' }),
-      rozmowy: d.conversations,
-      wiadomosci: d.messages,
-    };
-  });
+  // Build 7-day chart with all days (fill missing days with 0)
+  const chartData = (() => {
+    const statsMap = new Map(dailyStats.map(d => [d.date, d]));
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      // Use local date to match backend keys (avoid UTC timezone shift)
+      const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+      const stat = statsMap.get(key);
+      days.push({
+        label: date.toLocaleDateString('pl-PL', { weekday: 'short', day: 'numeric' }),
+        rozmowy: stat?.conversations ?? 0,
+        wiadomosci: stat?.messages ?? 0,
+      });
+    }
+    return days;
+  })();
 
   if (loading) {
     return (
@@ -176,7 +185,7 @@ export default function DashboardPage() {
       </div>
 
       {/* 7-day Activity Chart */}
-      {chartData.length > 0 && (
+      {!loading && (
         <Card className="glass-card p-5">
           <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-4">
             Aktywność (ostatnie 7 dni)
@@ -197,6 +206,7 @@ export default function DashboardPage() {
                   tick={{ fill: '#71717a', fontSize: 12 }}
                   axisLine={false}
                   tickLine={false}
+                  interval={0}
                 />
                 <YAxis
                   stroke="#71717a"
@@ -204,6 +214,7 @@ export default function DashboardPage() {
                   axisLine={false}
                   tickLine={false}
                   allowDecimals={false}
+                  domain={[0, 'auto']}
                 />
                 <Tooltip
                   contentStyle={{
