@@ -242,19 +242,31 @@ export default function KBSection({
         />
       )}
 
-      {/* Content textarea — react-textarea-autosize handles resize without scroll jump */}
+      {/* Content textarea with highlight overlay for selected fragment */}
       <div className="px-4 py-3">
-        <TextareaAutosize
-          ref={textareaRef}
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onMouseUp={handleMouseUp}
-          minRows={5}
-          className={`w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 transition-shadow rounded ${
-            inlineEditState === 'loading' ? 'ring-1 ring-purple-500/30' : ''
-          }`}
-          placeholder="Wpisz tresc sekcji bazy wiedzy..."
-        />
+        <div className="relative">
+          {/* Highlight backdrop — mirrors textarea text, shows purple highlight on selected fragment during loading */}
+          {selection && inlineEditState === 'loading' && (
+            <div
+              aria-hidden
+              className="absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden"
+              style={{ wordBreak: 'break-word' }}
+            >
+              {content.slice(0, selection.start)}
+              <mark className="bg-purple-500/20 text-transparent rounded-sm">{content.slice(selection.start, selection.end)}</mark>
+              {content.slice(selection.end)}
+            </div>
+          )}
+          <TextareaAutosize
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onMouseUp={handleMouseUp}
+            minRows={5}
+            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
+            placeholder="Wpisz tresc sekcji bazy wiedzy..."
+          />
+        </div>
       </div>
 
       {/* Actions bar */}

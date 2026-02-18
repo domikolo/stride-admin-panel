@@ -22,11 +22,8 @@ export default function InlineEditBar({ onSubmit, onClose, state, position, sele
   const dragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
 
-  // Focus input on mount
-  useEffect(() => {
-    const id = setTimeout(() => inputRef.current?.focus(), 100);
-    return () => clearTimeout(id);
-  }, []);
+  // Don't auto-focus — textarea keeps focus so selection stays alive
+  // User clicks into input when ready to type instruction
 
   // Auto-close after "done" state
   useEffect(() => {
