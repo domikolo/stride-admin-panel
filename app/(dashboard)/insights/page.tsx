@@ -338,9 +338,9 @@ export default function InsightsPage() {
           />
           <StatsCard
             title="Luki w bazie wiedzy"
-            value={current.summary.gapsCount}
+            value={activeGaps.length}
             icon={AlertTriangle}
-            trend={activePeriod === 'daily' && current.summary.gapsCount > 0 ? 'down' : undefined}
+            trend={activePeriod === 'daily' && activeGaps.length > 0 ? 'down' : undefined}
           />
         </div>
 
