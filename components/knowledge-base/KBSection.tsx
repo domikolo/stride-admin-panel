@@ -47,6 +47,8 @@ export default function KBSection({
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [inputFocused, setInputFocused] = useState(false);
+  const [doneRange, setDoneRange] = useState<{ start: number; end: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -112,18 +114,30 @@ export default function KBSection({
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
+    setInputFocused(false);
   }, []);
 
   const handleInlineEdit = async (instruction: string) => {
     if (!selection || !onAiInlineEdit) return;
     const selectedText = content.slice(selection.start, selection.end);
     setInlineEditState('loading');
+    setInputFocused(false);
     try {
       const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
+      // Track where the new text landed for green highlight
+      setDoneRange({ start: selection.start, end: selection.start + edited.length });
       setContent(prev =>
         prev.slice(0, selection.start) + edited + prev.slice(selection.end)
       );
       setInlineEditState('done');
+      // Auto-close popup after 1.5s, green highlight fades after 2.5s
+      setTimeout(() => {
+        setSelection(null);
+        setPopupPos(null);
+        setInlineEditState('idle');
+        setInputFocused(false);
+      }, 1500);
+      setTimeout(() => setDoneRange(null), 2500);
     } catch {
       setInlineEditState('idle');
     }
@@ -260,24 +274,44 @@ export default function KBSection({
           state={inlineEditState}
           position={popupPos}
           selectedText={content.slice(selection.start, selection.end)}
+          onInputFocus={() => setInputFocused(true)}
+          onInputBlur={() => setInputFocused(false)}
         />
       )}
 
-      {/* Content textarea with highlight overlay for selected fragment */}
+      {/* Content textarea with highlight overlay */}
       <div className="px-4 py-3">
         <div className="relative">
-          {/* Highlight backdrop — mirrors textarea text, shows purple highlight on selected fragment during loading */}
-          {selection && inlineEditState === 'loading' && (
-            <div
-              aria-hidden
-              className="absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden"
-              style={{ wordBreak: 'break-word' }}
-            >
-              {content.slice(0, selection.start)}
-              <mark className="bg-purple-500/20 text-transparent rounded-sm">{content.slice(selection.start, selection.end)}</mark>
-              {content.slice(selection.end)}
-            </div>
-          )}
+          {/* Highlight backdrop — shows when popup input has focus (idle), during loading, or after done */}
+          {(() => {
+            // Determine which range to highlight and with what color
+            const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
+            const showLoadingHighlight = selection && inlineEditState === 'loading';
+            const showDoneHighlight = doneRange && inlineEditState !== 'loading';
+            const highlightRange = showDoneHighlight ? doneRange
+              : (showLoadingHighlight || showIdleHighlight) ? selection
+              : null;
+            const markClass = showDoneHighlight
+              ? 'bg-green-500/20 text-transparent rounded-sm'
+              : showLoadingHighlight
+              ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
+              : 'bg-purple-500/15 text-transparent rounded-sm';
+
+            if (!highlightRange) return null;
+            return (
+              <div
+                aria-hidden
+                className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${
+                  showDoneHighlight ? 'transition-opacity duration-1000' : ''
+                }`}
+                style={{ wordBreak: 'break-word' }}
+              >
+                {content.slice(0, highlightRange.start)}
+                <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
+                {content.slice(highlightRange.end)}
+              </div>
+            );
+          })()}
           <TextareaAutosize
             ref={textareaRef}
             value={content}

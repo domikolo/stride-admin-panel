@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, X, Check, GripHorizontal } from 'lucide-react';
 
@@ -12,26 +12,17 @@ interface InlineEditBarProps {
   state: VisualState;
   position: { x: number; y: number };
   selectedText: string;
+  onInputFocus?: () => void;
+  onInputBlur?: () => void;
 }
 
-export default function InlineEditBar({ onSubmit, onClose, state, position, selectedText }: InlineEditBarProps) {
+export default function InlineEditBar({ onSubmit, onClose, state, position, selectedText, onInputFocus, onInputBlur }: InlineEditBarProps) {
   const [instruction, setInstruction] = useState('');
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const dragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
-
-  // Don't auto-focus — textarea keeps focus so selection stays alive
-  // User clicks into input when ready to type instruction
-
-  // Auto-close after "done" state
-  useEffect(() => {
-    if (state === 'done') {
-      const id = setTimeout(onClose, 1500);
-      return () => clearTimeout(id);
-    }
-  }, [state, onClose]);
 
   // Drag handlers
   const handleDragStart = useCallback((e: React.MouseEvent) => {
@@ -71,8 +62,6 @@ export default function InlineEditBar({ onSubmit, onClose, state, position, sele
     <div
       ref={popupRef}
       onMouseDown={(e) => {
-        // Prevent textarea from stealing focus when clicking inside popup
-        // but allow clicks on our own input
         if ((e.target as HTMLElement).tagName !== 'INPUT') {
           e.preventDefault();
         }
@@ -83,9 +72,23 @@ export default function InlineEditBar({ onSubmit, onClose, state, position, sele
         top: position.y + offset.y,
         width: popupWidth,
         zIndex: 50,
+        animation: 'inlinePopupIn 200ms ease-out',
       }}
       className="rounded-lg border border-purple-500/25 bg-zinc-900/95 backdrop-blur-sm shadow-xl shadow-purple-500/5"
     >
+      <style jsx>{`
+        @keyframes inlinePopupIn {
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+      `}</style>
+
       {/* Header — draggable */}
       <div
         onMouseDown={handleDragStart}
@@ -121,6 +124,8 @@ export default function InlineEditBar({ onSubmit, onClose, state, position, sele
               type="text"
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
+              onFocus={onInputFocus}
+              onBlur={onInputBlur}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') handleSubmit();
                 if (e.key === 'Escape') onClose();
