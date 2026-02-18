@@ -45,33 +45,45 @@ export default function KBSection({
 
   // Inline edit selection state
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
-  const [inlineEditLoading, setInlineEditLoading] = useState(false);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+  const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const handleSelect = useCallback(() => {
+  const handleMouseUp = useCallback((e: React.MouseEvent) => {
     const ta = textareaRef.current;
     if (!ta || isNew || !onAiInlineEdit) return;
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
     if (start !== end) {
       setSelection({ start, end });
+      setPopupPos({ x: e.clientX, y: e.clientY + 10 });
+      setInlineEditState('idle');
     } else {
-      if (!inlineEditLoading) setSelection(null);
+      if (inlineEditState !== 'loading') {
+        setSelection(null);
+        setPopupPos(null);
+      }
     }
-  }, [isNew, onAiInlineEdit, inlineEditLoading]);
+  }, [isNew, onAiInlineEdit, inlineEditState]);
+
+  const handleInlineClose = useCallback(() => {
+    setSelection(null);
+    setPopupPos(null);
+    setInlineEditState('idle');
+  }, []);
 
   const handleInlineEdit = async (instruction: string) => {
     if (!selection || !onAiInlineEdit) return;
     const selectedText = content.slice(selection.start, selection.end);
-    setInlineEditLoading(true);
+    setInlineEditState('loading');
     try {
       const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
       setContent(prev =>
         prev.slice(0, selection.start) + edited + prev.slice(selection.end)
       );
-      setSelection(null);
-    } finally {
-      setInlineEditLoading(false);
+      setInlineEditState('done');
+    } catch {
+      setInlineEditState('idle');
     }
   };
 
@@ -195,12 +207,14 @@ export default function KBSection({
         </div>
       )}
 
-      {/* Inline AI edit bar */}
-      {selection && !isNew && onAiInlineEdit && (
+      {/* Floating inline AI edit popup */}
+      {selection && popupPos && !isNew && onAiInlineEdit && (
         <InlineEditBar
           onSubmit={handleInlineEdit}
-          onClose={() => setSelection(null)}
-          loading={inlineEditLoading}
+          onClose={handleInlineClose}
+          state={inlineEditState}
+          position={popupPos}
+          selectedText={content.slice(selection.start, selection.end)}
         />
       )}
 
@@ -210,9 +224,11 @@ export default function KBSection({
           ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
-          onSelect={handleSelect}
+          onMouseUp={handleMouseUp}
           minRows={5}
-          className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
+          className={`w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 transition-shadow rounded ${
+            inlineEditState === 'loading' ? 'ring-1 ring-purple-500/30' : ''
+          }`}
           placeholder="Wpisz tresc sekcji bazy wiedzy..."
         />
       </div>
