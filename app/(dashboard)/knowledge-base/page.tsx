@@ -19,6 +19,7 @@ import {
   getGaps,
   resolveGap,
   getResolvedGaps,
+  inlineEditKB,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
@@ -169,6 +170,19 @@ export default function KnowledgeBasePage() {
     return result.content;
   };
 
+  const handleAiInlineEdit = async (
+    entryId: string, topic: string, content: string,
+    selectedText: string, instruction: string
+  ) => {
+    const result = await inlineEditKB(getClientId(), {
+      topic,
+      full_content: content,
+      selected_text: selectedText,
+      instruction,
+    });
+    return result.content;
+  };
+
   const handleImport = async () => {
     setImporting(true);
     try {
@@ -303,6 +317,7 @@ export default function KnowledgeBasePage() {
               onUnpublish={handleUnpublish}
               onDelete={handleDelete}
               onAiAssist={handleAiAssist}
+              onAiInlineEdit={handleAiInlineEdit}
               gapContext={gapContextRef.current.get(entry.kbEntryId)}
             />
           ))}
@@ -328,6 +343,7 @@ export default function KnowledgeBasePage() {
               onUnpublish={handleUnpublish}
               onDelete={handleDelete}
               onAiAssist={handleAiAssist}
+              onAiInlineEdit={handleAiInlineEdit}
             />
           ))}
         </div>

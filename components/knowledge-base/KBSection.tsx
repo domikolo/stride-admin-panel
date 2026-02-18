@@ -4,11 +4,12 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare } from 'lucide-react';
 import { KBEntry } from '@/lib/types';
+import InlineEditBar from './InlineEditBar';
 
 interface KBSectionProps {
   entry: KBEntry;
@@ -17,6 +18,7 @@ interface KBSectionProps {
   onUnpublish: (entryId: string) => Promise<void>;
   onDelete: (entryId: string) => void;
   onAiAssist: (entryId: string, topic: string, content: string) => Promise<string>;
+  onAiInlineEdit?: (entryId: string, topic: string, content: string, selectedText: string, instruction: string) => Promise<string>;
   isNew?: boolean;
   gapContext?: {
     questionExamples: string[];
@@ -31,6 +33,7 @@ export default function KBSection({
   onUnpublish,
   onDelete,
   onAiAssist,
+  onAiInlineEdit,
   isNew,
   gapContext,
 }: KBSectionProps) {
@@ -39,6 +42,38 @@ export default function KBSection({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+
+  // Inline edit selection state
+  const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
+  const [inlineEditLoading, setInlineEditLoading] = useState(false);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const handleSelect = useCallback(() => {
+    const ta = textareaRef.current;
+    if (!ta || isNew || !onAiInlineEdit) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    if (start !== end) {
+      setSelection({ start, end });
+    } else {
+      if (!inlineEditLoading) setSelection(null);
+    }
+  }, [isNew, onAiInlineEdit, inlineEditLoading]);
+
+  const handleInlineEdit = async (instruction: string) => {
+    if (!selection || !onAiInlineEdit) return;
+    const selectedText = content.slice(selection.start, selection.end);
+    setInlineEditLoading(true);
+    try {
+      const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
+      setContent(prev =>
+        prev.slice(0, selection.start) + edited + prev.slice(selection.end)
+      );
+      setSelection(null);
+    } finally {
+      setInlineEditLoading(false);
+    }
+  };
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
@@ -160,11 +195,22 @@ export default function KBSection({
         </div>
       )}
 
+      {/* Inline AI edit bar */}
+      {selection && !isNew && onAiInlineEdit && (
+        <InlineEditBar
+          onSubmit={handleInlineEdit}
+          onClose={() => setSelection(null)}
+          loading={inlineEditLoading}
+        />
+      )}
+
       {/* Content textarea — react-textarea-autosize handles resize without scroll jump */}
       <div className="px-4 py-3">
         <TextareaAutosize
+          ref={textareaRef}
           value={content}
           onChange={(e) => setContent(e.target.value)}
+          onSelect={handleSelect}
           minRows={5}
           className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600"
           placeholder="Wpisz tresc sekcji bazy wiedzy..."

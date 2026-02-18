@@ -332,6 +332,20 @@ export const generateKBDraft = (
     data
   );
 
+export const inlineEditKB = (
+  clientId: string,
+  data: {
+    topic: string;
+    full_content: string;
+    selected_text: string;
+    instruction: string;
+  }
+) =>
+  api.post<{ content: string; tokensUsed: number; costUsd: number }>(
+    `/clients/${clientId}/knowledge-base/ai-inline-edit`,
+    data
+  );
+
 export const publishKBEntry = (clientId: string, entryId: string) =>
   api.post<KBEntry>(
     `/clients/${clientId}/knowledge-base/${entryId}/publish`,
