@@ -86,7 +86,14 @@ export default function KBSection({
   const [extractResult, setExtractResult] = useState<ExtractResult | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState('');
+  const fileErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const showFileError = (msg: string) => {
+    if (fileErrorTimer.current) clearTimeout(fileErrorTimer.current);
+    setFileError(msg);
+    fileErrorTimer.current = setTimeout(() => setFileError(''), 6000);
+  };
 
   // AI prompt panel
   const [showPrompt, setShowPrompt] = useState(false);
@@ -212,7 +219,7 @@ export default function KBSection({
         setAiPrompt(getDefaultPrompt(topic, content.trim().length > 0, true));
       }
     } catch (err) {
-      setFileError(err instanceof Error ? err.message : 'Nie udało się odczytać pliku.');
+      showFileError(err instanceof Error ? err.message : 'Nie udało się odczytać pliku.');
     } finally {
       setFileLoading(false);
       e.target.value = '';
@@ -350,7 +357,7 @@ export default function KBSection({
 
       {/* File error */}
       {fileError && (
-        <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-red-500/[0.05] border border-red-500/20 rounded-lg">
+        <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-red-500/[0.05] border border-red-500/20 rounded-lg animate-in fade-in slide-in-from-top-1 duration-200">
           <AlertTriangle size={13} className="text-red-400 mt-0.5 shrink-0" />
           <p className="text-xs text-red-400">{fileError}</p>
         </div>

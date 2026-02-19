@@ -3,7 +3,7 @@ const MAX_PDF_PAGES = 15;
 export const AI_CHAR_LIMIT = 40_000;
 
 const CONTACT_MSG =
-  'AI nie jest w stanie przetworzyć tak dużego pliku. Skontaktuj się z nami — pomożemy i sami to ogarniemy.';
+  'Plik jest zbyt duży dla AI. Skontaktuj się z Jakubem lub Dominikiem — pomożemy przygotować tę treść.';
 
 export interface ExtractResult {
   text: string;
@@ -54,7 +54,7 @@ export async function extractTextFromFile(file: File): Promise<ExtractResult> {
 
     if (text.trim().length < 50) {
       throw new Error(
-        'PDF nie zawiera tekstu — prawdopodobnie jest zeskanowany (obraz). Skontaktuj się z nami, pomożemy.'
+        'PDF nie zawiera tekstu — prawdopodobnie jest zeskanowany (obraz). Skontaktuj się z Jakubem lub Dominikiem, pomożemy.'
       );
     }
 
