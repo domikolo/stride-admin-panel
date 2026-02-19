@@ -7,9 +7,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare } from 'lucide-react';
+import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare, Paperclip, X, FileText, FileSpreadsheet } from 'lucide-react';
 import { KBEntry } from '@/lib/types';
 import InlineEditBar from './InlineEditBar';
+import { extractTextFromFile } from '@/lib/fileExtractor';
 
 interface KBSectionProps {
   entry: KBEntry;
@@ -17,13 +18,29 @@ interface KBSectionProps {
   onPublish: (entryId: string) => Promise<void>;
   onUnpublish: (entryId: string) => Promise<void>;
   onDelete: (entryId: string) => void;
-  onAiAssist: (entryId: string, topic: string, content: string) => Promise<string>;
+  onAiAssist: (
+    entryId: string,
+    topic: string,
+    content: string,
+    fileContext?: { fileContent: string; filePrompt: string }
+  ) => Promise<string>;
   onAiInlineEdit?: (entryId: string, topic: string, content: string, selectedText: string, instruction: string) => Promise<string>;
   isNew?: boolean;
   gapContext?: {
     questionExamples: string[];
     gapReason: string;
   };
+}
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function FileIcon({ ext }: { ext: string }) {
+  if (ext === 'csv') return <FileSpreadsheet size={18} className="text-green-400 shrink-0" />;
+  return <FileText size={18} className="text-blue-400 shrink-0" />;
 }
 
 export default function KBSection({
@@ -42,6 +59,14 @@ export default function KBSection({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+
+  // File attachment state
+  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [fileContent, setFileContent] = useState('');
+  const [filePrompt, setFilePrompt] = useState('');
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Inline edit selection state
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
@@ -184,10 +209,51 @@ export default function KBSection({
     }
   };
 
+  const handleFileAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFileLoading(true);
+    setFileError('');
+    try {
+      const text = await extractTextFromFile(file);
+      setAttachedFile(file);
+      setFileContent(text);
+      setFilePrompt('');
+    } catch (err) {
+      setFileError(err instanceof Error ? err.message : 'Nie udało się odczytać pliku.');
+    } finally {
+      setFileLoading(false);
+      e.target.value = '';
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setAttachedFile(null);
+    setFileContent('');
+    setFilePrompt('');
+    setFileError('');
+  };
+
+  const handleAiAssistWithFile = async () => {
+    setAiLoading(true);
+    try {
+      const generated = await onAiAssist(entry.kbEntryId, topic, content, {
+        fileContent,
+        filePrompt,
+      });
+      setContent(generated);
+      handleRemoveFile();
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const handleDiscard = () => {
     setTopic(entry.topic);
     setContent(entry.content);
   };
+
+  const attachedExt = attachedFile?.name.split('.').pop()?.toLowerCase() ?? '';
 
   return (
     <div
@@ -279,70 +345,143 @@ export default function KBSection({
         />
       )}
 
-      {/* Content textarea with highlight overlay */}
-      <div className="px-4 py-3">
-        <div className="relative">
-          {/* Highlight backdrop — shows when popup input has focus (idle), during loading, or after done */}
-          {(() => {
-            // Determine which range to highlight and with what color
-            const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
-            const showLoadingHighlight = selection && inlineEditState === 'loading';
-            const showDoneHighlight = doneRange && inlineEditState !== 'loading';
-            const highlightRange = showDoneHighlight ? doneRange
-              : (showLoadingHighlight || showIdleHighlight) ? selection
-              : null;
-            const markClass = showDoneHighlight
-              ? 'bg-green-500/20 text-transparent rounded-sm'
-              : showLoadingHighlight
-              ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
-              : 'bg-purple-500/15 text-transparent rounded-sm';
-
-            if (!highlightRange) return null;
-            return (
-              <div
-                aria-hidden
-                className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${
-                  showDoneHighlight ? 'transition-opacity duration-1000' : ''
-                }`}
-                style={{ wordBreak: 'break-word' }}
-              >
-                {content.slice(0, highlightRange.start)}
-                <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
-                {content.slice(highlightRange.end)}
-              </div>
-            );
-          })()}
+      {/* Content area — file mode or normal textarea */}
+      {attachedFile ? (
+        <div className="px-4 py-3 space-y-3">
+          {/* File card */}
+          <div className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/[0.08] rounded-lg">
+            <FileIcon ext={attachedExt} />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm text-zinc-200 truncate">{attachedFile.name}</p>
+              <p className="text-xs text-zinc-500">{formatBytes(attachedFile.size)}</p>
+            </div>
+            <button
+              onClick={handleRemoveFile}
+              className="text-zinc-500 hover:text-zinc-300 transition-colors"
+            >
+              <X size={14} />
+            </button>
+          </div>
+          {/* Instruction prompt */}
           <TextareaAutosize
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onSelect={handleSelect}
-            onMouseMove={handleMouseMove}
-            minRows={5}
-            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
-            placeholder="Wpisz tresc sekcji bazy wiedzy..."
+            value={filePrompt}
+            onChange={e => setFilePrompt(e.target.value)}
+            placeholder={`Opisz co AI ma zrobić z tym plikiem...\nnp. Wyciągnij kluczowe informacje o cenach i sformatuj jako wpis do bazy wiedzy chatbota`}
+            minRows={3}
+            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-500"
           />
         </div>
-      </div>
+      ) : (
+        /* Normal textarea with highlight overlay */
+        <div className="px-4 py-3">
+          <div className="relative">
+            {/* Highlight backdrop */}
+            {(() => {
+              const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
+              const showLoadingHighlight = selection && inlineEditState === 'loading';
+              const showDoneHighlight = doneRange && inlineEditState !== 'loading';
+              const highlightRange = showDoneHighlight ? doneRange
+                : (showLoadingHighlight || showIdleHighlight) ? selection
+                : null;
+              const markClass = showDoneHighlight
+                ? 'bg-green-500/20 text-transparent rounded-sm'
+                : showLoadingHighlight
+                ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
+                : 'bg-purple-500/15 text-transparent rounded-sm';
+
+              if (!highlightRange) return null;
+              return (
+                <div
+                  aria-hidden
+                  className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${
+                    showDoneHighlight ? 'transition-opacity duration-1000' : ''
+                  }`}
+                  style={{ wordBreak: 'break-word' }}
+                >
+                  {content.slice(0, highlightRange.start)}
+                  <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
+                  {content.slice(highlightRange.end)}
+                </div>
+              );
+            })()}
+            <TextareaAutosize
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onSelect={handleSelect}
+              onMouseMove={handleMouseMove}
+              minRows={5}
+              className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
+              placeholder="Wpisz tresc sekcji bazy wiedzy..."
+            />
+          </div>
+        </div>
+      )}
+
+      {/* File error */}
+      {fileError && (
+        <p className="px-4 pb-2 text-xs text-red-400">{fileError}</p>
+      )}
 
       {/* Actions bar */}
       <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.04]">
         <div className="flex items-center gap-2">
           {isDraft && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleAiAssist}
-              disabled={aiLoading || !topic}
-              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
-            >
-              {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-              AI Assist
-            </Button>
+            <>
+              {/* Hidden file input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".txt,.md,.csv,.pdf,.docx"
+                className="hidden"
+                onChange={handleFileAttach}
+              />
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={fileLoading || aiLoading}
+                className="text-zinc-400 hover:text-zinc-200 h-7 text-xs gap-1"
+              >
+                {fileLoading
+                  ? <Loader2 size={12} className="animate-spin" />
+                  : <Paperclip size={12} />}
+                {attachedFile ? 'Zmień plik' : 'Dołącz plik'}
+              </Button>
+
+              {/* AI Assist — normal (only when no file attached) */}
+              {!attachedFile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAiAssist}
+                  disabled={aiLoading || !topic}
+                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
+                >
+                  {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  AI Assist
+                </Button>
+              )}
+
+              {/* Generuj z pliku — when file attached */}
+              {attachedFile && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleAiAssistWithFile}
+                  disabled={aiLoading || !filePrompt.trim()}
+                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
+                >
+                  {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+                  Generuj z pliku
+                </Button>
+              )}
+            </>
           )}
         </div>
         <div className="flex items-center gap-2">
-          {isDraft && (
+          {/* Deploy only visible when no file attached (no content yet) */}
+          {isDraft && !attachedFile && (
             <Button
               variant="ghost"
               size="sm"

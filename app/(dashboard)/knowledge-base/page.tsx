@@ -159,13 +159,20 @@ export default function KnowledgeBasePage() {
     }
   };
 
-  const handleAiAssist = async (entryId: string, topic: string, content: string) => {
+  const handleAiAssist = async (
+    entryId: string,
+    topic: string,
+    content: string,
+    fileContext?: { fileContent: string; filePrompt: string }
+  ) => {
     const ctx = gapContextRef.current.get(entryId);
     const result = await generateKBDraft(getClientId(), {
       topic,
       existing_content: content,
       question_examples: ctx?.questionExamples,
       gap_reason: ctx?.gapReason,
+      file_content: fileContext?.fileContent,
+      file_prompt: fileContext?.filePrompt,
     });
     return result.content;
   };
