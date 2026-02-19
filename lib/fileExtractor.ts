@@ -1,22 +1,48 @@
-export async function extractTextFromFile(file: File): Promise<string> {
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+const MAX_PDF_PAGES = 15;
+export const AI_CHAR_LIMIT = 40_000;
+
+const CONTACT_MSG =
+  'AI nie jest w stanie przetworzyć tak dużego pliku. Skontaktuj się z nami — pomożemy i sami to ogarniemy.';
+
+export interface ExtractResult {
+  text: string;
+  /** total chars extracted (may exceed AI_CHAR_LIMIT) */
+  totalChars: number;
+  /** PDF only */
+  pages?: number;
+}
+
+export async function extractTextFromFile(file: File): Promise<ExtractResult> {
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(CONTACT_MSG);
+  }
+
   const ext = file.name.split('.').pop()?.toLowerCase();
 
   if (ext === 'txt' || ext === 'md' || ext === 'csv') {
-    return readAsText(file);
+    const text = await readAsText(file);
+    return { text, totalChars: text.length };
   }
 
   if (ext === 'docx') {
     const mammoth = (await import('mammoth')).default;
     const arrayBuffer = await file.arrayBuffer();
     const result = await mammoth.extractRawText({ arrayBuffer });
-    return result.value;
+    const text = result.value;
+    return { text, totalChars: text.length };
   }
 
   if (ext === 'pdf') {
     const pdfjsLib = await import('pdfjs-dist');
-    pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs';
     const arrayBuffer = await file.arrayBuffer();
     const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+
+    if (pdf.numPages > MAX_PDF_PAGES) {
+      throw new Error(CONTACT_MSG);
+    }
+
     const pages = await Promise.all(
       Array.from({ length: pdf.numPages }, (_, i) =>
         pdf.getPage(i + 1)
@@ -24,7 +50,15 @@ export async function extractTextFromFile(file: File): Promise<string> {
           .then(tc => tc.items.map((it: any) => it.str).join(' '))
       )
     );
-    return pages.join('\n\n');
+    const text = pages.join('\n\n');
+
+    if (text.trim().length < 50) {
+      throw new Error(
+        'PDF nie zawiera tekstu — prawdopodobnie jest zeskanowany (obraz). Skontaktuj się z nami, pomożemy.'
+      );
+    }
+
+    return { text, totalChars: text.length, pages: pdf.numPages };
   }
 
   throw new Error(`Nieobsługiwany format pliku: .${ext}`);

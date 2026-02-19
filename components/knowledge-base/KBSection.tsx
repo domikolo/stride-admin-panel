@@ -7,10 +7,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
-import { Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle, MessageSquare, Paperclip, X, FileText, FileSpreadsheet } from 'lucide-react';
+import {
+  Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle,
+  MessageSquare, Paperclip, X, FileText, FileSpreadsheet,
+} from 'lucide-react';
 import { KBEntry } from '@/lib/types';
 import InlineEditBar from './InlineEditBar';
-import { extractTextFromFile } from '@/lib/fileExtractor';
+import { extractTextFromFile, AI_CHAR_LIMIT, type ExtractResult } from '@/lib/fileExtractor';
 
 interface KBSectionProps {
   entry: KBEntry;
@@ -22,7 +25,7 @@ interface KBSectionProps {
     entryId: string,
     topic: string,
     content: string,
-    fileContext?: { fileContent: string; filePrompt: string }
+    options?: { fileContent?: string; instruction?: string }
   ) => Promise<string>;
   onAiInlineEdit?: (entryId: string, topic: string, content: string, selectedText: string, instruction: string) => Promise<string>;
   isNew?: boolean;
@@ -38,9 +41,26 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatChars(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(1)}k` : String(n);
+}
+
 function FileIcon({ ext }: { ext: string }) {
-  if (ext === 'csv') return <FileSpreadsheet size={18} className="text-green-400 shrink-0" />;
-  return <FileText size={18} className="text-blue-400 shrink-0" />;
+  if (ext === 'csv') return <FileSpreadsheet size={16} className="text-green-400 shrink-0" />;
+  return <FileText size={16} className="text-blue-400 shrink-0" />;
+}
+
+function getDefaultPrompt(topic: string, hasContent: boolean, hasFile: boolean): string {
+  if (hasFile && hasContent) {
+    return `Uwzględniając załączony plik oraz poniższy tekst, sformatuj kompletny wpis bazy wiedzy chatbota.`;
+  }
+  if (hasFile) {
+    return `Wyciągnij kluczowe informacje z załączonego pliku i sformatuj jako wpis bazy wiedzy chatbota.`;
+  }
+  if (hasContent) {
+    return `Rozbuduj i sformatuj poniższy tekst jako wpis bazy wiedzy chatbota. Zachowaj informacje użytkownika, dodaj szczegóły i popraw formatowanie.`;
+  }
+  return `Wygeneruj treść wpisu bazy wiedzy chatbota na temat: ${topic}. Tekst powinien być czytelny, konkretny i pomocny.`;
 }
 
 export default function KBSection({
@@ -59,16 +79,20 @@ export default function KBSection({
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
+  const [contentFlash, setContentFlash] = useState(false);
 
-  // File attachment state
+  // File attachment
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [fileContent, setFileContent] = useState('');
-  const [filePrompt, setFilePrompt] = useState('');
+  const [extractResult, setExtractResult] = useState<ExtractResult | null>(null);
   const [fileLoading, setFileLoading] = useState(false);
   const [fileError, setFileError] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Inline edit selection state
+  // AI prompt panel
+  const [showPrompt, setShowPrompt] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState('');
+
+  // Inline edit
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
@@ -80,52 +104,32 @@ export default function KBSection({
   const closingRef = useRef(false);
   const lastMouse = useRef({ x: 0, y: 0 });
 
-  // Track mouse position over textarea for popup placement
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
     lastMouse.current = { x: e.clientX, y: e.clientY };
   }, []);
 
-  // Fires on any selection change: mouse drag, double/triple click, Ctrl+A, Shift+arrows
   const handleSelect = useCallback(() => {
     const ta = textareaRef.current;
     const container = containerRef.current;
     if (!ta || !container || isNew || !onAiInlineEdit) return;
     if (closingRef.current) return;
-
-    // Clear previous debounce
     if (selectionTimer.current) clearTimeout(selectionTimer.current);
 
     const start = ta.selectionStart;
     const end = ta.selectionEnd;
-
-    // No selection → dismiss (unless loading)
     if (start === end) {
-      if (inlineEditState !== 'loading') {
-        setSelection(null);
-        setPopupPos(null);
-      }
+      if (inlineEditState !== 'loading') { setSelection(null); setPopupPos(null); }
       return;
     }
 
-    // Debounce 600ms — lets double/triple click settle
     selectionTimer.current = setTimeout(() => {
-      // Re-check selection (may have changed during debounce)
       const s = ta.selectionStart;
       const e = ta.selectionEnd;
       if (s === e) return;
-
       const rect = container.getBoundingClientRect();
       const popupWidth = 340;
-
-      // Position relative to container, clamped to stay within bounds
-      let px = lastMouse.current.x - rect.left;
-      let py = lastMouse.current.y - rect.top + 14;
-
-      // Clamp horizontal: keep popup fully inside container (or at least start at 0)
-      px = Math.max(0, Math.min(px, rect.width - popupWidth));
-      // Clamp vertical: don't go above container
-      py = Math.max(0, py);
-
+      let px = Math.max(0, Math.min(lastMouse.current.x - rect.left, rect.width - popupWidth));
+      let py = Math.max(0, lastMouse.current.y - rect.top + 14);
       setSelection({ start: s, end: e });
       setPopupPos({ x: px, y: py });
       setInlineEditState('idle');
@@ -136,10 +140,8 @@ export default function KBSection({
     closingRef.current = true;
     setTimeout(() => { closingRef.current = false; }, 400);
     if (selectionTimer.current) clearTimeout(selectionTimer.current);
-    setSelection(null);
-    setPopupPos(null);
-    setInlineEditState('idle');
-    setInputFocused(false);
+    setSelection(null); setPopupPos(null);
+    setInlineEditState('idle'); setInputFocused(false);
   }, []);
 
   const handleInlineEdit = async (instruction: string) => {
@@ -149,61 +151,45 @@ export default function KBSection({
     setInputFocused(false);
     try {
       const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
-      // Track where the new text landed for green highlight
       setDoneRange({ start: selection.start, end: selection.start + edited.length });
-      setContent(prev =>
-        prev.slice(0, selection.start) + edited + prev.slice(selection.end)
-      );
+      setContent(prev => prev.slice(0, selection.start) + edited + prev.slice(selection.end));
       setInlineEditState('done');
-      // Auto-close popup after 1.5s, green highlight fades after 2.5s
-      setTimeout(() => {
-        setSelection(null);
-        setPopupPos(null);
-        setInlineEditState('idle');
-        setInputFocused(false);
-      }, 1500);
+      setTimeout(() => { setSelection(null); setPopupPos(null); setInlineEditState('idle'); setInputFocused(false); }, 1500);
       setTimeout(() => setDoneRange(null), 2500);
-    } catch {
-      setInlineEditState('idle');
-    }
+    } catch { setInlineEditState('idle'); }
   };
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
 
-  // Sync with entry updates from parent
   useEffect(() => {
     setTopic(entry.topic);
     setContent(entry.content);
   }, [entry.topic, entry.content]);
 
-  const handleSaveAndPublish = async () => {
-    setPublishing(true);
-    try {
-      if (isDirty) {
-        await onSave(entry.kbEntryId, topic, content);
-      }
-      await onPublish(entry.kbEntryId);
-    } finally {
-      setPublishing(false);
-    }
+  // When prompt panel opens, set context-aware default
+  const openPromptPanel = () => {
+    setAiPrompt(getDefaultPrompt(topic, content.trim().length > 0, !!attachedFile));
+    setShowPrompt(true);
   };
 
-  const handleDeploy = async () => {
-    setSaving(true);
-    try {
-      await onSave(entry.kbEntryId, topic, content);
-      await onPublish(entry.kbEntryId);
-    } finally {
-      setSaving(false);
-    }
+  const closePromptPanel = () => {
+    setShowPrompt(false);
+    setAiPrompt('');
   };
 
-  const handleAiAssist = async () => {
+  const handleGenerate = async () => {
     setAiLoading(true);
     try {
-      const generated = await onAiAssist(entry.kbEntryId, topic, content);
+      const generated = await onAiAssist(entry.kbEntryId, topic, content, {
+        fileContent: extractResult?.text,
+        instruction: aiPrompt,
+      });
       setContent(generated);
+      closePromptPanel();
+      // Flash green on textarea
+      setContentFlash(true);
+      setTimeout(() => setContentFlash(false), 1200);
     } finally {
       setAiLoading(false);
     }
@@ -215,10 +201,13 @@ export default function KBSection({
     setFileLoading(true);
     setFileError('');
     try {
-      const text = await extractTextFromFile(file);
+      const result = await extractTextFromFile(file);
       setAttachedFile(file);
-      setFileContent(text);
-      setFilePrompt('');
+      setExtractResult(result);
+      // If prompt panel is open, refresh default prompt
+      if (showPrompt) {
+        setAiPrompt(getDefaultPrompt(topic, content.trim().length > 0, true));
+      }
     } catch (err) {
       setFileError(err instanceof Error ? err.message : 'Nie udało się odczytać pliku.');
     } finally {
@@ -229,23 +218,27 @@ export default function KBSection({
 
   const handleRemoveFile = () => {
     setAttachedFile(null);
-    setFileContent('');
-    setFilePrompt('');
+    setExtractResult(null);
     setFileError('');
+    if (showPrompt) {
+      setAiPrompt(getDefaultPrompt(topic, content.trim().length > 0, false));
+    }
   };
 
-  const handleAiAssistWithFile = async () => {
-    setAiLoading(true);
+  const handleSaveAndPublish = async () => {
+    setPublishing(true);
     try {
-      const generated = await onAiAssist(entry.kbEntryId, topic, content, {
-        fileContent,
-        filePrompt,
-      });
-      setContent(generated);
-      handleRemoveFile();
-    } finally {
-      setAiLoading(false);
-    }
+      if (isDirty) await onSave(entry.kbEntryId, topic, content);
+      await onPublish(entry.kbEntryId);
+    } finally { setPublishing(false); }
+  };
+
+  const handleDeploy = async () => {
+    setSaving(true);
+    try {
+      await onSave(entry.kbEntryId, topic, content);
+      await onPublish(entry.kbEntryId);
+    } finally { setSaving(false); }
   };
 
   const handleDiscard = () => {
@@ -254,6 +247,7 @@ export default function KBSection({
   };
 
   const attachedExt = attachedFile?.name.split('.').pop()?.toLowerCase() ?? '';
+  const truncated = extractResult && extractResult.totalChars > AI_CHAR_LIMIT;
 
   return (
     <div
@@ -263,7 +257,7 @@ export default function KBSection({
         : 'border-white/[0.06] bg-white/[0.02]'
       }`}
     >
-      {/* Section header */}
+      {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
         <div className="flex items-center gap-2 flex-1 min-w-0">
           {isDraft && (
@@ -286,22 +280,13 @@ export default function KBSection({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {!isDraft && isDirty && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleDiscard}
-              className="text-zinc-500 hover:text-zinc-300 h-7 px-2 text-xs gap-1"
-            >
-              <Undo2 size={12} />
-              Cofnij
+            <Button variant="ghost" size="sm" onClick={handleDiscard}
+              className="text-zinc-500 hover:text-zinc-300 h-7 px-2 text-xs gap-1">
+              <Undo2 size={12} /> Cofnij
             </Button>
           )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(entry.kbEntryId)}
-            className="text-zinc-600 hover:text-red-400 h-7 px-2"
-          >
+          <Button variant="ghost" size="sm" onClick={() => onDelete(entry.kbEntryId)}
+            className="text-zinc-600 hover:text-red-400 h-7 px-2">
             <Trash2 size={14} />
           </Button>
         </div>
@@ -332,7 +317,43 @@ export default function KBSection({
         </div>
       )}
 
-      {/* Floating inline AI edit popup */}
+      {/* File card */}
+      {attachedFile && (
+        <div className="mx-4 mt-3">
+          <div className="flex items-center gap-3 px-3 py-2 bg-white/[0.03] border border-white/[0.08] rounded-lg">
+            <FileIcon ext={attachedExt} />
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-zinc-300 truncate">{attachedFile.name}</p>
+              <p className="text-[11px] text-zinc-500">
+                {formatBytes(attachedFile.size)}
+                {extractResult && (
+                  <span className="ml-2">
+                    · {formatChars(extractResult.totalChars)} znaków
+                    {truncated && (
+                      <span className="text-yellow-500 ml-1">
+                        (AI przetworzy pierwsze {formatChars(AI_CHAR_LIMIT)})
+                      </span>
+                    )}
+                  </span>
+                )}
+              </p>
+            </div>
+            <button onClick={handleRemoveFile} className="text-zinc-500 hover:text-zinc-300 transition-colors ml-1">
+              <X size={13} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* File error */}
+      {fileError && (
+        <div className="mx-4 mt-3 flex items-start gap-2 p-3 bg-red-500/[0.05] border border-red-500/20 rounded-lg">
+          <AlertTriangle size={13} className="text-red-400 mt-0.5 shrink-0" />
+          <p className="text-xs text-red-400">{fileError}</p>
+        </div>
+      )}
+
+      {/* Inline edit popup */}
       {selection && popupPos && !isNew && onAiInlineEdit && (
         <InlineEditBar
           onSubmit={handleInlineEdit}
@@ -345,82 +366,88 @@ export default function KBSection({
         />
       )}
 
-      {/* Content area — file mode or normal textarea */}
-      {attachedFile ? (
-        <div className="px-4 py-3 space-y-3">
-          {/* File card */}
-          <div className="flex items-center gap-3 p-3 bg-white/[0.03] border border-white/[0.08] rounded-lg">
-            <FileIcon ext={attachedExt} />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm text-zinc-200 truncate">{attachedFile.name}</p>
-              <p className="text-xs text-zinc-500">{formatBytes(attachedFile.size)}</p>
-            </div>
-            <button
-              onClick={handleRemoveFile}
-              className="text-zinc-500 hover:text-zinc-300 transition-colors"
-            >
-              <X size={14} />
-            </button>
-          </div>
-          {/* Instruction prompt */}
+      {/* Content textarea */}
+      <div className="px-4 py-3">
+        <div className="relative">
+          {/* Inline edit highlight backdrop */}
+          {(() => {
+            const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
+            const showLoadingHighlight = selection && inlineEditState === 'loading';
+            const showDoneHighlight = doneRange && inlineEditState !== 'loading';
+            const highlightRange = showDoneHighlight ? doneRange
+              : (showLoadingHighlight || showIdleHighlight) ? selection : null;
+            const markClass = showDoneHighlight
+              ? 'bg-green-500/20 text-transparent rounded-sm'
+              : showLoadingHighlight
+              ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
+              : 'bg-purple-500/15 text-transparent rounded-sm';
+            if (!highlightRange) return null;
+            return (
+              <div
+                aria-hidden
+                className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${showDoneHighlight ? 'transition-opacity duration-1000' : ''}`}
+                style={{ wordBreak: 'break-word' }}
+              >
+                {content.slice(0, highlightRange.start)}
+                <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
+                {content.slice(highlightRange.end)}
+              </div>
+            );
+          })()}
+
+          {/* Generation flash overlay */}
+          {contentFlash && (
+            <div
+              aria-hidden
+              className="absolute inset-0 rounded bg-green-500/10 pointer-events-none transition-opacity duration-1000"
+            />
+          )}
+
           <TextareaAutosize
-            value={filePrompt}
-            onChange={e => setFilePrompt(e.target.value)}
-            placeholder={`Opisz co AI ma zrobić z tym plikiem...\nnp. Wyciągnij kluczowe informacje o cenach i sformatuj jako wpis do bazy wiedzy chatbota`}
-            minRows={3}
-            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-500"
+            ref={textareaRef}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            onSelect={handleSelect}
+            onMouseMove={handleMouseMove}
+            minRows={5}
+            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
+            placeholder="Wpisz treść, wklej cokolwiek, lub użyj AI Assist..."
           />
         </div>
-      ) : (
-        /* Normal textarea with highlight overlay */
-        <div className="px-4 py-3">
-          <div className="relative">
-            {/* Highlight backdrop */}
-            {(() => {
-              const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
-              const showLoadingHighlight = selection && inlineEditState === 'loading';
-              const showDoneHighlight = doneRange && inlineEditState !== 'loading';
-              const highlightRange = showDoneHighlight ? doneRange
-                : (showLoadingHighlight || showIdleHighlight) ? selection
-                : null;
-              const markClass = showDoneHighlight
-                ? 'bg-green-500/20 text-transparent rounded-sm'
-                : showLoadingHighlight
-                ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
-                : 'bg-purple-500/15 text-transparent rounded-sm';
+      </div>
 
-              if (!highlightRange) return null;
-              return (
-                <div
-                  aria-hidden
-                  className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${
-                    showDoneHighlight ? 'transition-opacity duration-1000' : ''
-                  }`}
-                  style={{ wordBreak: 'break-word' }}
-                >
-                  {content.slice(0, highlightRange.start)}
-                  <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
-                  {content.slice(highlightRange.end)}
-                </div>
-              );
-            })()}
-            <TextareaAutosize
-              ref={textareaRef}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              onSelect={handleSelect}
-              onMouseMove={handleMouseMove}
-              minRows={5}
-              className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
-              placeholder="Wpisz tresc sekcji bazy wiedzy..."
-            />
+      {/* AI Prompt panel */}
+      {showPrompt && (
+        <div className="mx-4 mb-3 p-3 bg-purple-500/[0.05] border border-purple-500/20 rounded-lg space-y-2">
+          <p className="text-[11px] text-purple-400 font-medium">Instrukcja dla AI</p>
+          <TextareaAutosize
+            value={aiPrompt}
+            onChange={e => setAiPrompt(e.target.value)}
+            minRows={2}
+            autoFocus
+            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-500"
+            placeholder="Opisz co ma zrobić AI..."
+          />
+          <div className="flex justify-end gap-2 pt-1">
+            <Button
+              variant="ghost" size="sm"
+              onClick={closePromptPanel}
+              disabled={aiLoading}
+              className="text-zinc-500 hover:text-zinc-300 h-7 text-xs"
+            >
+              Anuluj
+            </Button>
+            <Button
+              variant="ghost" size="sm"
+              onClick={handleGenerate}
+              disabled={aiLoading || !aiPrompt.trim()}
+              className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
+            >
+              {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
+              Generuj
+            </Button>
           </div>
         </div>
-      )}
-
-      {/* File error */}
-      {fileError && (
-        <p className="px-4 pb-2 text-xs text-red-400">{fileError}</p>
       )}
 
       {/* Actions bar */}
@@ -428,7 +455,6 @@ export default function KBSection({
         <div className="flex items-center gap-2">
           {isDraft && (
             <>
-              {/* Hidden file input */}
               <input
                 ref={fileInputRef}
                 type="file"
@@ -437,8 +463,7 @@ export default function KBSection({
                 onChange={handleFileAttach}
               />
               <Button
-                variant="ghost"
-                size="sm"
+                variant="ghost" size="sm"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={fileLoading || aiLoading}
                 className="text-zinc-400 hover:text-zinc-200 h-7 text-xs gap-1"
@@ -449,42 +474,26 @@ export default function KBSection({
                 {attachedFile ? 'Zmień plik' : 'Dołącz plik'}
               </Button>
 
-              {/* AI Assist — normal (only when no file attached) */}
-              {!attachedFile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAiAssist}
-                  disabled={aiLoading || !topic}
-                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
-                >
-                  {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  AI Assist
-                </Button>
-              )}
-
-              {/* Generuj z pliku — when file attached */}
-              {attachedFile && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAiAssistWithFile}
-                  disabled={aiLoading || !filePrompt.trim()}
-                  className="text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 h-7 text-xs gap-1"
-                >
-                  {aiLoading ? <Loader2 size={12} className="animate-spin" /> : <Sparkles size={12} />}
-                  Generuj z pliku
-                </Button>
-              )}
+              <Button
+                variant="ghost" size="sm"
+                onClick={showPrompt ? closePromptPanel : openPromptPanel}
+                disabled={aiLoading || !topic}
+                className={`h-7 text-xs gap-1 ${showPrompt
+                  ? 'text-purple-300 bg-purple-500/10'
+                  : 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10'
+                }`}
+              >
+                <Sparkles size={12} />
+                AI Assist
+              </Button>
             </>
           )}
         </div>
+
         <div className="flex items-center gap-2">
-          {/* Deploy only visible when no file attached (no content yet) */}
-          {isDraft && !attachedFile && (
+          {isDraft && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               onClick={handleSaveAndPublish}
               disabled={publishing || !topic || !content}
               className="text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 text-xs gap-1"
@@ -495,8 +504,7 @@ export default function KBSection({
           )}
           {!isDraft && isDirty && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               onClick={handleDeploy}
               disabled={saving || !topic || !content}
               className="text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 text-xs gap-1"
@@ -507,8 +515,7 @@ export default function KBSection({
           )}
           {!isDraft && !isDirty && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="ghost" size="sm"
               onClick={() => onUnpublish(entry.kbEntryId)}
               className="text-zinc-500 hover:text-zinc-300 h-7 text-xs"
             >

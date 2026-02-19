@@ -326,7 +326,7 @@ export const generateKBDraft = (
     gap_reason?: string;
     existing_content?: string;
     file_content?: string;
-    file_prompt?: string;
+    instruction?: string;
   }
 ) =>
   api.post<{ content: string; tokensUsed: number; costUsd: number }>(

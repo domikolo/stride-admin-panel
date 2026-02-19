@@ -163,7 +163,7 @@ export default function KnowledgeBasePage() {
     entryId: string,
     topic: string,
     content: string,
-    fileContext?: { fileContent: string; filePrompt: string }
+    options?: { fileContent?: string; instruction?: string }
   ) => {
     const ctx = gapContextRef.current.get(entryId);
     const result = await generateKBDraft(getClientId(), {
@@ -171,8 +171,8 @@ export default function KnowledgeBasePage() {
       existing_content: content,
       question_examples: ctx?.questionExamples,
       gap_reason: ctx?.gapReason,
-      file_content: fileContext?.fileContent,
-      file_prompt: fileContext?.filePrompt,
+      file_content: options?.fileContent,
+      instruction: options?.instruction,
     });
     return result.content;
   };
