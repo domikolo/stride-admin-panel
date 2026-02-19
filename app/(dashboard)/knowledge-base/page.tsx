@@ -174,7 +174,7 @@ export default function KnowledgeBasePage() {
       file_content: options?.fileContent,
       instruction: options?.instruction,
     });
-    return result.content;
+    return { content: result.content, suggestedTopic: result.suggestedTopic };
   };
 
   const handleAiInlineEdit = async (

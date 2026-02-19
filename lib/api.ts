@@ -329,7 +329,7 @@ export const generateKBDraft = (
     instruction?: string;
   }
 ) =>
-  api.post<{ content: string; tokensUsed: number; costUsd: number }>(
+  api.post<{ content: string; suggestedTopic?: string; tokensUsed: number; costUsd: number }>(
     `/clients/${clientId}/knowledge-base/ai-generate`,
     data
   );

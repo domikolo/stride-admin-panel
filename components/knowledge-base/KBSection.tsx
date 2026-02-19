@@ -26,7 +26,7 @@ interface KBSectionProps {
     topic: string,
     content: string,
     options?: { fileContent?: string; instruction?: string }
-  ) => Promise<string>;
+  ) => Promise<{ content: string; suggestedTopic?: string }>;
   onAiInlineEdit?: (entryId: string, topic: string, content: string, selectedText: string, instruction: string) => Promise<string>;
   isNew?: boolean;
   gapContext?: {
@@ -181,11 +181,14 @@ export default function KBSection({
   const handleGenerate = async () => {
     setAiLoading(true);
     try {
-      const generated = await onAiAssist(entry.kbEntryId, topic, content, {
+      const result = await onAiAssist(entry.kbEntryId, topic, content, {
         fileContent: extractResult?.text,
         instruction: aiPrompt,
       });
-      setContent(generated);
+      setContent(result.content);
+      if (result.suggestedTopic && topic === 'Nowa sekcja') {
+        setTopic(result.suggestedTopic);
+      }
       closePromptPanel();
       // Flash green on textarea
       setContentFlash(true);
