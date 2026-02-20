@@ -119,12 +119,12 @@ export default function InsightsPage() {
   };
 
   const handleResolveGap = async (topicId: string) => {
-    // Optimistic update
-    const previousResolved = [...resolvedGaps];
-    setResolvedGaps(prev => [...prev, topicId]);
-    setResolvingGaps(prev => new Set(prev).add(topicId));
-
+    // Optimistic update — resolve by topicName (stable across days)
     const gap = current.gaps.find(g => g.topicId === topicId);
+    const topicName = gap?.topicName || '';
+    const previousResolved = [...resolvedGaps];
+    setResolvedGaps(prev => [...prev, topicName]);
+    setResolvingGaps(prev => new Set(prev).add(topicId));
 
     try {
       await resolveGap(getClientId(), topicId, gap?.topicName || '');
@@ -142,14 +142,14 @@ export default function InsightsPage() {
   };
 
   const current = activePeriod === 'daily' ? daily : activePeriod === 'weekly' ? weekly : monthly;
-  const activeGaps = current.gaps.filter(gap => !resolvedGaps.includes(gap.topicId));
+  const activeGaps = current.gaps.filter(gap => !resolvedGaps.includes(gap.topicName));
 
   // Calculate top buying intent for current period
   const topBuyingTopic = [...current.topics]
     .sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0];
 
   const renderPeriodContent = (data: PeriodData, periodKey: string) => {
-    const filteredGaps = data.gaps.filter(g => !resolvedGaps.includes(g.topicId));
+    const filteredGaps = data.gaps.filter(g => !resolvedGaps.includes(g.topicName));
     const isDaily = periodKey === 'daily';
 
     if (data.topics.length === 0) {
