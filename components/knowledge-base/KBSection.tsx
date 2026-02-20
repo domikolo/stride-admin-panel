@@ -347,7 +347,11 @@ export default function KBSection({
               <Clock size={14} />
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => onDelete(entry.kbEntryId)}
+          <Button variant="ghost" size="sm" onClick={() => {
+              if (window.confirm(`Usunąć sekcję "${entry.topic}"? Tej operacji nie można cofnąć.`)) {
+                onDelete(entry.kbEntryId);
+              }
+            }}
             className="text-zinc-600 hover:text-red-400 h-7 px-2">
             <Trash2 size={14} />
           </Button>
