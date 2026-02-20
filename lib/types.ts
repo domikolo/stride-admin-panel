@@ -172,3 +172,21 @@ export interface KBVersion {
   status: 'draft' | 'published';
   updatedAt: string;
 }
+
+// Live Conversations Types
+export interface LiveSession {
+  sessionId: string;
+  lastActivity: number;
+  messageCount: number;
+  firstMessagePreview: string;
+  conversationNumber: number;
+  takenOverBy?: string;
+}
+
+export interface LiveMessage {
+  role: string;
+  text: string;
+  timestamp: number;
+  sentBy?: string;
+  conversationNumber: number;
+}

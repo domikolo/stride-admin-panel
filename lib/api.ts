@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -375,5 +375,12 @@ export const revertKBEntry = (clientId: string, entryId: string, versionSk: stri
   api.post<KBEntry>(
     `/clients/${clientId}/knowledge-base/${entryId}/revert`,
     { version_sk: versionSk }
+  );
+
+// ─── Live Conversations ─────────────────────────────────────────
+
+export const getLiveSessions = (clientId: string) =>
+  api.get<{ sessions: LiveSession[]; count: number }>(
+    `/clients/${clientId}/live/sessions`
   );
 
