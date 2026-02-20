@@ -377,10 +377,18 @@ export const revertKBEntry = (clientId: string, entryId: string, versionSk: stri
     { version_sk: versionSk }
   );
 
+export interface HealthCheckIssue {
+  severity: 'high' | 'medium';
+  section: string;
+  description: string;
+  fixType: 'create' | 'update';
+  entryId: string;
+}
+
 export interface HealthCheckResult {
   score: number;
   summary: string;
-  issues: { severity: 'high' | 'medium'; section: string; description: string }[];
+  issues: HealthCheckIssue[];
   recommendations: string[];
   tokensUsed: number;
   costUsd: number;
@@ -417,3 +425,27 @@ export const healthCheckKB = async (clientId: string): Promise<HealthCheckResult
 
   return data;
 };
+
+export const healthFixQuestions = (
+  clientId: string,
+  data: { issue_description: string; section_name: string; fix_type: 'create' | 'update' }
+) =>
+  api.post<{ questions: string[] }>(
+    `/clients/${clientId}/knowledge-base/health-fix-questions`,
+    data
+  );
+
+export const healthFixApply = (
+  clientId: string,
+  data: {
+    issue_description: string;
+    section_name: string;
+    answers: string[];
+    entry_id: string;
+    fix_type: 'create' | 'update';
+  }
+) =>
+  api.post<{ action: 'created' | 'updated'; entry: KBEntry }>(
+    `/clients/${clientId}/knowledge-base/health-fix-apply`,
+    data
+  );

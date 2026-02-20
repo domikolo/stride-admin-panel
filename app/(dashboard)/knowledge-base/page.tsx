@@ -26,7 +26,7 @@ import {
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
 import GapsBar from '@/components/knowledge-base/GapsBar';
-import HealthCheckModal from '@/components/knowledge-base/HealthCheckModal';
+import HealthCheckPanel from '@/components/knowledge-base/HealthCheckPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { BookOpen, Plus, Download, Loader2, Search, X, HeartPulse } from 'lucide-react';
@@ -363,6 +363,21 @@ export default function KnowledgeBasePage() {
       {/* Gaps bar */}
       <GapsBar gaps={gaps} onFixGap={handleFixGap} />
 
+      {/* Health Check Panel (inline) */}
+      <HealthCheckPanel
+        open={healthCheckOpen}
+        onClose={() => setHealthCheckOpen(false)}
+        clientId={getClientId()}
+        onEntryCreated={(entry) => {
+          setEntries(prev => [entry, ...prev]);
+        }}
+        onEntryUpdated={(entry) => {
+          setEntries(prev =>
+            prev.map(e => (e.kbEntryId === entry.kbEntryId ? { ...e, ...entry } : e))
+          );
+        }}
+      />
+
       {/* Drafts */}
       {drafts.length > 0 && (
         <div className="space-y-3">
@@ -418,12 +433,6 @@ export default function KnowledgeBasePage() {
         </div>
       )}
 
-      {/* Health Check Modal */}
-      <HealthCheckModal
-        open={healthCheckOpen}
-        onClose={() => setHealthCheckOpen(false)}
-        clientId={getClientId()}
-      />
     </div>
   );
 }
