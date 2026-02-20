@@ -162,3 +162,13 @@ export interface KBEntry {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface KBVersion {
+  kbEntryId: string;
+  versionSk: string;
+  versionTimestamp: string;
+  topic: string;
+  content: string;
+  status: 'draft' | 'published';
+  updatedAt: string;
+}

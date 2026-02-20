@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -365,3 +365,55 @@ export const importKBFromS3 = (clientId: string) =>
     `/clients/${clientId}/knowledge-base/import-s3`,
     {}
   );
+
+export const getKBVersions = (clientId: string, entryId: string) =>
+  api.get<{ versions: KBVersion[]; count: number }>(
+    `/clients/${clientId}/knowledge-base/${entryId}/history`
+  );
+
+export const revertKBEntry = (clientId: string, entryId: string, versionSk: string) =>
+  api.post<KBEntry>(
+    `/clients/${clientId}/knowledge-base/${entryId}/revert`,
+    { version_sk: versionSk }
+  );
+
+export interface HealthCheckResult {
+  score: number;
+  summary: string;
+  issues: { severity: 'high' | 'medium'; section: string; description: string }[];
+  recommendations: string[];
+  tokensUsed: number;
+  costUsd: number;
+}
+
+const HEALTH_CHECK_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+
+export const healthCheckKB = async (clientId: string): Promise<HealthCheckResult> => {
+  const cacheKey = `kb-health-check-${clientId}`;
+
+  if (typeof window !== 'undefined') {
+    try {
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        if (Date.now() - timestamp < HEALTH_CHECK_CACHE_TTL) {
+          return data as HealthCheckResult;
+        }
+        sessionStorage.removeItem(cacheKey);
+      }
+    } catch { /* ignore */ }
+  }
+
+  const data = await api.post<HealthCheckResult>(
+    `/clients/${clientId}/knowledge-base/health-check`,
+    {}
+  );
+
+  if (typeof window !== 'undefined') {
+    try {
+      sessionStorage.setItem(cacheKey, JSON.stringify({ data, timestamp: Date.now() }));
+    } catch { /* storage full */ }
+  }
+
+  return data;
+};

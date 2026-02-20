@@ -9,9 +9,9 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import {
   Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle,
-  MessageSquare, Paperclip, X, FileText, FileSpreadsheet,
+  MessageSquare, Paperclip, X, FileText, FileSpreadsheet, Clock,
 } from 'lucide-react';
-import { KBEntry } from '@/lib/types';
+import { KBEntry, KBVersion } from '@/lib/types';
 import InlineEditBar from './InlineEditBar';
 import { extractTextFromFile, AI_CHAR_LIMIT, type ExtractResult } from '@/lib/fileExtractor';
 
@@ -28,6 +28,8 @@ interface KBSectionProps {
     options?: { fileContent?: string; instruction?: string }
   ) => Promise<{ content: string; suggestedTopic?: string }>;
   onAiInlineEdit?: (entryId: string, topic: string, content: string, selectedText: string, instruction: string) => Promise<string>;
+  onGetVersions?: (entryId: string) => Promise<KBVersion[]>;
+  onRevert?: (entryId: string, versionSk: string) => Promise<void>;
   isNew?: boolean;
   gapContext?: {
     questionExamples: string[];
@@ -71,6 +73,8 @@ export default function KBSection({
   onDelete,
   onAiAssist,
   onAiInlineEdit,
+  onGetVersions,
+  onRevert,
   isNew,
   gapContext,
 }: KBSectionProps) {
@@ -80,6 +84,12 @@ export default function KBSection({
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [contentFlash, setContentFlash] = useState(false);
+
+  // Version history
+  const [showVersions, setShowVersions] = useState(false);
+  const [versions, setVersions] = useState<KBVersion[]>([]);
+  const [versionsLoading, setVersionsLoading] = useState(false);
+  const [reverting, setReverting] = useState<string | null>(null);
 
   // File attachment
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
@@ -256,6 +266,42 @@ export default function KBSection({
     setContent(entry.content);
   };
 
+  const handleToggleVersions = async () => {
+    if (showVersions) {
+      setShowVersions(false);
+      return;
+    }
+    if (!onGetVersions) return;
+    setVersionsLoading(true);
+    setShowVersions(true);
+    try {
+      const v = await onGetVersions(entry.kbEntryId);
+      setVersions(v);
+    } catch { setVersions([]); }
+    finally { setVersionsLoading(false); }
+  };
+
+  const handleRevert = async (versionSk: string) => {
+    if (!onRevert) return;
+    setReverting(versionSk);
+    try {
+      await onRevert(entry.kbEntryId, versionSk);
+      setShowVersions(false);
+    } finally { setReverting(null); }
+  };
+
+  const formatVersionDate = (ts: string) => {
+    try {
+      const d = new Date(ts);
+      const day = d.getDate();
+      const months = ['sty', 'lut', 'mar', 'kwi', 'maj', 'cze', 'lip', 'sie', 'wrz', 'paź', 'lis', 'gru'];
+      const month = months[d.getMonth()];
+      const h = d.getHours().toString().padStart(2, '0');
+      const m = d.getMinutes().toString().padStart(2, '0');
+      return `${day} ${month}, ${h}:${m}`;
+    } catch { return ts; }
+  };
+
   const attachedExt = attachedFile?.name.split('.').pop()?.toLowerCase() ?? '';
   const truncated = extractResult && extractResult.totalChars > AI_CHAR_LIMIT;
 
@@ -295,12 +341,51 @@ export default function KBSection({
               <Undo2 size={12} /> Cofnij
             </Button>
           )}
+          {onGetVersions && (
+            <Button variant="ghost" size="sm" onClick={handleToggleVersions}
+              className={`h-7 px-2 ${showVersions ? 'text-blue-400' : 'text-zinc-600 hover:text-zinc-300'}`}>
+              <Clock size={14} />
+            </Button>
+          )}
           <Button variant="ghost" size="sm" onClick={() => onDelete(entry.kbEntryId)}
             className="text-zinc-600 hover:text-red-400 h-7 px-2">
             <Trash2 size={14} />
           </Button>
         </div>
       </div>
+
+      {/* Version history dropdown */}
+      {showVersions && (
+        <div className="mx-4 mt-2 p-2 bg-white/[0.03] border border-white/[0.08] rounded-lg">
+          {versionsLoading ? (
+            <div className="flex items-center gap-2 py-2 px-1">
+              <Loader2 size={12} className="animate-spin text-zinc-400" />
+              <span className="text-xs text-zinc-500">Ładowanie historii...</span>
+            </div>
+          ) : versions.length === 0 ? (
+            <p className="text-xs text-zinc-500 py-2 px-1">Brak wcześniejszych wersji</p>
+          ) : (
+            <div className="space-y-1">
+              {versions.map(v => (
+                <div key={v.versionSk} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded hover:bg-white/[0.03]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-zinc-300 truncate">{v.topic}</p>
+                    <p className="text-[11px] text-zinc-500">{formatVersionDate(v.versionTimestamp)}</p>
+                  </div>
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => handleRevert(v.versionSk)}
+                    disabled={reverting !== null}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-6 text-[11px] px-2 shrink-0"
+                  >
+                    {reverting === v.versionSk ? <Loader2 size={10} className="animate-spin" /> : 'Przywróć'}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Gap context */}
       {gapContext && isDraft && (gapContext.gapReason || gapContext.questionExamples.length > 0) && (
@@ -424,6 +509,17 @@ export default function KBSection({
             placeholder="Wpisz treść, wklej cokolwiek, lub użyj AI Assist..."
           />
         </div>
+      </div>
+
+      {/* Character counter */}
+      <div className="px-4 -mt-1 mb-1 flex justify-end">
+        <span className={`text-[11px] ${
+          content.length > 5000 ? 'text-red-400' :
+          content.length >= 2000 ? 'text-yellow-400' :
+          'text-green-400'
+        }`}>
+          {content.length.toLocaleString('pl-PL')} znaków
+        </span>
       </div>
 
       {/* AI Prompt panel */}

@@ -20,13 +20,16 @@ import {
   resolveGap,
   getResolvedGaps,
   inlineEditKB,
+  getKBVersions,
+  revertKBEntry,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
 import GapsBar from '@/components/knowledge-base/GapsBar';
+import HealthCheckModal from '@/components/knowledge-base/HealthCheckModal';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Plus, Download, Loader2 } from 'lucide-react';
+import { BookOpen, Plus, Download, Loader2, Search, X, HeartPulse } from 'lucide-react';
 
 export default function KnowledgeBasePage() {
   const { user } = useAuth();
@@ -37,6 +40,8 @@ export default function KnowledgeBasePage() {
   const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [healthCheckOpen, setHealthCheckOpen] = useState(false);
   const processedGapRef = useRef<string | null>(null);
 
   const getClientId = () =>
@@ -52,10 +57,10 @@ export default function KnowledgeBasePage() {
         getGaps(cid, 'week').catch(() => ({ gaps: [] as Gap[] })),
         getResolvedGaps(cid).catch(() => ({ resolvedGapIds: [] as string[] })),
       ]);
-      const resolvedIds = resolvedData.resolvedGapIds || [];
+      const resolvedNames = resolvedData.resolvedGapIds || [];
       const allGaps = (gapsData as { gaps: Gap[] }).gaps || [];
       setEntries(kbData.entries);
-      setGaps(allGaps.filter(g => !resolvedIds.includes(g.topicId)));
+      setGaps(allGaps.filter(g => !resolvedNames.includes(g.topicName)));
       setError(null);
     } catch (err) {
       console.error('Failed to load KB:', err);
@@ -214,9 +219,30 @@ export default function KnowledgeBasePage() {
     );
   };
 
-  // Split entries
-  const drafts = entries.filter(e => e.status === 'draft');
-  const published = entries.filter(e => e.status === 'published');
+  const handleGetVersions = async (entryId: string) => {
+    const cid = getClientId();
+    const data = await getKBVersions(cid, entryId);
+    return data.versions;
+  };
+
+  const handleRevert = async (entryId: string, versionSk: string) => {
+    const cid = getClientId();
+    const updated = await revertKBEntry(cid, entryId, versionSk);
+    setEntries(prev =>
+      prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
+    );
+  };
+
+  // Filter + split entries
+  const query = searchQuery.toLowerCase().trim();
+  const filtered = query
+    ? entries.filter(e =>
+        e.topic.toLowerCase().includes(query) ||
+        e.content.toLowerCase().includes(query)
+      )
+    : entries;
+  const drafts = filtered.filter(e => e.status === 'draft');
+  const published = filtered.filter(e => e.status === 'published');
 
   if (loading) {
     return (
@@ -282,17 +308,49 @@ export default function KnowledgeBasePage() {
             Baza Wiedzy
           </h1>
           <p className="text-zinc-500 text-sm mt-1">
-            {published.length} opublikowanych, {drafts.length} szkicow
+            {query
+              ? `Znaleziono ${filtered.length} z ${entries.length} wpisów`
+              : `${entries.filter(e => e.status === 'published').length} opublikowanych, ${entries.filter(e => e.status === 'draft').length} szkicow`
+            }
           </p>
         </div>
-        <Button
-          onClick={() => handleAddDraft()}
-          size="sm"
-          className="gap-1.5 bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus size={14} />
-          Nowa sekcja
-        </Button>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Szukaj w bazie wiedzy..."
+              className="h-8 w-56 rounded-md border border-white/[0.08] bg-white/[0.03] pl-8 pr-8 text-sm text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-blue-500/40"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300"
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
+          <Button
+            onClick={() => setHealthCheckOpen(true)}
+            variant="outline"
+            size="sm"
+            className="gap-1.5 text-zinc-400 hover:text-zinc-200"
+          >
+            <HeartPulse size={14} />
+            Sprawdź KB
+          </Button>
+          <Button
+            onClick={() => handleAddDraft()}
+            size="sm"
+            className="gap-1.5 bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus size={14} />
+            Nowa sekcja
+          </Button>
+        </div>
       </div>
 
       {/* Error */}
@@ -325,6 +383,8 @@ export default function KnowledgeBasePage() {
               onDelete={handleDelete}
               onAiAssist={handleAiAssist}
               onAiInlineEdit={handleAiInlineEdit}
+              onGetVersions={handleGetVersions}
+              onRevert={handleRevert}
               gapContext={gapContextRef.current.get(entry.kbEntryId)}
             />
           ))}
@@ -351,10 +411,19 @@ export default function KnowledgeBasePage() {
               onDelete={handleDelete}
               onAiAssist={handleAiAssist}
               onAiInlineEdit={handleAiInlineEdit}
+              onGetVersions={handleGetVersions}
+              onRevert={handleRevert}
             />
           ))}
         </div>
       )}
+
+      {/* Health Check Modal */}
+      <HealthCheckModal
+        open={healthCheckOpen}
+        onClose={() => setHealthCheckOpen(false)}
+        clientId={getClientId()}
+      />
     </div>
   );
 }
