@@ -26,10 +26,9 @@ import {
 import { KBEntry, Gap } from '@/lib/types';
 import KBSection from '@/components/knowledge-base/KBSection';
 import GapsBar from '@/components/knowledge-base/GapsBar';
-import HealthCheckPanel from '@/components/knowledge-base/HealthCheckPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Plus, Download, Loader2, Search, X, HeartPulse } from 'lucide-react';
+import { BookOpen, Plus, Download, Loader2, Search, X } from 'lucide-react';
 
 export default function KnowledgeBasePage() {
   const { user } = useAuth();
@@ -41,7 +40,6 @@ export default function KnowledgeBasePage() {
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [healthCheckOpen, setHealthCheckOpen] = useState(false);
   const processedGapRef = useRef<string | null>(null);
 
   const getClientId = () =>
@@ -334,15 +332,6 @@ export default function KnowledgeBasePage() {
             )}
           </div>
           <Button
-            onClick={() => setHealthCheckOpen(true)}
-            variant="outline"
-            size="sm"
-            className="gap-1.5 text-zinc-400 hover:text-zinc-200"
-          >
-            <HeartPulse size={14} />
-            Sprawdź KB
-          </Button>
-          <Button
             onClick={() => handleAddDraft()}
             size="sm"
             className="gap-1.5 bg-blue-600 hover:bg-blue-700"
@@ -362,21 +351,6 @@ export default function KnowledgeBasePage() {
 
       {/* Gaps bar */}
       <GapsBar gaps={gaps} onFixGap={handleFixGap} />
-
-      {/* Health Check Panel (inline) */}
-      <HealthCheckPanel
-        open={healthCheckOpen}
-        onClose={() => setHealthCheckOpen(false)}
-        clientId={getClientId()}
-        onEntryCreated={(entry) => {
-          setEntries(prev => [entry, ...prev]);
-        }}
-        onEntryUpdated={(entry) => {
-          setEntries(prev =>
-            prev.map(e => (e.kbEntryId === entry.kbEntryId ? { ...e, ...entry } : e))
-          );
-        }}
-      />
 
       {/* Drafts */}
       {drafts.length > 0 && (
