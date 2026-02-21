@@ -6,6 +6,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -137,13 +138,21 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                     href={link.href}
                     onClick={handleLinkClick}
                     className={cn(
-                      'flex items-center justify-between md:justify-center lg:justify-between px-3 md:px-0 lg:px-3 py-2.5 rounded-lg transition-all duration-150 relative group',
+                      'flex items-center justify-between md:justify-center lg:justify-between px-3 md:px-0 lg:px-3 py-2.5 rounded-lg transition-colors duration-150 relative group',
                       isActive
-                        ? 'bg-white/[0.08] text-white font-medium'
+                        ? 'text-white font-medium'
                         : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
                     )}
                   >
-                    <div className="flex items-center gap-3 md:gap-0 lg:gap-3">
+                    {/* Animated active background */}
+                    {isActive && (
+                      <motion.span
+                        layoutId="sidebar-active"
+                        className="absolute inset-0 bg-white/[0.08] rounded-lg"
+                        transition={{ type: 'spring', stiffness: 350, damping: 30 }}
+                      />
+                    )}
+                    <div className="relative flex items-center gap-3 md:gap-0 lg:gap-3">
                       <Icon size={18} className={isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'} />
                       <span className="md:hidden lg:inline text-[13px]">{link.label}</span>
                     </div>

@@ -191,7 +191,7 @@ export default function DashboardPage() {
           <h3 className="text-sm font-medium text-zinc-500 mb-4">
             Aktywność — ostatnie 7 dni
           </h3>
-          <div className="h-[200px]">
+          <div className="h-[240px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData}>
                 <defs>

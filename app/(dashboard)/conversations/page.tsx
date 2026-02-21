@@ -433,8 +433,12 @@ export default function ConversationsPage() {
                             <span className="text-xs text-zinc-500">{latestDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="italic text-zinc-500 text-sm">
-                          {!isSingleSession ? "Kliknij, aby rozwinąć..." : (group.conversations[0]?.preview || "Kliknij, aby zobaczyć...")}
+                        <TableCell className="text-sm text-zinc-500 max-w-xs truncate">
+                          {!isSingleSession ? (
+                            <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">Kliknij, aby rozwiąć...</span>
+                          ) : (
+                            <span>{group.conversations[0]?.preview || 'Kliknij, aby zobaczyć...'}</span>
+                          )}
                         </TableCell>
                       </TableRow>
 
@@ -446,7 +450,8 @@ export default function ConversationsPage() {
                         return (
                           <TableRow
                             key={`${conv.sessionId}-${conv.conversationNumber}`}
-                            className={`bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer ${isLast ? 'border-b-2 border-white/[0.04]' : 'border-b-0'}`}
+                            className={`bg-white/[0.04] hover:bg-white/[0.08] transition-colors cursor-pointer border-l-2 border-l-blue-500/30 ${isLast ? 'border-b-2 border-b-white/[0.04]' : 'border-b-0'}`}
+                            style={{ animation: `slideIn ${100 + idx * 50}ms ease-out` }}
                             onClick={() => router.push(`/conversations/${conv.sessionId}?conversation_number=${conv.conversationNumber}`)}
                           >
                             <TableCell className="py-2">

@@ -9,6 +9,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/layout/Sidebar';
 import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 import SearchDialog from '@/components/layout/SearchDialog';
+import PageTransition from '@/components/layout/PageTransition';
 import { Menu, Search } from 'lucide-react';
 
 export default function DashboardLayout({
@@ -56,7 +57,9 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="p-5 md:p-8 lg:p-10">
             <div className="max-w-[1440px] mx-auto">
-              {children}
+              <PageTransition>
+                {children}
+              </PageTransition>
             </div>
           </div>
         </main>
@@ -67,3 +70,4 @@ export default function DashboardLayout({
     </div>
   );
 }
+

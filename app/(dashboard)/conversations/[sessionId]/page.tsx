@@ -189,41 +189,43 @@ export default function ConversationDetailPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Breadcrumb + Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-sm mb-2">
-            <Link href="/conversations" className="text-zinc-400 hover:text-white transition-colors">
-              Rozmowy
-            </Link>
-            <ChevronRight size={14} className="text-zinc-600" />
-            <span className="text-zinc-400">{sessionId.slice(0, 12)}...</span>
-            {conversationNumber && (
-              <>
-                <ChevronRight size={14} className="text-zinc-600" />
-                <span className="text-zinc-300">#{conversationNumber}</span>
-              </>
-            )}
-          </nav>
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-20 -mx-5 md:-mx-8 lg:-mx-10 px-5 md:px-8 lg:px-10 py-4 bg-background/80 backdrop-blur-xl border-b border-white/[0.04]">
+        <div className="flex items-center justify-between max-w-4xl mx-auto">
+          <div>
+            {/* Breadcrumb */}
+            <nav className="flex items-center gap-1.5 text-sm mb-1">
+              <Link href="/conversations" className="text-zinc-500 hover:text-white transition-colors">
+                Rozmowy
+              </Link>
+              <ChevronRight size={14} className="text-zinc-700" />
+              <span className="text-zinc-400">{sessionId.slice(0, 12)}...</span>
+              {conversationNumber && (
+                <>
+                  <ChevronRight size={14} className="text-zinc-700" />
+                  <span className="text-zinc-300">#{conversationNumber}</span>
+                </>
+              )}
+            </nav>
 
-          <h1 className="text-2xl font-semibold text-white">
-            Rozmowa {conversationNumber ? `#${conversationNumber}` : ''}
-          </h1>
-          <div className="mt-1">
-            <Badge variant="secondary">{messages.length} wiadomości</Badge>
+            <div className="flex items-center gap-3">
+              <h1 className="text-xl font-semibold text-white">
+                Rozmowa {conversationNumber ? `#${conversationNumber}` : ''}
+              </h1>
+              <Badge variant="secondary" className="text-[11px]">{messages.length} wiadomości</Badge>
+            </div>
           </div>
-        </div>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={copyConversation}
-          className="text-zinc-400 hover:text-white gap-2"
-        >
-          {copied ? <Check size={16} /> : <Copy size={16} />}
-          {copied ? 'Skopiowano' : 'Kopiuj'}
-        </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={copyConversation}
+            className="text-zinc-400 hover:text-white gap-2"
+          >
+            {copied ? <Check size={16} /> : <Copy size={16} />}
+            {copied ? 'Skopiowano' : 'Kopiuj'}
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -258,22 +260,22 @@ export default function ConversationDetailPage() {
 
               {/* Message */}
               <div className={`flex gap-3 ${message.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                {/* Label */}
-                <div className="flex-shrink-0 pt-1">
-                  <span className={`text-[11px] font-medium uppercase tracking-wider ${
-                    message.role === 'user' ? 'text-blue-400' : 'text-zinc-500'
-                  }`}>
-                    {message.role === 'user' ? 'User' : 'AI'}
-                  </span>
+                {/* Avatar */}
+                <div className="flex-shrink-0 mt-1">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold ${message.role === 'user'
+                      ? 'bg-blue-500/20 text-blue-400'
+                      : 'bg-white/[0.06] text-zinc-500'
+                    }`}>
+                    {message.role === 'user' ? 'U' : 'AI'}
+                  </div>
                 </div>
 
                 {/* Bubble */}
                 <div className={`flex-1 max-w-[85%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
-                  <div className={`px-4 py-3 rounded-xl transition-shadow ${
-                    message.role === 'user'
+                  <div className={`px-4 py-3 rounded-xl transition-shadow ${message.role === 'user'
                       ? 'bg-blue-500/10 rounded-tr-sm'
                       : 'bg-white/[0.04] rounded-tl-sm'
-                  } ${index === highlightedIndex ? 'animate-highlight-flash' : ''}`}>
+                    } ${index === highlightedIndex ? 'animate-highlight-flash' : ''}`}>
                     <div className="text-zinc-300 break-words text-sm leading-relaxed">
                       {renderMarkdown(message.text)}
                     </div>

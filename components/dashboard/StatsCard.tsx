@@ -1,9 +1,10 @@
 /**
- * Stats Card Component - displays metric with icon and optional clickable value
+ * Stats Card Component - displays metric with icon, optional sparkline, and count-up animation
  */
 
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LucideIcon, TrendingUp, TrendingDown, Minus, Info } from 'lucide-react';
@@ -33,6 +34,50 @@ function getIconBg(iconColor: string): string {
   return 'bg-white/[0.04]';
 }
 
+/** Animated count-up for numeric values */
+function AnimatedValue({ value }: { value: string | number }) {
+  const [display, setDisplay] = useState('0');
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const str = String(value);
+    // Extract numeric part (handles "12", "45.2", "$12.50", "85%", "3.2 min", etc.)
+    const match = str.match(/(\d+\.?\d*)/);
+    if (!match) {
+      setDisplay(str);
+      return;
+    }
+
+    const target = parseFloat(match[1]);
+    const prefix = str.slice(0, match.index);
+    const suffix = str.slice((match.index || 0) + match[0].length);
+    const hasDecimal = match[0].includes('.');
+    const decimalPlaces = hasDecimal ? (match[0].split('.')[1]?.length || 0) : 0;
+
+    const duration = 600; // ms
+    const start = performance.now();
+
+    const animate = (now: number) => {
+      const elapsed = now - start;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const current = target * eased;
+
+      setDisplay(`${prefix}${hasDecimal ? current.toFixed(decimalPlaces) : Math.round(current)}${suffix}`);
+
+      if (progress < 1) {
+        rafRef.current = requestAnimationFrame(animate);
+      }
+    };
+
+    rafRef.current = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [value]);
+
+  return <>{display}</>;
+}
+
 export default function StatsCard({
   title,
   value,
@@ -49,18 +94,20 @@ export default function StatsCard({
   const sparklineColor = trend === 'up' ? '#34d399' : trend === 'down' ? '#f87171' : '#3b82f6';
   const iconBg = getIconBg(iconColor);
 
+  const valueContent = <AnimatedValue value={value} />;
+
   const valueElement = valueHref ? (
     <Link href={valueHref}>
       <span className="text-3xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer">
-        {value}
+        {valueContent}
       </span>
     </Link>
   ) : (
-    <span className="text-3xl font-bold text-white tracking-tight">{value}</span>
+    <span className="text-3xl font-bold text-white tracking-tight">{valueContent}</span>
   );
 
   return (
-    <Card className="glass-card transition-shadow duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)]">
+    <Card className="glass-card">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-xs font-medium text-zinc-500">{title}</CardTitle>
