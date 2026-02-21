@@ -51,19 +51,19 @@ export default function StatsCard({
 
   const valueElement = valueHref ? (
     <Link href={valueHref}>
-      <span className="text-2xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer">
+      <span className="text-3xl font-bold text-white tracking-tight hover:text-blue-400 transition-colors cursor-pointer">
         {value}
       </span>
     </Link>
   ) : (
-    <span className="text-2xl font-bold text-white tracking-tight">{value}</span>
+    <span className="text-3xl font-bold text-white tracking-tight">{value}</span>
   );
 
   return (
     <Card className="glass-card transition-shadow duration-200 hover:shadow-[0_4px_16px_rgba(0,0,0,0.6),0_0_0_1px_rgba(255,255,255,0.08)]">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
-          <CardTitle className="text-xs font-medium text-zinc-500 uppercase tracking-wide">{title}</CardTitle>
+          <CardTitle className="text-xs font-medium text-zinc-500">{title}</CardTitle>
           {description && (
             <Tooltip>
               <TooltipTrigger asChild>
@@ -75,8 +75,8 @@ export default function StatsCard({
             </Tooltip>
           )}
         </div>
-        <div className={`w-8 h-8 rounded-lg ${iconBg} flex items-center justify-center`}>
-          <Icon size={16} className={iconColor} />
+        <div className={`w-7 h-7 rounded-md ${iconBg} flex items-center justify-center`}>
+          <Icon size={14} className={iconColor} />
         </div>
       </CardHeader>
       <CardContent>

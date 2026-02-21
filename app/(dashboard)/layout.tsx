@@ -54,8 +54,10 @@ export default function DashboardLayout({
         </div>
 
         <main className="flex-1 overflow-y-auto bg-background">
-          <div className="p-4 md:p-8">
-            {children}
+          <div className="p-5 md:p-8 lg:p-10">
+            <div className="max-w-[1440px] mx-auto">
+              {children}
+            </div>
           </div>
         </main>
       </div>

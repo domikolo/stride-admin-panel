@@ -98,15 +98,15 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
                     Brak danych. Poczekaj na pierwszą analizę.
                 </p>
             ) : (
-                <div className="space-y-2">
+                <div className="divide-y divide-white/[0.04]">
                     {topTopics.map((topic, index) => (
                         <div
                             key={topic.topicId}
-                            className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/[0.04] transition-colors duration-200"
+                            className="flex items-center gap-3 px-2 py-3 hover:bg-white/[0.04] transition-colors duration-150"
                         >
                             {/* Rank */}
-                            <span className="text-lg font-bold text-zinc-500 w-6 text-center">
-                                #{index + 1}
+                            <span className="text-sm font-medium text-zinc-600 w-5 text-center">
+                                {index + 1}
                             </span>
 
                             {/* Topic info */}

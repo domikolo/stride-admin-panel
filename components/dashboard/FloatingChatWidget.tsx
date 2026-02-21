@@ -393,7 +393,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           transform: 'translateY(-50%) scale(1)',
           width: 'var(--floating-chat-btn-width)',
           height: 'var(--floating-chat-btn-height)',
-          background: '#141414',
+          background: '#111113',
           border: '1px solid rgba(255, 255, 255, 0.08)',
           borderRadius: '20px',
           boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
@@ -442,7 +442,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           }}
         >
           <div
-            className="bg-[#141414] text-zinc-300 text-sm px-4 py-2.5 rounded-xl whitespace-nowrap pointer-events-auto cursor-pointer"
+            className="bg-[#111113] text-zinc-300 text-sm px-4 py-2.5 rounded-xl whitespace-nowrap pointer-events-auto cursor-pointer"
             style={{
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.08)',
             }}
@@ -464,7 +464,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           top: '50%',
           right: 'var(--floating-chat-widget-right)',
           transform: 'translateY(-50%)',
-          background: '#141414',
+          background: '#111113',
           boxShadow: 'none',
           border: '1px solid rgba(255, 255, 255, 0.06)',
           borderRadius: '16px',
@@ -479,7 +479,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         <div
           className="widget-header px-5 py-3 transition-opacity duration-300 flex items-center justify-between"
           style={{
-            background: '#0a0a0a',
+            background: '#09090b',
             borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
@@ -547,7 +547,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                       }`}
                       style={{
                         lineHeight: '1.5',
-                        background: msg.role === 'user' ? '#1e1e1e' : '#1e1e1e',
+                        background: msg.role === 'user' ? '#1a1a1e' : '#1a1a1e',
                         border: msg.role === 'user'
                           ? '1px solid rgba(255, 255, 255, 0.08)'
                           : '1px solid rgba(255, 255, 255, 0.04)',
@@ -575,7 +575,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
               <div
                 className="self-start rounded-xl px-3 py-2 max-w-[75%] flex gap-1.5"
                 style={{
-                  background: '#1e1e1e',
+                  background: '#1a1a1e',
                   border: '1px solid rgba(255, 255, 255, 0.04)',
                 }}
               >
@@ -597,7 +597,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
         <div
           className="widget-footer p-4 xl:p-5 transition-opacity duration-300"
           style={{
-            background: '#0a0a0a',
+            background: '#09090b',
             borderTop: '1px solid rgba(255, 255, 255, 0.06)',
           }}
         >
@@ -615,7 +615,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 border: '1px solid rgba(255, 255, 255, 0.06)',
                 borderRadius: '10px',
                 fontSize: '14px',
-                background: '#1e1e1e',
+                background: '#1a1a1e',
                 color: '#ffffff',
               }}
               onFocus={(e) => {
@@ -636,7 +636,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 height: '40px',
                 borderRadius: '10px',
                 border: '1px solid rgba(255, 255, 255, 0.06)',
-                background: '#1e1e1e',
+                background: '#1a1a1e',
                 color: '#a1a1aa',
                 cursor: 'pointer',
               }}
@@ -648,7 +648,7 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
                 }
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.background = '#1e1e1e';
+                e.currentTarget.style.background = '#1a1a1e';
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
                 e.currentTarget.style.color = '#a1a1aa';
               }}
@@ -665,17 +665,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
           onClick={animateClose}
           className="close-btn absolute top-2.5 right-2.5 w-7 h-7 rounded-lg flex items-center justify-center z-10 transition-all duration-200"
           style={{
-            background: '#1e1e1e',
+            background: '#1a1a1e',
             border: '1px solid rgba(255, 255, 255, 0.06)',
             cursor: 'pointer',
             opacity: 0,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#1e1e1e';
+            e.currentTarget.style.background = '#1a1a1e';
             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#1e1e1e';
+            e.currentTarget.style.background = '#1a1a1e';
             e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.06)';
           }}
         >

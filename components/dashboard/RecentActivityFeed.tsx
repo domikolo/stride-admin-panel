@@ -81,12 +81,12 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                 <Clock size={18} className="text-zinc-400" />
                 Ostatnia aktywność
             </h3>
-            <div className="space-y-2">
+            <div className="divide-y divide-white/[0.04]">
                 {activities.map((activity, index) => (
                     <div
                         key={`${activity.type}-${activity.id}-${index}`}
                         onClick={() => handleClick(activity)}
-                        className="flex items-start gap-3 p-3 rounded-lg hover:bg-white/[0.04] transition-colors duration-200 cursor-pointer border border-transparent hover:border-white/[0.08]"
+                        className="flex items-start gap-3 px-3 py-3 hover:bg-white/[0.04] transition-colors duration-150 cursor-pointer"
                     >
                         {/* Icon */}
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${activity.type === 'conversation'
@@ -110,7 +110,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                                         <>{activity.contactName || 'Spotkanie'}</>
                                     )}
                                 </span>
-                                <span className="text-xs text-zinc-500 flex-shrink-0">
+                                <span className="text-[11px] text-zinc-600 flex-shrink-0">
                                     {formatTimestamp(activity.timestamp)}
                                 </span>
                             </div>

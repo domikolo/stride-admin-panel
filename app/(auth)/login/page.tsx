@@ -35,15 +35,18 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-[#09090b]">
       <Card className="w-full max-w-md glass-card">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
-            Stride Admin
-          </CardTitle>
-          <CardDescription className="text-zinc-400">
-            Sign in to your admin account
-          </CardDescription>
+        <CardHeader className="space-y-4 items-center text-center">
+          <img src="/logo.png" alt="Stride" className="h-8 w-auto" />
+          <div>
+            <CardTitle className="text-2xl font-semibold text-white">
+              Admin Panel
+            </CardTitle>
+            <CardDescription className="text-zinc-500 text-sm mt-1">
+              Zaloguj się do panelu administracyjnego
+            </CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -55,7 +58,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150"
                 placeholder="you@example.com"
                 required
               />
@@ -69,7 +72,7 @@ export default function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/20"
+                className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150"
                 placeholder="••••••••"
                 required
               />
@@ -83,10 +86,10 @@ export default function LoginPage() {
 
             <Button
               type="submit"
-              className="w-full bg-white text-black hover:bg-zinc-100 font-semibold"
+              className="w-full bg-white text-black hover:bg-zinc-200 font-medium transition-colors"
               disabled={loading}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? 'Logowanie...' : 'Zaloguj się'}
             </Button>
           </form>
         </CardContent>

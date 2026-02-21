@@ -270,12 +270,12 @@ export default function ConversationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
+      <div className="mb-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">
           Rozmowy
         </h1>
-        <p className="text-zinc-400 mt-1">
-          {groupData.length} sesji użytkowników ({conversations.length} rozmów)
+        <p className="text-sm text-zinc-500 mt-1">
+          {groupData.length} sesji użytkowników • {conversations.length} rozmów
         </p>
       </div>
 
@@ -295,7 +295,7 @@ export default function ConversationsPage() {
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#141414] border border-white/[0.04] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 transition-colors duration-200"
+            className="w-full pl-10 pr-4 py-2.5 bg-[#111113] border border-white/[0.06] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150 text-sm"
           />
         </div>
 
@@ -381,7 +381,7 @@ export default function ConversationsPage() {
                       {/* Parent Group Row */}
                       <TableRow
                         className={`
-                          transition-colors border-b border-white/[0.04] relative cursor-pointer hover:bg-white/[0.04]
+                          transition-colors duration-150 border-b border-white/[0.06] relative cursor-pointer hover:bg-white/[0.06]
                         `}
                         onClick={() => {
                           if (isSingleSession) {

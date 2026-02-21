@@ -42,7 +42,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         <p className="text-xs text-zinc-500">Generowanie briefingu...</p>
                     </div>
                 </div>
-                <div className="bg-[#1e1e1e] rounded-xl p-5 border border-white/[0.04]">
+                <div className="inset-panel p-5">
                     <div className="space-y-3">
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-[90%]" />
@@ -75,7 +75,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         <img src="/icon-logo-biale.png" alt="Stride" className="w-9 h-9 object-contain" />
                     </div>
                     <div>
-                        <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
+                        <h2 className="text-lg font-semibold text-white">Daily Briefing</h2>
                         <p className="text-xs text-zinc-500">
                             Wygenerowano: {formatDate(briefing.generatedAt)}
                         </p>
@@ -95,7 +95,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                 )}
             </div>
 
-            <div className="bg-[#1e1e1e] rounded-xl p-5 border border-white/[0.04]">
+            <div className="inset-panel p-5">
                 <p className="text-zinc-200 leading-relaxed">
                     {briefing.briefing}
                 </p>

@@ -15,7 +15,6 @@ import {
   Users,
   LogOut,
   Flame,
-  AlertCircle,
   Search,
   BookOpen,
   Radio,
@@ -35,16 +34,16 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
   const clientLinks = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/conversations', icon: MessageSquare, label: 'Conversations' },
+    { href: '/conversations', icon: MessageSquare, label: 'Rozmowy' },
     { href: '/live', icon: Radio, label: 'Live' },
-    { href: '/appointments', icon: Calendar, label: 'Appointments' },
+    { href: '/appointments', icon: Calendar, label: 'Spotkania' },
     { href: '/insights', icon: Flame, label: 'Insights' },
     { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
   ];
 
   const ownerLinks = [
     ...clientLinks,
-    { href: '/clients', icon: Users, label: 'Clients' },
+    { href: '/clients', icon: Users, label: 'Klienci' },
   ];
 
   const links = user?.role === 'owner' ? ownerLinks : clientLinks;
@@ -58,19 +57,27 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     signOut();
   };
 
+  // Get user initials for avatar
+  const getInitials = (email?: string) => {
+    if (!email) return '?';
+    const parts = email.split('@')[0].split(/[._-]/);
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
+    return email[0].toUpperCase();
+  };
+
   return (
     <>
       {/* Mobile overlay */}
       {open && (
         <div
-          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
         className={cn(
-          'border-r border-border bg-card h-screen flex flex-col z-50',
+          'bg-[#0c0c0e] h-screen flex flex-col z-50',
           // Width: collapsed on md, full on lg
           'w-64 md:w-16 lg:w-64',
           // Mobile: fixed, slide in/out
@@ -80,12 +87,11 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
           'md:translate-x-0 md:static'
         )}
         style={{
-          boxShadow: '1px 0 0 rgba(255,255,255,0.03)',
-          borderRight: 'none',
+          borderRight: '1px solid rgba(255,255,255,0.06)',
         }}
       >
         {/* Logo */}
-        <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.04]">
+        <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.06]">
           <Link href="/dashboard" className="flex items-center gap-3 md:justify-center lg:justify-start" onClick={handleLinkClick}>
             <img
               src="/logo.png"
@@ -101,25 +107,25 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             <TooltipTrigger asChild>
               <button
                 onClick={() => { onClose?.(); onSearchOpen?.(); }}
-                className="w-full flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-2.5 rounded-lg text-zinc-500 hover:text-white hover:bg-white/[0.04] transition-colors border border-white/[0.08] text-sm"
+                className="w-full flex items-center justify-between md:justify-center lg:justify-between px-3 md:px-0 lg:px-3 py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-all duration-150 border border-white/[0.06] text-sm"
               >
                 <div className="flex items-center gap-3 md:gap-0 lg:gap-3">
-                  <Search size={16} />
-                  <span className="md:hidden lg:inline">Search...</span>
+                  <Search size={15} />
+                  <span className="md:hidden lg:inline text-zinc-500">Szukaj...</span>
                 </div>
-                <kbd className="text-[10px] bg-white/[0.04] px-1.5 py-0.5 rounded border border-white/[0.08] md:hidden lg:inline-block">
+                <kbd className="text-[10px] bg-white/[0.04] text-zinc-500 px-1.5 py-0.5 rounded border border-white/[0.06] md:hidden lg:inline-block font-mono">
                   ⌘K
                 </kbd>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right" className="md:block lg:hidden hidden">
-              Search (⌘K)
+              Szukaj (⌘K)
             </TooltipContent>
           </Tooltip>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 md:p-2 lg:p-4 space-y-1">
+        <nav className="flex-1 px-3 py-4 md:px-2 lg:px-3 space-y-0.5">
           {links.map((link) => {
             const Icon = link.icon;
             const isActive = pathname === link.href || pathname.startsWith(link.href + '/');
@@ -131,15 +137,15 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                     href={link.href}
                     onClick={handleLinkClick}
                     className={cn(
-                      'flex items-center justify-between md:justify-center lg:justify-between px-4 md:px-0 lg:px-4 py-3 rounded-lg transition-all duration-200 relative',
+                      'flex items-center justify-between md:justify-center lg:justify-between px-3 md:px-0 lg:px-3 py-2.5 rounded-lg transition-all duration-150 relative group',
                       isActive
-                        ? 'bg-blue-500/[0.08] text-blue-400 md:text-blue-400 lg:text-white font-semibold border-l-2 md:border-l-0 lg:border-l-2 border-blue-500'
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] border-l-2 md:border-l-0 lg:border-l-2 border-transparent'
+                        ? 'bg-white/[0.08] text-white font-medium'
+                        : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
                     )}
                   >
                     <div className="flex items-center gap-3 md:gap-0 lg:gap-3">
-                      <Icon size={20} />
-                      <span className="md:hidden lg:inline">{link.label}</span>
+                      <Icon size={18} className={isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'} />
+                      <span className="md:hidden lg:inline text-[13px]">{link.label}</span>
                     </div>
                     {/* Active indicator dot for collapsed sidebar */}
                     {isActive && (
@@ -156,27 +162,30 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </nav>
 
         {/* User section */}
-        <div className="p-4 md:p-2 lg:p-4 border-t border-white/[0.04]">
-          <div className="mb-3 px-4 py-2 md:px-0 md:text-center lg:px-4 lg:text-left">
-            <p className="font-medium text-white text-sm truncate md:hidden lg:block">{user?.email}</p>
-            <span className="text-[10px] text-zinc-500 capitalize border border-white/[0.08] px-1.5 py-0.5 rounded-full inline-flex items-center gap-1 mt-0.5 md:hidden lg:inline-flex">
-              {user?.role === 'owner' && <AlertCircle size={10} className="text-amber-500" />}
-              {user?.role}
-            </span>
+        <div className="p-3 md:p-2 lg:p-3 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 px-3 py-2.5 md:justify-center lg:justify-start rounded-lg">
+            {/* Avatar with initials */}
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-white/[0.08] flex items-center justify-center flex-shrink-0">
+              <span className="text-[11px] font-semibold text-blue-400">{getInitials(user?.email)}</span>
+            </div>
+            <div className="md:hidden lg:block min-w-0">
+              <p className="font-medium text-white text-[13px] truncate">{user?.email}</p>
+              <span className="text-[10px] text-zinc-600 capitalize">{user?.role}</span>
+            </div>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 onClick={handleSignOut}
                 variant="ghost"
-                className="w-full justify-start md:justify-center lg:justify-start gap-3 md:gap-0 lg:gap-3 text-zinc-600 hover:text-zinc-400 hover:bg-transparent"
+                className="w-full justify-start md:justify-center lg:justify-start gap-3 md:gap-0 lg:gap-3 text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] h-9 px-3 text-[13px]"
               >
-                <LogOut size={18} />
-                <span className="md:hidden lg:inline">Sign Out</span>
+                <LogOut size={16} />
+                <span className="md:hidden lg:inline">Wyloguj się</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="right" className="md:block lg:hidden hidden">
-              Sign Out
+              Wyloguj się
             </TooltipContent>
           </Tooltip>
         </div>

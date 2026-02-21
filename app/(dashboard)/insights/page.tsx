@@ -280,13 +280,13 @@ export default function InsightsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
+      <div className="mb-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
           <Flame className="text-orange-500" />
           Trending Questions
         </h1>
-        <p className="text-zinc-400 mt-2">
-          Analiza pytan uzytkownikow chatbota
+        <p className="text-sm text-zinc-500 mt-1">
+          Analiza pytań użytkowników chatbota
         </p>
       </div>
 
@@ -299,7 +299,7 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-        <TabsList className="bg-[#141414] mb-6 border border-white/[0.04]">
+        <TabsList className="bg-[#111113] mb-6 border border-white/[0.06]">
           <TabsTrigger value="daily" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
             <Clock size={16} />
             Wczoraj (24h)

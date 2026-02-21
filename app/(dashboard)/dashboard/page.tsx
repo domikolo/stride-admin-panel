@@ -136,10 +136,11 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
+      <div className="mb-2">
         <h1 className="text-2xl font-semibold tracking-tight text-white">
           Dashboard
         </h1>
+        <p className="text-sm text-zinc-500 mt-1">Przegląd aktywności i statystyk</p>
       </div>
 
       {error && (
@@ -187,8 +188,8 @@ export default function DashboardPage() {
       {/* 7-day Activity Chart */}
       {!loading && (
         <Card className="glass-card p-5">
-          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wide mb-4">
-            Aktywność (ostatnie 7 dni)
+          <h3 className="text-sm font-medium text-zinc-500 mb-4">
+            Aktywność — ostatnie 7 dni
           </h3>
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -199,7 +200,7 @@ export default function DashboardPage() {
                     <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e1e1e" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis
                   dataKey="label"
                   stroke="#71717a"
@@ -218,8 +219,8 @@ export default function DashboardPage() {
                 />
                 <Tooltip
                   contentStyle={{
-                    backgroundColor: '#141414',
-                    border: '1px solid #1e1e1e',
+                    backgroundColor: '#111113',
+                    border: '1px solid rgba(255,255,255,0.08)',
                     borderRadius: '8px',
                     fontSize: '13px',
                   }}
