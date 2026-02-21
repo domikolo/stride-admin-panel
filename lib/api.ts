@@ -27,20 +27,13 @@ function camelCaseKeys(obj: any): any {
 class ApiClient {
   private async getHeaders(): Promise<HeadersInit> {
     const token = await getIdToken();
-    const headers = {
+    return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
     };
-    console.log('[API] Request headers:', {
-      hasToken: !!token,
-      hasAuthHeader: !!headers.Authorization,
-      authHeaderPreview: headers.Authorization ? `${headers.Authorization.substring(0, 30)}...` : 'none',
-    });
-    return headers;
   }
 
   async get<T>(endpoint: string): Promise<T> {
-    console.log('[API] GET request to:', `${API_BASE_URL}${endpoint}`);
     const headers = await this.getHeaders();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',

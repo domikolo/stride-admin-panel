@@ -57,17 +57,9 @@ export const signOut = () => {
  * Get current session
  */
 export const getCurrentSession = (): Promise<CognitoUserSession | null> => {
-  console.log('[Auth] Getting current session...');
-  console.log('[Auth] UserPool config:', {
-    UserPoolId: poolData.UserPoolId,
-    ClientId: poolData.ClientId,
-  });
-
   const cognitoUser = userPool.getCurrentUser();
-  console.log('[Auth] getCurrentUser() returned:', cognitoUser?.getUsername() || 'null');
 
   if (!cognitoUser) {
-    console.log('[Auth] No current user found in pool');
     return Promise.resolve(null);
   }
 
@@ -76,11 +68,7 @@ export const getCurrentSession = (): Promise<CognitoUserSession | null> => {
       if (err) {
         console.error('[Auth] getSession() error:', err);
         resolve(null);
-      } else if (!session) {
-        console.log('[Auth] getSession() returned null session');
-        resolve(null);
       } else {
-        console.log('[Auth] Session found, isValid:', session.isValid());
         resolve(session);
       }
     });
@@ -92,9 +80,7 @@ export const getCurrentSession = (): Promise<CognitoUserSession | null> => {
  */
 export const getIdToken = async (): Promise<string | null> => {
   const session = await getCurrentSession();
-  const token = session?.getIdToken().getJwtToken() || null;
-  console.log('[Auth] getIdToken() returning:', token ? `${token.substring(0, 20)}...` : 'null');
-  return token;
+  return session?.getIdToken().getJwtToken() || null;
 };
 
 /**

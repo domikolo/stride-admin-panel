@@ -18,15 +18,7 @@ import Link from 'next/link';
 import { MessageSquare, Copy, Check, ChevronRight } from 'lucide-react';
 import { format, isToday, isYesterday, isSameDay } from 'date-fns';
 import toast from 'react-hot-toast';
-
-// --- Markdown rendering ---
-
-function inlineMd(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-white">$1</strong>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>')
-    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 rounded bg-white/[0.08] text-zinc-300 text-[13px] font-mono">$1</code>');
-}
+import { inlineMd } from '@/lib/markdown';
 
 function renderMarkdown(text: string): React.ReactElement {
   const lines = text.split('\n');

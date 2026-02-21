@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { sendChatMessage, getChatHistory } from '@/lib/api';
 import { ChatHistoryMessage } from '@/lib/types';
+import { inlineMd } from '@/lib/markdown';
 
 interface FloatingChatWidgetProps {
   clientId: string;
@@ -135,15 +136,6 @@ function renderMarkdown(text: string): React.ReactElement {
   return <>{elements}</>;
 }
 
-/** Inline markdown: **bold**, [[conv:...]] links */
-function inlineMd(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(
-      /\[\[conv:([^:]+):(\d+):([^\]]+)\]\]/g,
-      '<a data-conv-link="true" href="/conversations/$1?conversation_number=$2" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 cursor-pointer">$3</a>'
-    );
-}
 
 const NOTIFICATION_MESSAGES = [
   'W czym mogę Ci pomóc?',
@@ -163,6 +155,14 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
   const notificationCount = useRef(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const historyLoaded = useRef(false);
+  const animationTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  // Cleanup animation timers on unmount
+  useEffect(() => {
+    return () => {
+      animationTimers.current.forEach(clearTimeout);
+    };
+  }, []);
 
   // Load chat history on mount (background, ready before user opens)
   useEffect(() => {
@@ -233,8 +233,16 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     return () => { if (timeout) clearTimeout(timeout); };
   }, [isOpen]);
 
+  const scheduleTimer = (fn: () => void, ms: number) => {
+    const id = setTimeout(fn, ms);
+    animationTimers.current.push(id);
+    return id;
+  };
+
   const animateOpen = () => {
     if (isAnimating || isOpen) return;
+    animationTimers.current.forEach(clearTimeout);
+    animationTimers.current = [];
     setIsAnimating(true);
 
     const widget = document.getElementById('chat-widget-floating');
@@ -257,27 +265,27 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
     void widget.offsetWidth;
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
       widget.style.setProperty('transform', 'translateY(-50%) translateX(0)', 'important');
     }, 10);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'width 0.5s cubic-bezier(0.77,0,0.18,1), transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
       widget.style.setProperty('width', 'var(--floating-chat-widget-width)', 'important');
     }, 260);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), width 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
       widget.style.setProperty('height', 'var(--floating-chat-widget-height)', 'important');
     }, 510);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), width 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.6s ease-out', 'important');
       widget.style.setProperty('box-shadow', '0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.06)', 'important');
     }, 510);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       setIsAnimating(false);
       setIsOpen(true);
 
@@ -298,6 +306,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
 
   const animateClose = () => {
     if (isAnimating || !isOpen) return;
+    animationTimers.current.forEach(clearTimeout);
+    animationTimers.current = [];
     setIsAnimating(true);
 
     const widget = document.getElementById('chat-widget-floating');
@@ -316,17 +326,17 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     widget.style.setProperty('height', '115px', 'important');
     widget.style.setProperty('box-shadow', 'none', 'important');
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'transform 0.5s cubic-bezier(0.77,0,0.18,1), height 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
       widget.style.setProperty('transform', 'translateY(-50%) translateX(40px)', 'important');
     }, 250);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       widget.style.setProperty('transition', 'width 0.5s cubic-bezier(0.77,0,0.18,1), transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
       widget.style.setProperty('width', '35px', 'important');
     }, 500);
 
-    setTimeout(() => {
+    scheduleTimer(() => {
       setIsAnimating(false);
       setIsOpen(false);
       widget.style.setProperty('display', 'none', 'important');

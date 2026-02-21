@@ -65,6 +65,7 @@ class WebSocketClient {
       return;
     }
 
+    // Token in query string is required — AWS API Gateway WebSocket does not support custom headers
     const url = `${WS_URL}?token=${this.token}`;
     console.log('[WS] Connecting...');
 

@@ -4,7 +4,6 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -33,18 +32,13 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
-  const [gapsCount, setGapsCount] = useState<number>(0);
-
-  useEffect(() => {
-    setGapsCount(0);
-  }, []);
 
   const clientLinks = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
     { href: '/conversations', icon: MessageSquare, label: 'Conversations' },
     { href: '/live', icon: Radio, label: 'Live' },
     { href: '/appointments', icon: Calendar, label: 'Appointments' },
-    { href: '/insights', icon: Flame, label: 'Insights', badge: gapsCount > 0 ? gapsCount : null },
+    { href: '/insights', icon: Flame, label: 'Insights' },
     { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
   ];
 
@@ -150,14 +144,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                     {/* Active indicator dot for collapsed sidebar */}
                     {isActive && (
                       <span className="hidden md:block lg:hidden absolute -right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
-                    )}
-                    {link.badge && (
-                      <span className={cn(
-                        'text-xs px-2 py-0.5 rounded-full md:hidden lg:inline-block',
-                        'bg-orange-500/20 text-orange-400'
-                      )}>
-                        {link.badge}
-                      </span>
                     )}
                   </Link>
                 </TooltipTrigger>
