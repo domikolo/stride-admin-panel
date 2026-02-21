@@ -281,12 +281,11 @@ export default function InsightsPage() {
     <div className="space-y-8">
       {/* Header */}
       <div className="mb-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
-          <Flame className="text-orange-500" />
-          Trending Questions
+        <h1 className="text-2xl font-semibold tracking-tight text-white">
+          Insights
         </h1>
         <p className="text-sm text-zinc-500 mt-1">
-          Analiza pytań użytkowników chatbota
+          Analiza pytań i trendów użytkowników
         </p>
       </div>
 
@@ -299,68 +298,53 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
-        <TabsList className="bg-[#111113] mb-6 border border-white/[0.06]">
-          <TabsTrigger value="daily" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
-            <Clock size={16} />
-            Wczoraj (24h)
+        <TabsList className="bg-[#111113] mb-4 border border-white/[0.06]">
+          <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+            Wczoraj
           </TabsTrigger>
-          <TabsTrigger value="weekly" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
-            <Calendar size={16} />
-            Tydzien (7 dni)
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+            7 dni
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="data-[state=active]:bg-blue-500/10 data-[state=active]:text-blue-400 data-[state=active]:border-b-2 data-[state=active]:border-blue-500 flex items-center gap-2">
-            <Calendar size={16} />
-            Miesiac (30 dni)
+          <TabsTrigger value="monthly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+            30 dni
           </TabsTrigger>
         </TabsList>
 
-        {/* Period info */}
-        <p className="text-zinc-500 text-sm mb-4">
-          {activePeriod === 'daily'
-            ? 'Dane z wczoraj (ostatnie pelne 24h) - Trend: zmiana vs poprzedni dzien'
-            : activePeriod === 'weekly'
-              ? 'Dane z ostatnich 7 dni - Trend: zmiana vs poprzedni tydzien'
-              : 'Dane z ostatnich 30 dni - Trend: zmiana vs poprzedni miesiac'
-          }
-        </p>
-
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <StatsCard
             title="Unikalne tematy"
             value={current.summary.totalTopics}
             icon={MessageSquare}
+            iconColor="text-blue-400"
           />
           <StatsCard
-            title="Laczne pytania"
+            title="Łączne pytania"
             value={current.summary.totalQuestions}
             icon={TrendingUp}
+            iconColor="text-emerald-400"
           />
           <StatsCard
             title="Luki w bazie wiedzy"
             value={activeGaps.length}
             icon={AlertTriangle}
-            trend={activePeriod === 'daily' && activeGaps.length > 0 ? 'down' : undefined}
+            iconColor={activeGaps.length > 0 ? 'text-amber-400' : 'text-zinc-400'}
           />
         </div>
 
-        {/* Buying Intent Highlight */}
         {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
-          <Card className="glass-card p-4 border-green-500/30 mb-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <DollarSign size={20} className="text-green-400" />
-              </div>
-              <div>
-                <p className="text-white font-medium">
-                  Hot Lead Alert: &quot;{topBuyingTopic.topicName}&quot;
-                </p>
-                <p className="text-sm text-zinc-400">
-                  {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytajacych wyraza zamiar zakupu
-                </p>
-              </div>
+          <div className="flex items-center gap-3 p-4 glass-card border-emerald-500/20 mb-6">
+            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+              <DollarSign size={18} className="text-emerald-400" />
             </div>
-          </Card>
+            <div>
+              <p className="text-sm text-white font-medium">
+                Hot Lead: &quot;{topBuyingTopic.topicName}&quot;
+              </p>
+              <p className="text-xs text-zinc-500">
+                {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
+              </p>
+            </div>
+          </div>
         )}
 
         {/* Content for each period */}

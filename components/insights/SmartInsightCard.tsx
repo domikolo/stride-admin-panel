@@ -10,21 +10,21 @@ export default function SmartInsightCard({ insight, topicName }: SmartInsightCar
     if (!insight) return null;
 
     return (
-        <Card className="glass-card p-5 border-purple-500/30 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                <Sparkles size={80} />
+        <Card className="glass-card p-5 border-violet-500/20 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-[0.04]">
+                <Sparkles size={64} />
             </div>
 
             <div className="flex items-start gap-4 relative z-10">
-                <div className="p-2 bg-purple-500/20 rounded-lg shrink-0">
-                    <Lightbulb className="text-purple-400" size={24} />
+                <div className="p-2 bg-violet-500/15 rounded-lg shrink-0">
+                    <Lightbulb className="text-violet-400" size={20} />
                 </div>
                 <div>
-                    <h3 className="text-sm font-medium text-purple-300 mb-1 flex items-center gap-2">
-                        <Sparkles size={14} />
-                        AI Insight dla tematu "{topicName}"
+                    <h3 className="text-xs font-medium text-violet-400 mb-1 flex items-center gap-1.5">
+                        <Sparkles size={12} />
+                        AI Insight — {topicName}
                     </h3>
-                    <p className="text-white text-lg leading-snug">
+                    <p className="text-sm text-zinc-200 leading-relaxed">
                         {insight}
                     </p>
                 </div>

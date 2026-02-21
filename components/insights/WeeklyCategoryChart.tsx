@@ -68,7 +68,7 @@ export default function WeeklyCategoryChart({ topics, totalQuestions }: WeeklyCa
                                 ))}
                             </Pie>
                             <Tooltip
-                                contentStyle={{ backgroundColor: '#18181b', borderColor: '#27272a', borderRadius: '8px' }}
+                                contentStyle={{ backgroundColor: '#111113', borderColor: 'rgba(255,255,255,0.08)', borderRadius: '8px', fontSize: '13px' }}
                                 itemStyle={{ color: '#fff' }}
                             />
                             <Legend

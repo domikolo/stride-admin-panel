@@ -1,23 +1,35 @@
 'use client';
 
-import { motion } from 'framer-motion';
 import { usePathname } from 'next/navigation';
+import { useEffect, useRef } from 'react';
 
 interface PageTransitionProps {
     children: React.ReactNode;
 }
 
+/**
+ * Animates page content on route change WITHOUT remounting children.
+ * Uses CSS animation triggered by pathname change instead of key-based remount.
+ */
 export default function PageTransition({ children }: PageTransitionProps) {
     const pathname = usePathname();
+    const ref = useRef<HTMLDivElement>(null);
+    const prevPathname = useRef(pathname);
+
+    useEffect(() => {
+        if (pathname !== prevPathname.current && ref.current) {
+            prevPathname.current = pathname;
+            // Trigger CSS animation
+            ref.current.style.animation = 'none';
+            // Force reflow to restart animation
+            ref.current.offsetHeight;
+            ref.current.style.animation = 'pageIn 0.2s ease-out';
+        }
+    }, [pathname]);
 
     return (
-        <motion.div
-            key={pathname}
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
-        >
+        <div ref={ref} style={{ animation: 'pageIn 0.2s ease-out' }}>
             {children}
-        </motion.div>
+        </div>
     );
 }
