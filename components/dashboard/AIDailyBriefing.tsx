@@ -19,9 +19,10 @@ interface AIDailyBriefingProps {
     loading?: boolean;
     onRefresh?: () => void;
     refreshing?: boolean;
+    isNew?: boolean; // true = właśnie wygenerowany, odtwórz typewriter
 }
 
-export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshing }: AIDailyBriefingProps) {
+export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshing, isNew = false }: AIDailyBriefingProps) {
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '';
         try {
@@ -103,7 +104,10 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
             <div className="inset-panel p-5">
                 <p className="text-zinc-200 leading-relaxed">
-                    <TypewriterText text={briefing.briefing} speed={12} />
+                    {isNew
+                        ? <TypewriterText text={briefing.briefing} speed={12} />
+                        : briefing.briefing
+                    }
                 </p>
             </div>
 

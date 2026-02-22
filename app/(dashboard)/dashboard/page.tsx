@@ -43,6 +43,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [briefingRefreshing, setBriefingRefreshing] = useState(false);
+  const [briefingIsNew, setBriefingIsNew] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +61,7 @@ export default function DashboardPage() {
 
     // Load briefing independently (slow - AI generation)
     setBriefingLoading(true);
+    setBriefingIsNew(false);
     getDailyBriefing(clientId)
       .then((data) => setBriefing(data))
       .catch(() => setBriefing(null))
@@ -97,6 +99,7 @@ export default function DashboardPage() {
       const clientId = getClientId();
       const data = await getDailyBriefing(clientId, true);
       setBriefing(data);
+      setBriefingIsNew(true);
     } catch (err) {
       console.error('Failed to refresh briefing:', err);
     } finally {
@@ -189,6 +192,7 @@ export default function DashboardPage() {
         loading={briefingLoading}
         onRefresh={handleRefreshBriefing}
         refreshing={briefingRefreshing}
+        isNew={briefingIsNew}
       />
 
       {/* Quick Stats - 3 cards */}
