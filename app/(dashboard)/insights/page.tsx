@@ -1,15 +1,16 @@
 /**
  * Insights Page - Trending Questions & Knowledge Gaps
- * With Daily / Weekly / Monthly period tabs, gaps shown inline
+ * With Daily / Weekly / Monthly period tabs, load-on-demand per tab.
  */
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getTrendingTopics, Timeframe, resolveGap, getResolvedGaps } from '@/lib/api';
 import { Topic, Gap } from '@/lib/types';
+import toast from 'react-hot-toast';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
 import SmartInsightCard from '@/components/insights/SmartInsightCard';
@@ -18,8 +19,13 @@ import WeeklyCategoryChart from '@/components/insights/WeeklyCategoryChart';
 import StatsCard from '@/components/dashboard/StatsCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Flame, AlertTriangle, MessageSquare, TrendingUp, Calendar, Clock, DollarSign } from 'lucide-react';
+import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
+
+type Period = 'daily' | 'weekly' | 'monthly';
 
 interface PeriodData {
   topics: Topic[];
@@ -27,47 +33,56 @@ interface PeriodData {
   summary: { totalTopics: number; totalQuestions: number; gapsCount: number };
 }
 
+const PERIOD_TO_TIMEFRAME: Record<Period, Timeframe> = {
+  daily: 'yesterday',
+  weekly: 'week',
+  monthly: 'month',
+};
+
 export default function InsightsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
-  const [daily, setDaily] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
-  const [weekly, setWeekly] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
-  const [monthly, setMonthly] = useState<PeriodData>({ topics: [], gaps: [], summary: { totalTopics: 0, totalQuestions: 0, gapsCount: 0 } });
+  const periodParam = searchParams.get('period');
+  const initialPeriod: Period = (['daily', 'weekly', 'monthly'] as const).includes(periodParam as any)
+    ? (periodParam as Period)
+    : 'daily';
+
+  const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
+
+  const [periodData, setPeriodData] = useState<Record<Period, PeriodData | null>>({
+    daily: null,
+    weekly: null,
+    monthly: null,
+  });
+  const [periodLoading, setPeriodLoading] = useState<Record<Period, boolean>>({
+    daily: false,
+    weekly: false,
+    monthly: false,
+  });
+  const loadedPeriods = useRef<Set<Period>>(new Set());
 
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
-
-  const periodParam = searchParams.get('period');
-  const initialPeriod = (['daily', 'weekly', 'monthly'] as const).includes(periodParam as any)
-    ? (periodParam as 'daily' | 'weekly' | 'monthly')
-    : 'daily';
-
-  const [activePeriod, setActivePeriod] = useState<'daily' | 'weekly' | 'monthly'>(initialPeriod);
-  const [loading, setLoading] = useState(true);
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getClientId = () =>
     user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-  // Load resolved gaps from API
   useEffect(() => {
     if (user) {
       getResolvedGaps(getClientId())
         .then(data => setResolvedGaps(data.resolvedGapIds || []))
         .catch(() => {
-          // Fallback to localStorage
-          const stored = localStorage.getItem('resolvedGaps');
-          if (stored) {
-            try { setResolvedGaps(JSON.parse(stored)); } catch { }
-          }
+          toast.error('Nie udało się załadować listy naprawionych luk');
         });
     }
   }, [user]);
 
   useEffect(() => {
     if (user) {
-      loadData();
+      loadPeriod(initialPeriod);
     }
   }, [user]);
 
@@ -79,7 +94,7 @@ export default function InsightsPage() {
       questionExamples: t.questionExamples,
       questionSources: t.questionSources,
       gapReason: t.gapReason || '',
-      suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`
+      suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`,
     }));
 
   const buildPeriodData = (data: { topics: Topic[] }): PeriodData => {
@@ -95,32 +110,38 @@ export default function InsightsPage() {
     };
   };
 
-  const loadData = async () => {
+  const loadPeriod = async (period: Period, force = false) => {
+    if (!user) return;
+    if (!force && loadedPeriods.current.has(period)) return;
+
+    setPeriodLoading(prev => ({ ...prev, [period]: true }));
     try {
-      setLoading(true);
       const cid = getClientId();
-
-      const [dailyData, weeklyData, monthlyData] = await Promise.all([
-        getTrendingTopics(cid, 'yesterday', true),
-        getTrendingTopics(cid, 'week', true),
-        getTrendingTopics(cid, 'month', true),
-      ]);
-
-      setDaily(buildPeriodData(dailyData));
-      setWeekly(buildPeriodData(weeklyData));
-      setMonthly(buildPeriodData(monthlyData));
+      const data = await getTrendingTopics(cid, PERIOD_TO_TIMEFRAME[period], true);
+      setPeriodData(prev => ({ ...prev, [period]: buildPeriodData(data) }));
+      loadedPeriods.current.add(period);
+      setRefreshedAt(new Date());
       setError(null);
     } catch (err) {
-      console.error('Failed to load insights:', err);
-      setError('Nie udalo sie zaladowac danych. Sprobuj ponownie.');
+      console.error(`Failed to load insights for ${period}:`, err);
+      setError('Nie udało się załadować danych. Spróbuj ponownie.');
     } finally {
-      setLoading(false);
+      setPeriodLoading(prev => ({ ...prev, [period]: false }));
     }
   };
 
+  const handleTabChange = (period: Period) => {
+    setActivePeriod(period);
+    loadPeriod(period);
+  };
+
+  const handleRefresh = () => {
+    loadedPeriods.current.delete(activePeriod);
+    loadPeriod(activePeriod, true);
+  };
+
   const handleResolveGap = async (topicId: string) => {
-    // Optimistic update — resolve by topicName (stable across days)
-    const gap = current.gaps.find(g => g.topicId === topicId);
+    const gap = current?.gaps.find(g => g.topicId === topicId);
     const topicName = gap?.topicName || '';
     const previousResolved = [...resolvedGaps];
     setResolvedGaps(prev => [...prev, topicName]);
@@ -128,10 +149,11 @@ export default function InsightsPage() {
 
     try {
       await resolveGap(getClientId(), topicId, gap?.topicName || '');
+      toast.success('Luka oznaczona jako naprawiona');
     } catch (err) {
-      // Rollback on failure
       console.error('Failed to resolve gap:', err);
       setResolvedGaps(previousResolved);
+      toast.error('Nie udało się zapisać zmiany');
     } finally {
       setResolvingGaps(prev => {
         const next = new Set(prev);
@@ -141,14 +163,16 @@ export default function InsightsPage() {
     }
   };
 
-  const current = activePeriod === 'daily' ? daily : activePeriod === 'weekly' ? weekly : monthly;
-  const activeGaps = current.gaps.filter(gap => !resolvedGaps.includes(gap.topicName));
+  const current = periodData[activePeriod];
+  const isLoading = periodLoading[activePeriod];
+  const activeGaps = current ? current.gaps.filter(gap => !resolvedGaps.includes(gap.topicName)) : [];
+  const topBuyingTopic = current
+    ? [...current.topics].sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0]
+    : null;
 
-  // Calculate top buying intent for current period
-  const topBuyingTopic = [...current.topics]
-    .sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0];
+  const renderPeriodContent = (data: PeriodData | null, periodKey: string) => {
+    if (!data) return null;
 
-  const renderPeriodContent = (data: PeriodData, periodKey: string) => {
     const filteredGaps = data.gaps.filter(g => !resolvedGaps.includes(g.topicName));
     const isDaily = periodKey === 'daily';
 
@@ -156,7 +180,7 @@ export default function InsightsPage() {
       return (
         <Card className="glass-card p-8 text-center">
           <p className="text-zinc-400">
-            Brak danych. Poczekaj na pierwsza analize (codziennie o 2:00 w nocy).
+            Brak danych. Poczekaj na pierwszą analizę (codziennie o 2:00 w nocy).
           </p>
         </Card>
       );
@@ -164,7 +188,6 @@ export default function InsightsPage() {
 
     return (
       <div className="space-y-6">
-        {/* Smart Insight for daily top topic */}
         {isDaily && data.topics.length > 0 && data.topics[0].smartInsight && (
           <SmartInsightCard
             insight={data.topics[0].smartInsight}
@@ -172,7 +195,6 @@ export default function InsightsPage() {
           />
         )}
 
-        {/* Topics */}
         {isDaily ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {data.topics.map((topic) => (
@@ -225,7 +247,6 @@ export default function InsightsPage() {
           </div>
         )}
 
-        {/* Gaps Section - Inline below topics */}
         {filteredGaps.length > 0 && (
           <>
             <div className="flex items-center gap-4 pt-4">
@@ -236,7 +257,6 @@ export default function InsightsPage() {
               </span>
               <div className="h-px flex-1 bg-yellow-500/30" />
             </div>
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {filteredGaps.map((gap) => (
                 <GapCard
@@ -259,19 +279,17 @@ export default function InsightsPage() {
     );
   };
 
-  if (loading) {
+  // Full skeleton only on very first load (no data loaded yet)
+  const nothingLoaded = Object.values(periodData).every(d => d === null);
+  if (nothingLoaded && isLoading) {
     return (
       <div className="space-y-8">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32" />
-          ))}
+          {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} className="h-64" />
-          ))}
+          {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-64" />)}
         </div>
       </div>
     );
@@ -280,16 +298,30 @@ export default function InsightsPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">
-          Insights
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          Analiza pytań i trendów użytkowników
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Analiza pytań i trendów użytkowników
+            {refreshedAt && (
+              <span className="ml-2">
+                · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isLoading}
+          className="text-zinc-400 hover:text-white gap-2 mt-1"
+        >
+          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+          Odśwież
+        </Button>
       </div>
 
-      {/* Error */}
       {error && (
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           {error}
@@ -297,7 +329,7 @@ export default function InsightsPage() {
       )}
 
       {/* Period Tabs */}
-      <Tabs value={activePeriod} onValueChange={(v) => setActivePeriod(v as any)} className="w-full">
+      <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">
         <TabsList className="bg-[#111113] mb-4 border border-white/[0.06]">
           <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
             Wczoraj
@@ -313,13 +345,13 @@ export default function InsightsPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           <StatsCard
             title="Unikalne tematy"
-            value={current.summary.totalTopics}
+            value={current?.summary.totalTopics || 0}
             icon={MessageSquare}
             iconColor="text-blue-400"
           />
           <StatsCard
             title="Łączne pytania"
-            value={current.summary.totalQuestions}
+            value={current?.summary.totalQuestions || 0}
             icon={TrendingUp}
             iconColor="text-emerald-400"
           />
@@ -347,15 +379,26 @@ export default function InsightsPage() {
           </div>
         )}
 
-        {/* Content for each period */}
         <TabsContent value="daily" className="mt-0">
-          {renderPeriodContent(daily, 'daily')}
+          {periodLoading.daily && !periodData.daily ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw size={20} className="animate-spin text-zinc-500" />
+            </div>
+          ) : renderPeriodContent(periodData.daily, 'daily')}
         </TabsContent>
         <TabsContent value="weekly" className="mt-0">
-          {renderPeriodContent(weekly, 'weekly')}
+          {periodLoading.weekly && !periodData.weekly ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw size={20} className="animate-spin text-zinc-500" />
+            </div>
+          ) : renderPeriodContent(periodData.weekly, 'weekly')}
         </TabsContent>
         <TabsContent value="monthly" className="mt-0">
-          {renderPeriodContent(monthly, 'monthly')}
+          {periodLoading.monthly && !periodData.monthly ? (
+            <div className="flex items-center justify-center py-16">
+              <RefreshCw size={20} className="animate-spin text-zinc-500" />
+            </div>
+          ) : renderPeriodContent(periodData.monthly, 'monthly')}
         </TabsContent>
       </Tabs>
     </div>

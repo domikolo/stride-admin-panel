@@ -86,6 +86,9 @@ export default function KBSection({
   const [contentFlash, setContentFlash] = useState(false);
 
   // Version history
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmUnpublish, setConfirmUnpublish] = useState(false);
+
   const [showVersions, setShowVersions] = useState(false);
   const [versions, setVersions] = useState<KBVersion[]>([]);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -347,14 +350,33 @@ export default function KBSection({
               <Clock size={14} />
             </Button>
           )}
-          <Button variant="ghost" size="sm" onClick={() => {
-              if (window.confirm(`Usunąć sekcję "${entry.topic}"? Tej operacji nie można cofnąć.`)) {
-                onDelete(entry.kbEntryId);
-              }
-            }}
-            className="text-zinc-600 hover:text-red-400 h-7 px-2">
-            <Trash2 size={14} />
-          </Button>
+          {confirmDelete ? (
+            <div className="flex items-center gap-1">
+              <span className="text-xs text-zinc-500">Usunąć?</span>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => { setConfirmDelete(false); onDelete(entry.kbEntryId); }}
+                className="text-red-400 hover:text-red-300 hover:bg-red-500/10 h-6 px-2 text-xs"
+              >
+                Tak
+              </Button>
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => setConfirmDelete(false)}
+                className="text-zinc-500 hover:text-zinc-300 h-6 px-2 text-xs"
+              >
+                Nie
+              </Button>
+            </div>
+          ) : (
+            <Button
+              variant="ghost" size="sm"
+              onClick={() => setConfirmDelete(true)}
+              className="text-zinc-600 hover:text-red-400 h-7 px-2"
+            >
+              <Trash2 size={14} />
+            </Button>
+          )}
         </div>
       </div>
 
@@ -560,6 +582,21 @@ export default function KBSection({
         </div>
       )}
 
+      {/* Audit metadata */}
+      <div className="px-4 pb-2 flex items-center gap-3 text-[11px] text-zinc-600">
+        {entry.createdAt && (
+          <span>
+            Utworzono: {new Date(entry.createdAt).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+            {entry.createdBy && <span> przez {entry.createdBy}</span>}
+          </span>
+        )}
+        {entry.updatedAt && entry.updatedAt !== entry.createdAt && (
+          <span>
+            · Zaktualizowano: {new Date(entry.updatedAt).toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+          </span>
+        )}
+      </div>
+
       {/* Actions bar */}
       <div className="flex items-center justify-between px-4 py-2 border-t border-white/[0.04]">
         <div className="flex items-center gap-2">
@@ -624,13 +661,33 @@ export default function KBSection({
             </Button>
           )}
           {!isDraft && !isDirty && (
-            <Button
-              variant="ghost" size="sm"
-              onClick={() => onUnpublish(entry.kbEntryId)}
-              className="text-zinc-500 hover:text-zinc-300 h-7 text-xs"
-            >
-              Unpublish
-            </Button>
+            confirmUnpublish ? (
+              <div className="flex items-center gap-1">
+                <span className="text-xs text-zinc-500">Cofnąć publikację?</span>
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => { setConfirmUnpublish(false); onUnpublish(entry.kbEntryId); }}
+                  className="text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 h-6 px-2 text-xs"
+                >
+                  Tak
+                </Button>
+                <Button
+                  variant="ghost" size="sm"
+                  onClick={() => setConfirmUnpublish(false)}
+                  className="text-zinc-500 hover:text-zinc-300 h-6 px-2 text-xs"
+                >
+                  Nie
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="ghost" size="sm"
+                onClick={() => setConfirmUnpublish(true)}
+                className="text-zinc-500 hover:text-zinc-300 h-7 text-xs"
+              >
+                Unpublish
+              </Button>
+            )
           )}
         </div>
       </div>

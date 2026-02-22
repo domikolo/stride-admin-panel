@@ -311,6 +311,16 @@ export default function LivePage() {
               s.sessionId === event.sessionId ? { ...s, takenOverBy: undefined } : s
             )
           );
+          // Append system message indicating bot resumed
+          if (event.sessionId === selectedSessionIdRef.current) {
+            setMessages(prev => [...prev, {
+              role: 'system' as any,
+              text: 'Bot ponownie przejął rozmowę',
+              timestamp: Math.floor(Date.now() / 1000),
+              sentBy: 'system',
+              conversationNumber: 1,
+            }]);
+          }
         })
       );
     };
@@ -396,6 +406,15 @@ export default function LivePage() {
     try {
       const d = new Date(ts * 1000);
       return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
+  };
+
+  const formatAbsoluteTime = (ts: number) => {
+    try {
+      const d = new Date(ts * 1000);
+      return d.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false });
     } catch {
       return '';
     }
@@ -497,8 +516,11 @@ export default function LivePage() {
                             {unread > 9 ? '9+' : unread}
                           </span>
                         )}
-                        <span className="text-[11px] text-zinc-500">
-                          {formatTime(session.lastActivity)}
+                        <span className="text-[11px] text-zinc-600 font-mono">
+                          {formatAbsoluteTime(session.lastActivity)}
+                        </span>
+                        <span className="text-[11px] text-zinc-500" title={formatTime(session.lastActivity)}>
+                          · {formatTime(session.lastActivity)}
                         </span>
                       </div>
                     </div>
@@ -603,6 +625,20 @@ export default function LivePage() {
                   <p className="text-center text-zinc-500 text-sm py-8">Brak wiadomości</p>
                 )}
                 {messages.map((msg, i) => {
+                  // System messages render as a centered divider
+                  if ((msg.role as string) === 'system') {
+                    return (
+                      <div key={`${msg.timestamp}-${i}`} className="flex items-center gap-3 py-1">
+                        <div className="h-px flex-1 bg-white/[0.06]" />
+                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 italic">
+                          <Bot size={12} className="text-zinc-600" />
+                          {msg.text}
+                        </div>
+                        <div className="h-px flex-1 bg-white/[0.06]" />
+                      </div>
+                    );
+                  }
+
                   const isUser = msg.role === 'user';
                   const isAgent = msg.sentBy?.startsWith('agent:');
                   const agentName = isAgent ? msg.sentBy!.replace('agent:', '') : '';

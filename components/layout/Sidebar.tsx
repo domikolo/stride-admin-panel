@@ -19,6 +19,7 @@ import {
   Search,
   BookOpen,
   Radio,
+  Settings,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -40,6 +41,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     { href: '/appointments', icon: Calendar, label: 'Spotkania' },
     { href: '/insights', icon: Flame, label: 'Insights' },
     { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
+    { href: '/settings', icon: Settings, label: 'Ustawienia' },
   ];
 
   const ownerLinks = [

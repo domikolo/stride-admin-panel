@@ -24,6 +24,7 @@ import {
   revertKBEntry,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
+import toast from 'react-hot-toast';
 import KBSection from '@/components/knowledge-base/KBSection';
 import GapsBar from '@/components/knowledge-base/GapsBar';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -130,25 +131,37 @@ export default function KnowledgeBasePage() {
   };
 
   const handlePublish = async (entryId: string) => {
-    const updated = await publishKBEntry(getClientId(), entryId);
-    setEntries(prev =>
-      prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-    );
+    try {
+      const updated = await publishKBEntry(getClientId(), entryId);
+      setEntries(prev =>
+        prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
+      );
+      toast.success('Wpis opublikowany');
 
-    // Auto-resolve gap if this entry came from a gap
-    const entry = entries.find(e => e.kbEntryId === entryId);
-    if (entry?.sourceGapId) {
-      const gap = gaps.find(g => g.topicId === entry.sourceGapId);
-      resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => {});
-      setGaps(prev => prev.filter(g => g.topicId !== entry.sourceGapId));
+      // Auto-resolve gap if this entry came from a gap
+      const entry = entries.find(e => e.kbEntryId === entryId);
+      if (entry?.sourceGapId) {
+        const gap = gaps.find(g => g.topicId === entry.sourceGapId);
+        resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => {});
+        setGaps(prev => prev.filter(g => g.topicId !== entry.sourceGapId));
+      }
+    } catch (err) {
+      console.error('Failed to publish entry:', err);
+      toast.error('Nie udało się opublikować wpisu');
     }
   };
 
   const handleUnpublish = async (entryId: string) => {
-    const updated = await unpublishKBEntry(getClientId(), entryId);
-    setEntries(prev =>
-      prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-    );
+    try {
+      const updated = await unpublishKBEntry(getClientId(), entryId);
+      setEntries(prev =>
+        prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
+      );
+      toast.success('Publikacja cofnięta');
+    } catch (err) {
+      console.error('Failed to unpublish entry:', err);
+      toast.error('Nie udało się cofnąć publikacji');
+    }
   };
 
   const handleDelete = async (entryId: string) => {
@@ -156,9 +169,10 @@ export default function KnowledgeBasePage() {
       await deleteKBEntry(getClientId(), entryId);
       setEntries(prev => prev.filter(e => e.kbEntryId !== entryId));
       gapContextRef.current.delete(entryId);
+      toast.success('Wpis usunięty');
     } catch (err) {
       console.error('Failed to delete entry:', err);
-      setError('Nie udalo sie usunac wpisu.');
+      toast.error('Nie udało się usunąć wpisu');
     }
   };
 

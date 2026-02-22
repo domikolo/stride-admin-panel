@@ -84,6 +84,29 @@ export const getIdToken = async (): Promise<string | null> => {
 };
 
 /**
+ * Change password for currently logged-in user
+ */
+export const changePassword = async (oldPassword: string, newPassword: string): Promise<void> => {
+  const cognitoUser = userPool.getCurrentUser();
+  if (!cognitoUser) throw new Error('Nie jesteś zalogowany.');
+
+  // Ensure active session
+  await new Promise<void>((resolve, reject) => {
+    cognitoUser.getSession((err: Error | null) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+
+  return new Promise((resolve, reject) => {
+    cognitoUser.changePassword(oldPassword, newPassword, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+};
+
+/**
  * Get user info from session
  */
 export const getUserFromSession = async (): Promise<AuthUser | null> => {

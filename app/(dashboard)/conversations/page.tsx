@@ -15,8 +15,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
-import { isToday, isThisWeek, isThisMonth, differenceInMinutes } from 'date-fns';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon } from 'lucide-react';
+import { isToday, isThisWeek, isThisMonth, differenceInMinutes, formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
@@ -91,6 +92,7 @@ export default function ConversationsPage() {
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
 
   const itemsPerPage = 15;
 
@@ -105,6 +107,7 @@ export default function ConversationsPage() {
       const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
       const data = await getClientConversations(clientId);
       setConversations(data.conversations);
+      setRefreshedAt(new Date());
       setError(null);
     } catch (error) {
       console.error('Failed to load conversations:', error);
@@ -270,13 +273,29 @@ export default function ConversationsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">
-          Rozmowy
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">
-          {groupData.length} sesji użytkowników • {conversations.length} rozmów
-        </p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            Rozmowy
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            {groupData.length} sesji użytkowników • {conversations.length} rozmów
+            {refreshedAt && (
+              <span className="ml-2">
+                · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={loadConversations}
+          className="text-zinc-400 hover:text-white gap-2 mt-1"
+        >
+          <RefreshCw size={14} />
+          Odśwież
+        </Button>
       </div>
 
       {error && (

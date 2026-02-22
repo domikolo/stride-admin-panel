@@ -21,9 +21,12 @@ import AIDailyBriefing from '@/components/dashboard/AIDailyBriefing';
 import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
 import { Card } from '@/components/ui/card';
-import { MessageSquare, DollarSign, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { MessageSquare, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -39,6 +42,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [briefingLoading, setBriefingLoading] = useState(true);
   const [briefingRefreshing, setBriefingRefreshing] = useState(false);
+  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const getClientId = () =>
@@ -76,6 +80,7 @@ export default function DashboardPage() {
       setTopics(topicsData.topics);
       setGapsCount(gapsData.gaps?.length || 0);
       setActivities(activityData.activities);
+      setRefreshedAt(new Date());
       setError(null);
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
@@ -136,11 +141,29 @@ export default function DashboardPage() {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="mb-2">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">
-          Dashboard
-        </h1>
-        <p className="text-sm text-zinc-500 mt-1">Przegląd aktywności i statystyk</p>
+      <div className="flex items-start justify-between mb-2">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">
+            Dashboard
+          </h1>
+          <p className="text-sm text-zinc-500 mt-1">
+            Przegląd aktywności i statystyk
+            {refreshedAt && (
+              <span className="ml-2">
+                · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
+              </span>
+            )}
+          </p>
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={loadAllData}
+          className="text-zinc-400 hover:text-white gap-2 mt-1"
+        >
+          <RefreshCw size={14} />
+          Odśwież dane
+        </Button>
       </div>
 
       {error && (
