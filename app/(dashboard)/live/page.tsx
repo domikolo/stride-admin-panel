@@ -32,6 +32,7 @@ import {
   Sparkles,
   X,
   ArrowRight,
+  Loader2,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -55,14 +56,25 @@ const DONT_KNOW_PHRASES = [
   "i don't know", "i'm not sure", "i don't have information",
 ];
 
-// Only phrases that clearly mean "I can't help, talk to a human"
-// Removed: 'umów rozmowę', 'umów spotkanie' — normal chatbot actions (booking appointments)
+// Only phrases where bot explicitly says it CAN'T help and redirects to a human.
+// Removed generic contact phrases ('zadzwoń', 'skontaktuj się', 'nasz zespół', etc.)
+// — these appear in normal chatbot answers (giving contact details) and are NOT gaps.
 const HUMAN_ESCALATION_PHRASES = [
-  'skontaktuj się', 'zadzwoń', 'napisz na', 'wyślij email',
-  'skontaktuj się z nami', 'zadzwoń do nas', 'napisz do nas',
-  'proponuję kontakt', 'polecam kontakt', 'najlepiej zadzwonić',
-  'nasz konsultant', 'nasz zespół', 'nasi specjaliści',
-  'contact us', 'call us', 'email us',
+  'proponuję kontakt',
+  'polecam kontakt',
+  'sugeruję kontakt',
+  'najlepiej skontaktować się bezpośrednio',
+  'najlepiej porozmawiać z',
+  'w tej sprawie zadzwoń',
+  'w tej sprawie napisz',
+  'w tej sprawie skontaktuj',
+  'to wykracza poza moje możliwości',
+  'nie jestem w stanie ci w tym pomóc',
+  'nie moge ci w tym pomoc',
+  'przekazuję do konsultanta',
+  'przekazuje do konsultanta',
+  'łączę z konsultantem',
+  'lacze z konsultantem',
 ];
 
 interface GapInfo {
@@ -135,6 +147,8 @@ export default function LivePage() {
 
   // Per-session message cache for gap detection
   const [sessionMessages, setSessionMessages] = useState<Record<string, LiveMessage[]>>({});
+  // Sessions currently being prefetched (show spinner instead of 0 gaps)
+  const [prefetchingSessionIds, setPrefetchingSessionIds] = useState<Set<string>>(new Set());
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -185,22 +199,37 @@ export default function LivePage() {
 
       // Prefetch messages for sessions not yet in cache (enables gap detection from first load)
       const uncached = data.sessions.filter(s => !sessionMessagesRef.current[s.sessionId]);
-      uncached.forEach(async (s) => {
-        try {
-          const conv = await getConversationDetails(clientId, s.sessionId, s.conversationNumber);
-          const liveMessages: LiveMessage[] = conv.messages.map(m => ({
-            role: m.role,
-            text: m.text,
-            timestamp: Math.floor(new Date(m.timestamp).getTime() / 1000),
-            sentBy: m.sentBy,
-            conversationNumber: s.conversationNumber,
-          }));
-          setSessionMessages(prev => {
-            if (prev[s.sessionId]) return prev; // already updated by WS, don't overwrite
-            return { ...prev, [s.sessionId]: liveMessages };
-          });
-        } catch { /* ignore individual fetch failures silently */ }
-      });
+      if (uncached.length > 0) {
+        setPrefetchingSessionIds(prev => {
+          const next = new Set(prev);
+          uncached.forEach(s => next.add(s.sessionId));
+          return next;
+        });
+        uncached.forEach(async (s) => {
+          try {
+            const conv = await getConversationDetails(clientId, s.sessionId, s.conversationNumber);
+            const liveMessages: LiveMessage[] = conv.messages.map(m => ({
+              role: m.role,
+              text: m.text,
+              timestamp: Math.floor(new Date(m.timestamp).getTime() / 1000),
+              sentBy: m.sentBy,
+              conversationNumber: s.conversationNumber,
+            }));
+            setSessionMessages(prev => {
+              if (prev[s.sessionId]) return prev; // already updated by WS, don't overwrite
+              return { ...prev, [s.sessionId]: liveMessages };
+            });
+          } catch (err) {
+            console.error(`Failed to prefetch messages for session ${s.sessionId}:`, err);
+          } finally {
+            setPrefetchingSessionIds(prev => {
+              const next = new Set(prev);
+              next.delete(s.sessionId);
+              return next;
+            });
+          }
+        });
+      }
     } catch (err) {
       console.error('Failed to load live sessions:', err);
     } finally {
@@ -440,6 +469,7 @@ export default function LivePage() {
           ) : (
             <div className="divide-y divide-white/[0.04]">
               {sortedSessions.map((session) => {
+                const isPrefetching = prefetchingSessionIds.has(session.sessionId);
                 const sessionGaps = sessionMessages[session.sessionId]
                   ? detectGapsInMessages(sessionMessages[session.sessionId])
                   : { count: 0, indicators: [] };
@@ -483,12 +513,14 @@ export default function LivePage() {
                           Przejęta
                         </Badge>
                       )}
-                      {sessionGaps.count > 0 && (
+                      {isPrefetching ? (
+                        <Loader2 size={10} className="text-zinc-500 animate-spin" />
+                      ) : sessionGaps.count > 0 ? (
                         <Badge className={`text-[10px] px-1.5 py-0 gap-0.5 ${colors.badge}`}>
                           <AlertTriangle size={10} />
                           {sessionGaps.count} {sessionGaps.count === 1 ? 'luka' : 'luki'}
                         </Badge>
-                      )}
+                      ) : null}
                     </div>
                   </button>
                 );
