@@ -377,3 +377,13 @@ export const getLiveSessions = (clientId: string) =>
     `/clients/${clientId}/live/sessions`
   );
 
+export const getLiveAiSuggestion = (
+  clientId: string,
+  sessionId: string,
+  conversationNumber: number
+) =>
+  api.post<{ suggestion: string; sessionId: string }>(
+    `/clients/${clientId}/live/suggest`,
+    { session_id: sessionId, conversation_number: conversationNumber }
+  );
+

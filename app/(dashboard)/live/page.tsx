@@ -8,7 +8,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { getLiveSessions } from '@/lib/api';
+import { getLiveSessions, getConversationDetails, getLiveAiSuggestion } from '@/lib/api';
 import { getIdToken } from '@/lib/auth';
 import { wsClient, WSEvent } from '@/lib/websocket';
 import { LiveSession, LiveMessage } from '@/lib/types';
@@ -29,6 +29,9 @@ import {
   Circle,
   AlertTriangle,
   ShieldAlert,
+  Sparkles,
+  X,
+  ArrowRight,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -52,12 +55,13 @@ const DONT_KNOW_PHRASES = [
   "i don't know", "i'm not sure", "i don't have information",
 ];
 
+// Only phrases that clearly mean "I can't help, talk to a human"
+// Removed: 'umów rozmowę', 'umów spotkanie' — normal chatbot actions (booking appointments)
 const HUMAN_ESCALATION_PHRASES = [
   'skontaktuj się', 'zadzwoń', 'napisz na', 'wyślij email',
   'skontaktuj się z nami', 'zadzwoń do nas', 'napisz do nas',
   'proponuję kontakt', 'polecam kontakt', 'najlepiej zadzwonić',
   'nasz konsultant', 'nasz zespół', 'nasi specjaliści',
-  'umów rozmowę', 'umów spotkanie',
   'contact us', 'call us', 'email us',
 ];
 
@@ -92,16 +96,10 @@ function detectGapsInMessages(msgs: LiveMessage[]): GapInfo {
       continue;
     }
 
-    // Check escalation phrases
+    // Check escalation phrases (explicit redirect to human)
     const escalation = HUMAN_ESCALATION_PHRASES.find(p => lower.includes(p));
     if (escalation) {
       indicators.push({ question, reason: `Eskalacja: "${escalation}"` });
-      continue;
-    }
-
-    // Short response (only for non-empty)
-    if (msg.text.trim().length > 0 && msg.text.trim().length < 50) {
-      indicators.push({ question, reason: `Krótka odpowiedź (${msg.text.length} zn.)` });
     }
   }
 
@@ -131,6 +129,9 @@ export default function LivePage() {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
   const [connected, setConnected] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
+  const [suggestion, setSuggestion] = useState<string | null>(null);
+  const [suggestionLoading, setSuggestionLoading] = useState(false);
 
   // Per-session message cache for gap detection
   const [sessionMessages, setSessionMessages] = useState<Record<string, LiveMessage[]>>({});
@@ -138,10 +139,29 @@ export default function LivePage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  // Refs to avoid stale closures in WS event handlers
+  const selectedSessionIdRef = useRef<string | null>(null);
+  const sessionMessagesRef = useRef<Record<string, LiveMessage[]>>({});
+
+  useEffect(() => { selectedSessionIdRef.current = selectedSessionId; }, [selectedSessionId]);
+  useEffect(() => { sessionMessagesRef.current = sessionMessages; }, [sessionMessages]);
+
   // Get selected session object
   const selectedSession = sessions.find((s) => s.sessionId === selectedSessionId);
   const isTakenOver = !!takenOverBy;
   const isTakenOverByMe = takenOverBy === user?.email;
+
+  // On-demand AI suggestion fetch
+  const fetchSuggestion = useCallback(async () => {
+    if (!selectedSessionId || !selectedSession) return;
+    setSuggestion(null);
+    setSuggestionLoading(true);
+    try {
+      const data = await getLiveAiSuggestion(clientId, selectedSessionId, selectedSession.conversationNumber);
+      setSuggestion(data.suggestion);
+    } catch { /* ignore silently */ }
+    finally { setSuggestionLoading(false); }
+  }, [clientId, selectedSessionId, selectedSession]);
 
   // Live gap detection for current conversation
   const currentGaps = useMemo(() => detectGapsInMessages(messages), [messages]);
@@ -156,12 +176,31 @@ export default function LivePage() {
     });
   }, [sessions, sessionMessages]);
 
-  // ─── Load sessions via REST ──────────────────────────────────
+  // ─── Load sessions via REST + prefetch messages ───────────────
 
   const loadSessions = useCallback(async () => {
     try {
       const data = await getLiveSessions(clientId);
       setSessions(data.sessions);
+
+      // Prefetch messages for sessions not yet in cache (enables gap detection from first load)
+      const uncached = data.sessions.filter(s => !sessionMessagesRef.current[s.sessionId]);
+      uncached.forEach(async (s) => {
+        try {
+          const conv = await getConversationDetails(clientId, s.sessionId, s.conversationNumber);
+          const liveMessages: LiveMessage[] = conv.messages.map(m => ({
+            role: m.role,
+            text: m.text,
+            timestamp: Math.floor(new Date(m.timestamp).getTime() / 1000),
+            sentBy: m.sentBy,
+            conversationNumber: s.conversationNumber,
+          }));
+          setSessionMessages(prev => {
+            if (prev[s.sessionId]) return prev; // already updated by WS, don't overwrite
+            return { ...prev, [s.sessionId]: liveMessages };
+          });
+        } catch { /* ignore individual fetch failures silently */ }
+      });
     } catch (err) {
       console.error('Failed to load live sessions:', err);
     } finally {
@@ -194,7 +233,6 @@ export default function LivePage() {
             const msgs = event.messages as LiveMessage[];
             setMessages(msgs);
             setTakenOverBy(event.takenOverBy || '');
-            // Cache messages for gap detection in session list
             if (event.sessionId) {
               setSessionMessages(prev => ({ ...prev, [event.sessionId as string]: msgs }));
             }
@@ -207,12 +245,16 @@ export default function LivePage() {
           if (event.message) {
             const newMsg = event.message as LiveMessage;
             setMessages((prev) => [...prev, newMsg]);
-            // Update cached messages for the session
             if (event.sessionId) {
+              const sid = event.sessionId as string;
               setSessionMessages(prev => {
-                const existing = prev[event.sessionId as string] || [];
-                return { ...prev, [event.sessionId as string]: [...existing, newMsg] };
+                const existing = prev[sid] || [];
+                return { ...prev, [sid]: [...existing, newMsg] };
               });
+              // Track unread for sessions not currently viewed
+              if (sid !== selectedSessionIdRef.current) {
+                setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }));
+              }
             }
           }
           loadSessions();
@@ -247,7 +289,7 @@ export default function LivePage() {
     initWs();
     loadSessions();
 
-    const interval = setInterval(loadSessions, 30000);
+    const interval = setInterval(loadSessions, 10000);
 
     return () => {
       cleanups.forEach((c) => c());
@@ -271,6 +313,9 @@ export default function LivePage() {
     setSelectedSessionId(sessionId);
     setMessages([]);
     setTakenOverBy('');
+    setUnreadCounts(prev => ({ ...prev, [sessionId]: 0 }));
+    setSuggestion(null);
+    setSuggestionLoading(false);
     const session = sessions.find((s) => s.sessionId === sessionId);
     wsClient.subscribe(sessionId, session?.conversationNumber);
   };
@@ -296,6 +341,8 @@ export default function LivePage() {
     if (!text || !selectedSessionId || !selectedSession) return;
     wsClient.sendMessage(selectedSessionId, text, selectedSession.conversationNumber);
     setInputText('');
+    setSuggestion(null);
+    setSuggestionLoading(false);
     inputRef.current?.focus();
   };
 
@@ -397,6 +444,7 @@ export default function LivePage() {
                   ? detectGapsInMessages(sessionMessages[session.sessionId])
                   : { count: 0, indicators: [] };
                 const colors = getGapColor(sessionGaps.count);
+                const unread = unreadCounts[session.sessionId] || 0;
 
                 return (
                   <button
@@ -410,17 +458,24 @@ export default function LivePage() {
                       }`}
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="text-sm text-white font-medium truncate max-w-[60%]">
-                        {session.sessionId.slice(0, 12)}...
+                      <span className="text-sm text-white font-medium">
+                        Rozmowa #{session.conversationNumber}
                       </span>
-                      <span className="text-[11px] text-zinc-500">
-                        {formatTime(session.lastActivity)}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {unread > 0 && (
+                          <span className="min-w-[18px] h-[18px] px-1 rounded-full bg-blue-500 text-white text-[10px] font-semibold flex items-center justify-center">
+                            {unread > 9 ? '9+' : unread}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-zinc-500">
+                          {formatTime(session.lastActivity)}
+                        </span>
+                      </div>
                     </div>
                     <p className="text-sm text-zinc-400 truncate">{session.firstMessagePreview || 'Nowa rozmowa'}</p>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        #{session.conversationNumber} · {session.messageCount} wiad.
+                        {session.messageCount} wiad.
                       </Badge>
                       {session.takenOverBy && (
                         <Badge className="text-[10px] px-1.5 py-0 bg-blue-500/20 text-blue-400">
@@ -431,7 +486,7 @@ export default function LivePage() {
                       {sessionGaps.count > 0 && (
                         <Badge className={`text-[10px] px-1.5 py-0 gap-0.5 ${colors.badge}`}>
                           <AlertTriangle size={10} />
-                          {sessionGaps.count}
+                          {sessionGaps.count} {sessionGaps.count === 1 ? 'luka' : 'luki'}
                         </Badge>
                       )}
                     </div>
@@ -459,7 +514,7 @@ export default function LivePage() {
                 <div className="flex items-center gap-3">
                   <div>
                     <h2 className="text-sm font-semibold text-white">
-                      {selectedSessionId.slice(0, 16)}...
+                      Rozmowa #{selectedSession?.conversationNumber}
                     </h2>
                     {isTakenOver && (
                       <p className="text-xs text-blue-400 mt-0.5">
@@ -524,8 +579,7 @@ export default function LivePage() {
                   const isGapMessage = !isUser && !isAgent && msg.text && (() => {
                     const lower = msg.text.toLowerCase();
                     return DONT_KNOW_PHRASES.some(p => lower.includes(p))
-                      || HUMAN_ESCALATION_PHRASES.some(p => lower.includes(p))
-                      || (msg.text.trim().length > 0 && msg.text.trim().length < 50);
+                      || HUMAN_ESCALATION_PHRASES.some(p => lower.includes(p));
                   })();
 
                   return (
@@ -575,10 +629,63 @@ export default function LivePage() {
                 <div ref={messagesEndRef} />
               </div>
 
+              {/* AI suggestion bar (shown during takeover when AI has a suggestion) */}
+              {isTakenOverByMe && (suggestionLoading || suggestion) && (
+                <div className="px-3 pt-3 flex-shrink-0">
+                  <div className="rounded-lg border border-purple-500/20 bg-purple-500/[0.05] p-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-1.5 text-[11px] text-purple-400 font-medium">
+                        <Sparkles size={11} />
+                        AI sugeruje
+                      </div>
+                      {suggestion && (
+                        <button
+                          onClick={() => setSuggestion(null)}
+                          className="text-zinc-600 hover:text-zinc-400 transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                    {suggestionLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-zinc-500">
+                        <span className="animate-pulse tracking-widest">···</span>
+                        <span>AI pisze sugestię...</span>
+                      </div>
+                    ) : (
+                      <>
+                        <p className="text-sm text-zinc-300 leading-relaxed">{suggestion}</p>
+                        <button
+                          onClick={() => {
+                            setInputText(suggestion || '');
+                            setSuggestion(null);
+                            inputRef.current?.focus();
+                          }}
+                          className="mt-2 flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-300 transition-colors"
+                        >
+                          <ArrowRight size={10} />
+                          Wklej do wiadomości
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Input (only when taken over by me) */}
               {isTakenOverByMe && (
                 <div className="p-3 border-t border-white/[0.04] flex-shrink-0">
                   <div className="flex gap-2">
+                    <Button
+                      onClick={fetchSuggestion}
+                      disabled={suggestionLoading}
+                      size="sm"
+                      variant="ghost"
+                      title="Poproś AI o sugestię"
+                      className="px-2.5 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10 border border-purple-500/20 flex-shrink-0"
+                    >
+                      <Sparkles size={15} />
+                    </Button>
                     <input
                       ref={inputRef}
                       type="text"

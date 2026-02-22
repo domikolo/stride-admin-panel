@@ -55,6 +55,7 @@ export interface ConversationMessage {
   timestamp: string;
   role: 'user' | 'assistant';
   text: string;
+  sentBy?: string;
 }
 
 export interface Appointment {
