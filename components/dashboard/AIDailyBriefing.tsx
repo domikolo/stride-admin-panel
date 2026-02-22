@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DailyBriefing } from '@/lib/types';
+import TypewriterText from '@/components/ui/TypewriterText';
 import { RefreshCw, HelpCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -61,14 +62,19 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                 </div>
                 <div>
                     <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
-                    <p className="text-sm text-zinc-400 mt-1">Brak danych do wyswietlenia na ten moment.</p>
+                    <p className="text-sm text-zinc-400 mt-1">Brak danych do wyświetlenia na ten moment.</p>
                 </div>
             </Card>
         );
     }
 
     return (
-        <Card className="glass-card p-6 md:p-8">
+        <Card
+            className="glass-card p-6 md:p-8 relative overflow-hidden"
+            style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.07) 0%, transparent 70%), #111113',
+            }}
+        >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
@@ -97,13 +103,16 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
             <div className="inset-panel p-5">
                 <p className="text-zinc-200 leading-relaxed">
-                    {briefing.briefing}
+                    <TypewriterText text={briefing.briefing} speed={12} />
                 </p>
             </div>
 
             {/* Top Question */}
             {briefing.stats.topQuestion && (
-                <div className="mt-4 pt-3 border-t border-white/[0.04] flex items-start gap-3 px-1">
+                <div
+                    className="mt-4 pt-3 border-t border-white/[0.04] flex items-start gap-3 px-1"
+                    style={{ animation: 'fadeIn 300ms ease-out 500ms both' }}
+                >
                     <HelpCircle className="text-zinc-500 mt-0.5 flex-shrink-0" size={16} />
                     <div>
                         <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-semibold">Top Pytanie</span>

@@ -271,7 +271,7 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>

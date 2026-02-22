@@ -260,3 +260,41 @@
 .transition-default {
   transition: all 0.15s ease;
 }
+
+/* ═══════════════════════════════════════════════════════════
+   Microinteractions — active:scale on all buttons
+   ═══════════════════════════════════════════════════════════ */
+
+button,
+[role="button"],
+a[class*="btn"],
+a[class*="button"] {
+  transition: transform 100ms ease-out;
+}
+
+button:active,
+[role="button"]:active,
+a[class*="btn"]:active,
+a[class*="button"]:active {
+  transform: scale(0.98);
+}
+
+/* ═══════════════════════════════════════════════════════════
+   FadeIn — content after skeleton loading
+   ═══════════════════════════════════════════════════════════ */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 200ms ease-out both;
+}

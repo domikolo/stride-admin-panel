@@ -5,6 +5,7 @@
 'use client';
 
 import { useEffect, useState, useCallback, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -142,7 +143,7 @@ export default function KnowledgeBasePage() {
       const entry = entries.find(e => e.kbEntryId === entryId);
       if (entry?.sourceGapId) {
         const gap = gaps.find(g => g.topicId === entry.sourceGapId);
-        resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => {});
+        resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => { });
         setGaps(prev => prev.filter(g => g.topicId !== entry.sourceGapId));
       }
     } catch (err) {
@@ -249,9 +250,9 @@ export default function KnowledgeBasePage() {
   const query = searchQuery.toLowerCase().trim();
   const filtered = query
     ? entries.filter(e =>
-        e.topic.toLowerCase().includes(query) ||
-        e.content.toLowerCase().includes(query)
-      )
+      e.topic.toLowerCase().includes(query) ||
+      e.content.toLowerCase().includes(query)
+    )
     : entries;
   const drafts = filtered.filter(e => e.status === 'draft');
   const published = filtered.filter(e => e.status === 'published');
@@ -311,7 +312,7 @@ export default function KnowledgeBasePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-fadeIn">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -376,21 +377,43 @@ export default function KnowledgeBasePage() {
             </span>
             <div className="h-px flex-1 bg-blue-500/20" />
           </div>
-          {drafts.map(entry => (
-            <KBSection
-              key={entry.kbEntryId}
-              entry={entry}
-              onSave={handleSave}
-              onPublish={handlePublish}
-              onUnpublish={handleUnpublish}
-              onDelete={handleDelete}
-              onAiAssist={handleAiAssist}
-              onAiInlineEdit={handleAiInlineEdit}
-              onGetVersions={handleGetVersions}
-              onRevert={handleRevert}
-              gapContext={gapContextRef.current.get(entry.kbEntryId)}
-            />
-          ))}
+          {/* Stagger KBSection entries */}
+          {(() => {
+            const kbStaggerContainer = {
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.06 } },
+            };
+            const kbStaggerItem = {
+              hidden: { opacity: 0, y: 8 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+            };
+            return (
+              <motion.div
+                key={`drafts-${drafts.length}`}
+                className="space-y-3"
+                variants={kbStaggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {drafts.map(entry => (
+                  <motion.div key={entry.kbEntryId} variants={kbStaggerItem}>
+                    <KBSection
+                      entry={entry}
+                      onSave={handleSave}
+                      onPublish={handlePublish}
+                      onUnpublish={handleUnpublish}
+                      onDelete={handleDelete}
+                      onAiAssist={handleAiAssist}
+                      onAiInlineEdit={handleAiInlineEdit}
+                      onGetVersions={handleGetVersions}
+                      onRevert={handleRevert}
+                      gapContext={gapContextRef.current.get(entry.kbEntryId)}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            );
+          })()}
         </div>
       )}
 
@@ -404,20 +427,41 @@ export default function KnowledgeBasePage() {
             </span>
             <div className="h-px flex-1 bg-white/[0.06]" />
           </div>
-          {published.map(entry => (
-            <KBSection
-              key={entry.kbEntryId}
-              entry={entry}
-              onSave={handleSave}
-              onPublish={handlePublish}
-              onUnpublish={handleUnpublish}
-              onDelete={handleDelete}
-              onAiAssist={handleAiAssist}
-              onAiInlineEdit={handleAiInlineEdit}
-              onGetVersions={handleGetVersions}
-              onRevert={handleRevert}
-            />
-          ))}
+          {(() => {
+            const kbStaggerContainer = {
+              hidden: {},
+              visible: { transition: { staggerChildren: 0.06 } },
+            };
+            const kbStaggerItem = {
+              hidden: { opacity: 0, y: 8 },
+              visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+            };
+            return (
+              <motion.div
+                key={`published-${published.length}`}
+                className="space-y-3"
+                variants={kbStaggerContainer}
+                initial="hidden"
+                animate="visible"
+              >
+                {published.map(entry => (
+                  <motion.div key={entry.kbEntryId} variants={kbStaggerItem}>
+                    <KBSection
+                      entry={entry}
+                      onSave={handleSave}
+                      onPublish={handlePublish}
+                      onUnpublish={handleUnpublish}
+                      onDelete={handleDelete}
+                      onAiAssist={handleAiAssist}
+                      onAiInlineEdit={handleAiInlineEdit}
+                      onGetVersions={handleGetVersions}
+                      onRevert={handleRevert}
+                    />
+                  </motion.div>
+                ))}
+              </motion.div>
+            );
+          })()}
         </div>
       )}
 

@@ -6,6 +6,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
 import {
   getClientStats,
@@ -138,8 +139,18 @@ export default function DashboardPage() {
     );
   }
 
+  // Stagger variants for card grids
+  const cardGridVariants = {
+    hidden: {},
+    visible: { transition: { staggerChildren: 0.05 } },
+  };
+  const cardItemVariants = {
+    hidden: { opacity: 0, y: 8 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
@@ -181,32 +192,43 @@ export default function DashboardPage() {
       />
 
       {/* Quick Stats - 3 cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        <StatsCard
-          title="Rozmowy"
-          value={stats?.conversationsCount || 0}
-          icon={MessageSquare}
-          iconColor="text-blue-400"
-          description="Liczba rozmow w ostatnich 30 dniach"
-          valueHref="/conversations"
-          sparklineData={dailyStats.map(d => d.conversations)}
-        />
-        <StatsCard
-          title="Calkowity Koszt"
-          value={`$${stats?.totalCostUsd.toFixed(2) || '0.00'}`}
-          icon={DollarSign}
-          iconColor="text-amber-400"
-          description="Koszt AI w ostatnich 30 dniach"
-        />
-        <StatsCard
-          title="Luki w KB"
-          value={gapsCount}
-          icon={AlertTriangle}
-          iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
-          description="Luki w bazie wiedzy (30 dni)"
-          valueHref="/insights?period=monthly"
-        />
-      </div>
+      <motion.div
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+        variants={cardGridVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={cardItemVariants}>
+          <StatsCard
+            title="Rozmowy"
+            value={stats?.conversationsCount || 0}
+            icon={MessageSquare}
+            iconColor="text-blue-400"
+            description="Liczba rozmow w ostatnich 30 dniach"
+            valueHref="/conversations"
+            sparklineData={dailyStats.map(d => d.conversations)}
+          />
+        </motion.div>
+        <motion.div variants={cardItemVariants}>
+          <StatsCard
+            title="Calkowity Koszt"
+            value={`$${stats?.totalCostUsd.toFixed(2) || '0.00'}`}
+            icon={DollarSign}
+            iconColor="text-amber-400"
+            description="Koszt AI w ostatnich 30 dniach"
+          />
+        </motion.div>
+        <motion.div variants={cardItemVariants}>
+          <StatsCard
+            title="Luki w KB"
+            value={gapsCount}
+            icon={AlertTriangle}
+            iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
+            description="Luki w bazie wiedzy (30 dni)"
+            valueHref="/insights?period=monthly"
+          />
+        </motion.div>
+      </motion.div>
 
       {/* 7-day Activity Chart */}
       {!loading && (
@@ -264,10 +286,19 @@ export default function DashboardPage() {
       )}
 
       {/* Main Content: Insights + Recent Activity */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
-        <RecentActivityFeed activities={activities} loading={loading} />
-      </div>
+      <motion.div
+        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        variants={cardGridVariants}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div variants={cardItemVariants}>
+          <InsightsPreview topics={topics} gapsCount={gapsCount} loading={loading} />
+        </motion.div>
+        <motion.div variants={cardItemVariants}>
+          <RecentActivityFeed activities={activities} loading={loading} />
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

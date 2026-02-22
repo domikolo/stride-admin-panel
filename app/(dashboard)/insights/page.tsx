@@ -6,6 +6,7 @@
 'use client';
 
 import { useEffect, useState, useRef } from 'react';
+import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { getTrendingTopics, Timeframe, resolveGap, getResolvedGaps } from '@/lib/api';
@@ -176,6 +177,16 @@ export default function InsightsPage() {
     const filteredGaps = data.gaps.filter(g => !resolvedGaps.includes(g.topicName));
     const isDaily = periodKey === 'daily';
 
+    // Framer-motion stagger variants
+    const gridVariants = {
+      hidden: {},
+      visible: { transition: { staggerChildren: 0.04 } },
+    };
+    const cardVariants = {
+      hidden: { opacity: 0, y: 8 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.22, ease: [0.25, 0.46, 0.45, 0.94] as const } },
+    };
+
     if (data.topics.length === 0) {
       return (
         <Card className="glass-card p-8 text-center">
@@ -196,23 +207,30 @@ export default function InsightsPage() {
         )}
 
         {isDaily ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div
+            key={`${periodKey}-topics-${data.topics.length}`}
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            variants={gridVariants}
+            initial="hidden"
+            animate="visible"
+          >
             {data.topics.map((topic) => (
-              <TrendingTopicCard
-                key={topic.topicId}
-                rank={topic.rank}
-                topicName={topic.topicName}
-                count={topic.count}
-                totalQuestions={data.summary.totalQuestions}
-                examples={topic.questionExamples}
-                questionSources={topic.questionSources}
-                trend={topic.trend}
-                intentBreakdown={topic.intentBreakdown}
-                isGap={topic.isGap}
-                gapReason={topic.gapReason}
-              />
+              <motion.div key={topic.topicId} variants={cardVariants}>
+                <TrendingTopicCard
+                  rank={topic.rank}
+                  topicName={topic.topicName}
+                  count={topic.count}
+                  totalQuestions={data.summary.totalQuestions}
+                  examples={topic.questionExamples}
+                  questionSources={topic.questionSources}
+                  trend={topic.trend}
+                  intentBreakdown={topic.intentBreakdown}
+                  isGap={topic.isGap}
+                  gapReason={topic.gapReason}
+                />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-1 space-y-6">
@@ -228,22 +246,29 @@ export default function InsightsPage() {
                 totalQuestions={data.summary.totalQuestions}
               />
             </div>
-            <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start">
+            <motion.div
+              key={`${periodKey}-topics-${data.topics.length}`}
+              className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start"
+              variants={gridVariants}
+              initial="hidden"
+              animate="visible"
+            >
               {data.topics.map((topic) => (
-                <TrendingTopicCard
-                  key={topic.topicId}
-                  rank={topic.rank}
-                  topicName={topic.topicName}
-                  count={topic.count}
-                  totalQuestions={data.summary.totalQuestions}
-                  examples={topic.questionExamples}
-                  questionSources={topic.questionSources}
-                  trend={topic.trend}
-                  intentBreakdown={topic.intentBreakdown}
-                  isGap={topic.isGap}
-                />
+                <motion.div key={topic.topicId} variants={cardVariants}>
+                  <TrendingTopicCard
+                    rank={topic.rank}
+                    topicName={topic.topicName}
+                    count={topic.count}
+                    totalQuestions={data.summary.totalQuestions}
+                    examples={topic.questionExamples}
+                    questionSources={topic.questionSources}
+                    trend={topic.trend}
+                    intentBreakdown={topic.intentBreakdown}
+                    isGap={topic.isGap}
+                  />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
 
@@ -257,22 +282,29 @@ export default function InsightsPage() {
               </span>
               <div className="h-px flex-1 bg-yellow-500/30" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <motion.div
+              key={`${periodKey}-gaps-${filteredGaps.length}`}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+              variants={gridVariants}
+              initial="hidden"
+              animate="visible"
+            >
               {filteredGaps.map((gap) => (
-                <GapCard
-                  key={gap.topicId}
-                  topicId={gap.topicId}
-                  topicName={gap.topicName}
-                  count={gap.count}
-                  examples={gap.questionExamples}
-                  questionSources={gap.questionSources}
-                  gapReason={gap.gapReason}
-                  suggestion={gap.suggestion}
-                  onResolve={handleResolveGap}
-                  resolving={resolvingGaps.has(gap.topicId)}
-                />
+                <motion.div key={gap.topicId} variants={cardVariants}>
+                  <GapCard
+                    topicId={gap.topicId}
+                    topicName={gap.topicName}
+                    count={gap.count}
+                    examples={gap.questionExamples}
+                    questionSources={gap.questionSources}
+                    gapReason={gap.gapReason}
+                    suggestion={gap.suggestion}
+                    onResolve={handleResolveGap}
+                    resolving={resolvingGaps.has(gap.topicId)}
+                  />
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </>
         )}
       </div>
@@ -296,7 +328,7 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
