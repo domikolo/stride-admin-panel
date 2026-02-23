@@ -207,7 +207,7 @@ export interface ContactProfile {
   contactInfo: string;       // email or phone number
   contactType: 'email' | 'phone';
   displayName?: string;
-  status: PipelineStage;
+  status: string;            // PipelineStage or custom string
   notes?: string;
   firstSeen: number;         // Unix timestamp
   lastSeen: number;          // Unix timestamp
