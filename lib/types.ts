@@ -212,5 +212,6 @@ export interface ContactProfile {
   firstSeen: number;         // Unix timestamp
   lastSeen: number;          // Unix timestamp
   sourceCount: number;
-  sources?: ContactSource[]; // populated in get_detail only
+  sourceTypes?: string[];    // e.g. ['appointment', 'conversation'] — in list response
+  sources?: ContactSource[]; // full list with session links — in get_detail only
 }

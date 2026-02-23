@@ -389,6 +389,20 @@ export const getLiveAiSuggestion = (
 
 // ─── Contacts (CRM-lite) ────────────────────────────────────────
 
+export const getContactStages = (clientId: string) =>
+  api.get<{ stages: { id: string; label: string; hex: string }[] }>(
+    `/clients/${clientId}/contacts/stages`
+  );
+
+export const updateContactStages = (
+  clientId: string,
+  stages: { id: string; label: string; hex: string }[]
+) =>
+  api.put<{ status: string; stages: { id: string; label: string; hex: string }[] }>(
+    `/clients/${clientId}/contacts/stages`,
+    { stages }
+  );
+
 export const getClientContacts = (
   clientId: string,
   params?: {
