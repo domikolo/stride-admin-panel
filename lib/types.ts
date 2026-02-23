@@ -191,3 +191,26 @@ export interface LiveMessage {
   sentBy?: string;
   conversationNumber: number;
 }
+
+// Contacts / CRM-lite Types
+export type PipelineStage = 'new' | 'contacted' | 'proposal' | 'won' | 'lost';
+
+export interface ContactSource {
+  sourceType: 'appointment' | 'conversation';
+  sourceId: string;
+  sessionId: string;
+  createdAt: number;
+}
+
+export interface ContactProfile {
+  profileId: string;
+  contactInfo: string;       // email or phone number
+  contactType: 'email' | 'phone';
+  displayName?: string;
+  status: PipelineStage;
+  notes?: string;
+  firstSeen: number;         // Unix timestamp
+  lastSeen: number;          // Unix timestamp
+  sourceCount: number;
+  sources?: ContactSource[]; // populated in get_detail only
+}

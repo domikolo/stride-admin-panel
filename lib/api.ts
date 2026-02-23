@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './auth';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -387,3 +387,44 @@ export const getLiveAiSuggestion = (
     { session_id: sessionId, conversation_number: conversationNumber }
   );
 
+// ─── Contacts (CRM-lite) ────────────────────────────────────────
+
+export const getClientContacts = (
+  clientId: string,
+  params?: {
+    status?: string;
+    source_type?: string;
+    contact_type?: string;
+    date_from?: number;
+    date_to?: number;
+    limit?: number;
+  }
+) => {
+  const query = params
+    ? '?' + Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== '')
+        .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+        .join('&')
+    : '';
+  return api.get<{ contacts: ContactProfile[]; count: number }>(
+    `/clients/${clientId}/contacts${query}`
+  );
+};
+
+export const getContact = (clientId: string, profileId: string) =>
+  api.get<ContactProfile>(`/clients/${clientId}/contacts/${profileId}`);
+
+export const updateContact = (
+  clientId: string,
+  profileId: string,
+  data: { status?: string; notes?: string; display_name?: string }
+) =>
+  api.put<{ status: string; profileId: string }>(
+    `/clients/${clientId}/contacts/${profileId}`,
+    data
+  );
+
+export const deleteContact = (clientId: string, profileId: string) =>
+  api.delete<{ status: string; profileId: string }>(
+    `/clients/${clientId}/contacts/${profileId}`
+  );

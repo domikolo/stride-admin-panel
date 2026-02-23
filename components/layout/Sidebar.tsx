@@ -41,6 +41,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     { href: '/appointments', icon: Calendar, label: 'Spotkania' },
     { href: '/insights', icon: Flame, label: 'Insights' },
     { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
+    { href: '/contacts', icon: Users, label: 'Kontakty' },
     { href: '/settings', icon: Settings, label: 'Ustawienia' },
   ];
 
