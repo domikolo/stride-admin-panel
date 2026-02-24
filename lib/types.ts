@@ -33,6 +33,10 @@ export interface ClientStats {
   activityHeatmap?: Record<string, Record<string, { messages: number; appointments: number }>>;
   conversationLengthHistogram?: Record<string, number>;
   dropOffByLength?: Record<string, { total: number; dropped: number }>;
+  feedbackPositive?: number;
+  feedbackNegative?: number;
+  feedbackTotal?: number;
+  satisfactionRate?: number | null;
 }
 
 export interface DailyStat {
@@ -49,6 +53,7 @@ export interface Conversation {
   firstMessage: string;
   lastMessage: string;
   preview: string;
+  rating?: 'positive' | 'negative' | null;
 }
 
 export interface ConversationMessage {

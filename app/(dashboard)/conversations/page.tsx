@@ -206,6 +206,9 @@ export default function ConversationsPage() {
       const groupStatus = statuses.includes('in_progress') ? 'in_progress' :
         statuses.includes('test') ? 'test' : 'completed';
 
+      // Rating — take first rated conversation in the session
+      const groupRating = convs.find(c => c.rating)?.rating ?? null;
+
       // Sort conversations INSIDE group (always by conversation number ascending)
       const sortedConvs = [...convs].sort((a, b) => (a.conversationNumber || 1) - (b.conversationNumber || 1));
 
@@ -215,7 +218,8 @@ export default function ConversationsPage() {
         metrics: {
           latestMessage,
           totalMessages,
-          groupStatus
+          groupStatus,
+          rating: groupRating,
         }
       };
     });
@@ -384,6 +388,11 @@ export default function ConversationsPage() {
                     direction={sortDirection}
                     onSort={handleSort}
                   />
+                  <TableHead className="w-16 text-center">
+                    <HeaderTooltip tooltip="Ocena rozmowy wystawiona przez użytkownika w widgecie czatu (👍 pozytywna / 👎 negatywna).">
+                      Ocena
+                    </HeaderTooltip>
+                  </TableHead>
                   <TableHead>Podglad</TableHead>
                 </TableRow>
               </TableHeader>
@@ -452,9 +461,14 @@ export default function ConversationsPage() {
                             <span className="text-xs text-zinc-500">{latestDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                           </div>
                         </TableCell>
+                        <TableCell className="text-center">
+                          {group.metrics.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
+                          {group.metrics.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
+                          {!group.metrics.rating && <span className="text-zinc-700 text-xs">—</span>}
+                        </TableCell>
                         <TableCell className="text-sm text-zinc-500 max-w-xs truncate">
                           {!isSingleSession ? (
-                            <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">Kliknij, aby rozwiąć...</span>
+                            <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">Kliknij, aby rozwiąź...</span>
                           ) : (
                             <span>{group.conversations[0]?.preview || 'Kliknij, aby zobaczyć...'}</span>
                           )}
@@ -490,6 +504,11 @@ export default function ConversationsPage() {
                                 <span>{convDate.toLocaleDateString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
                                 <span className="text-xs text-zinc-600">{convDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                               </div>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              {conv.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
+                              {conv.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
+                              {!conv.rating && <span className="text-zinc-700 text-xs">—</span>}
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400 max-w-xs truncate">
                               {conv.preview}

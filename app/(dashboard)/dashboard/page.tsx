@@ -23,7 +23,7 @@ import InsightsPreview from '@/components/dashboard/InsightsPreview';
 import RecentActivityFeed from '@/components/dashboard/RecentActivityFeed';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, DollarSign, AlertTriangle, RefreshCw } from 'lucide-react';
+import { MessageSquare, DollarSign, AlertTriangle, RefreshCw, SmilePlus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { formatDistanceToNow } from 'date-fns';
@@ -195,9 +195,9 @@ export default function DashboardPage() {
         isNew={briefingIsNew}
       />
 
-      {/* Quick Stats - 3 cards */}
+      {/* Quick Stats - 4 cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5"
         variants={cardGridVariants}
         initial="hidden"
         animate="visible"
@@ -230,6 +230,20 @@ export default function DashboardPage() {
             iconColor={gapsCount > 0 ? "text-red-400" : "text-zinc-400"}
             description="Luki w bazie wiedzy (30 dni)"
             valueHref="/insights?period=monthly"
+          />
+        </motion.div>
+        <motion.div variants={cardItemVariants}>
+          <StatsCard
+            title="Satysfakcja"
+            value={stats?.satisfactionRate != null ? `${stats.satisfactionRate}%` : '—'}
+            icon={SmilePlus}
+            iconColor={
+              stats?.satisfactionRate == null ? 'text-zinc-400'
+                : stats.satisfactionRate >= 75 ? 'text-green-400'
+                  : stats.satisfactionRate >= 50 ? 'text-yellow-400'
+                    : 'text-red-400'
+            }
+            description={stats?.feedbackTotal ? `${stats.feedbackTotal} ocen (${stats.feedbackPositive} 👍 / ${stats.feedbackNegative} 👎)` : 'Brak ocen w tym okresie'}
           />
         </motion.div>
       </motion.div>
