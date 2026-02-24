@@ -100,21 +100,21 @@ export default function AppointmentsPage() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified': return 'bg-emerald-500';
-      case 'pending': return 'bg-amber-500';
-      case 'cancelled': return 'bg-red-500';
-      default: return 'bg-zinc-500';
-    }
-  };
-
   const getStatusLabel = (status: string) => {
     switch (status) {
       case 'verified': return 'Potwierdzone';
       case 'pending': return 'Oczekujące';
       case 'cancelled': return 'Anulowane';
       default: return status;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'verified': return 'bg-emerald-500';
+      case 'pending': return 'bg-amber-500';
+      case 'cancelled': return 'bg-red-500';
+      default: return 'bg-zinc-500';
     }
   };
 
@@ -269,7 +269,7 @@ export default function AppointmentsPage() {
                     </TableCell>
                     <TableCell>
                       <Badge variant={getStatusBadgeVariant(appt.status)}>
-                        {appt.status}
+                        {getStatusLabel(appt.status)}
                       </Badge>
                     </TableCell>
                     <TableCell>
