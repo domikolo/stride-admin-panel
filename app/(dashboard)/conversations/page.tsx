@@ -479,15 +479,19 @@ export default function ConversationsPage() {
                           </div>
                         </TableCell>
                         <TableCell className="text-center">
-                          {group.metrics.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
-                          {group.metrics.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
-                          {!group.metrics.rating && <span className="text-zinc-700 text-xs">—</span>}
+                          {isSingleSession ? (
+                            <>
+                              {group.metrics.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
+                              {group.metrics.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
+                              {!group.metrics.rating && <span className="text-zinc-700 text-xs">—</span>}
+                            </>
+                          ) : (
+                            <span className="text-zinc-700 text-xs">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="text-sm text-zinc-500 max-w-xs">
                           {!isSingleSession ? (
-                            group.conversations[group.conversations.length - 1]?.keywords
-                              ? <KeywordTags keywords={group.conversations[group.conversations.length - 1].keywords} />
-                              : <span className="text-zinc-600">Kliknij, aby rozwinąć...</span>
+                            <span className="text-zinc-600">Kliknij, aby rozwinąć...</span>
                           ) : (
                             group.conversations[0]?.keywords
                               ? <KeywordTags keywords={group.conversations[0].keywords} />
