@@ -24,6 +24,22 @@ type FilterType = 'all' | 'today' | 'week' | 'month';
 type SortKey = 'date' | 'messages' | 'sessionId' | 'status';
 type SortDirection = 'asc' | 'desc';
 
+// Keyword tags display
+function KeywordTags({ keywords }: { keywords?: string }) {
+  if (!keywords) return null;
+  const tags = keywords.split(',').map(k => k.trim()).filter(Boolean);
+  if (tags.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {tags.map((tag, i) => (
+        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+          {tag}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 // Tooltip component for column headers
 function HeaderTooltip({ children, tooltip }: { children: React.ReactNode; tooltip: string }) {
   return (
@@ -183,6 +199,7 @@ export default function ConversationsPage() {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(conv =>
         conv.sessionId.toLowerCase().includes(query) ||
+        conv.keywords?.toLowerCase().includes(query) ||
         conv.preview?.toLowerCase().includes(query)
       );
     }
@@ -466,11 +483,15 @@ export default function ConversationsPage() {
                           {group.metrics.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
                           {!group.metrics.rating && <span className="text-zinc-700 text-xs">—</span>}
                         </TableCell>
-                        <TableCell className="text-sm text-zinc-500 max-w-xs truncate">
+                        <TableCell className="text-sm text-zinc-500 max-w-xs">
                           {!isSingleSession ? (
-                            <span className="text-zinc-600 group-hover:text-zinc-400 transition-colors">Kliknij, aby rozwiąź...</span>
+                            group.conversations[group.conversations.length - 1]?.keywords
+                              ? <KeywordTags keywords={group.conversations[group.conversations.length - 1].keywords} />
+                              : <span className="text-zinc-600">Kliknij, aby rozwinąć...</span>
                           ) : (
-                            <span>{group.conversations[0]?.preview || 'Kliknij, aby zobaczyć...'}</span>
+                            group.conversations[0]?.keywords
+                              ? <KeywordTags keywords={group.conversations[0].keywords} />
+                              : <span>{group.conversations[0]?.preview || 'Kliknij, aby zobaczyć...'}</span>
                           )}
                         </TableCell>
                       </TableRow>
@@ -510,8 +531,11 @@ export default function ConversationsPage() {
                               {conv.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
                               {!conv.rating && <span className="text-zinc-700 text-xs">—</span>}
                             </TableCell>
-                            <TableCell className="text-sm text-zinc-400 max-w-xs truncate">
-                              {conv.preview}
+                            <TableCell className="text-sm text-zinc-400 max-w-xs">
+                              {conv.keywords
+                                ? <KeywordTags keywords={conv.keywords} />
+                                : <span className="truncate block">{conv.preview}</span>
+                              }
                             </TableCell>
                           </TableRow>
                         );

@@ -53,6 +53,7 @@ export interface Conversation {
   firstMessage: string;
   lastMessage: string;
   preview: string;
+  keywords?: string;
   rating?: 'positive' | 'negative' | null;
 }
 
@@ -119,6 +120,7 @@ export interface Activity {
   type: 'conversation' | 'appointment';
   id: string;
   preview?: string;
+  keywords?: string;
   contactName?: string;
   timestamp: string;
   messageCount?: number;
