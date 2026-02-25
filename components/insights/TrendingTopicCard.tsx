@@ -2,9 +2,13 @@
  * Trending Topic Card — clean professional design
  */
 
+'use client';
+
+import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { TrendingUp, TrendingDown, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
+import QuestionsModal from './QuestionsModal';
 
 interface TrendingTopicCardProps {
     rank: number;
@@ -42,6 +46,7 @@ export default function TrendingTopicCard({
     isGap,
     gapReason,
 }: TrendingTopicCardProps) {
+    const [modalOpen, setModalOpen] = useState(false);
     const percentage = totalQuestions > 0 ? (count / totalQuestions) * 100 : 0;
 
     const trendConfig = {
@@ -54,77 +59,96 @@ export default function TrendingTopicCard({
     const TrendIcon = trendConfig.icon;
 
     return (
-        <Card className={`glass-card group ${isGap ? 'border-yellow-500/20' : ''}`}>
-            <CardContent className="p-5 space-y-4">
-                {/* Top row: rank + name + trend */}
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-start gap-3 min-w-0">
-                        <span className="text-sm font-semibold text-zinc-600 mt-0.5 shrink-0 w-5 text-right">
-                            {rank}
+        <>
+            <Card className={`glass-card group ${isGap ? 'border-yellow-500/20' : ''}`}>
+                <CardContent className="p-5 space-y-4">
+                    {/* Top row: rank + name + trend */}
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-start gap-3 min-w-0">
+                            <span className="text-sm font-semibold text-zinc-600 mt-0.5 shrink-0 w-5 text-right">
+                                {rank}
+                            </span>
+                            <div className="min-w-0">
+                                <h3 className="text-[15px] font-semibold text-white leading-snug flex items-center gap-2">
+                                    <span className="truncate">{topicName}</span>
+                                    {isGap && <AlertTriangle size={14} className="text-yellow-400 shrink-0" />}
+                                </h3>
+                                <p className="text-xs text-zinc-500 mt-0.5">{formatQuestionCount(count)}</p>
+                            </div>
+                        </div>
+                        <span className={`shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${trendConfig.bg} ${trendConfig.color}`}>
+                            {trendConfig.label}
                         </span>
-                        <div className="min-w-0">
-                            <h3 className="text-[15px] font-semibold text-white leading-snug flex items-center gap-2">
-                                <span className="truncate">{topicName}</span>
-                                {isGap && <AlertTriangle size={14} className="text-yellow-400 shrink-0" />}
-                            </h3>
-                            <p className="text-xs text-zinc-500 mt-0.5">{formatQuestionCount(count)}</p>
+                    </div>
+
+                    {/* Progress bar */}
+                    <div>
+                        <div className="flex justify-between text-[11px] text-zinc-500 mb-1.5">
+                            <span>Udział</span>
+                            <span className="font-medium text-zinc-300">{percentage.toFixed(1)}%</span>
+                        </div>
+                        <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
+                            <div
+                                className={`h-full ${trendConfig.bar} rounded-full transition-all duration-700 ease-out`}
+                                style={{ width: `${Math.max(percentage, 2)}%` }}
+                            />
                         </div>
                     </div>
-                    <span className={`shrink-0 text-[11px] font-medium px-2 py-1 rounded-md ${trendConfig.bg} ${trendConfig.color}`}>
-                        {trendConfig.label}
-                    </span>
-                </div>
 
-                {/* Progress bar */}
-                <div>
-                    <div className="flex justify-between text-[11px] text-zinc-500 mb-1.5">
-                        <span>Udział</span>
-                        <span className="font-medium text-zinc-300">{percentage.toFixed(1)}%</span>
-                    </div>
-                    <div className="h-1.5 bg-white/[0.04] rounded-full overflow-hidden">
-                        <div
-                            className={`h-full ${trendConfig.bar} rounded-full transition-all duration-700 ease-out`}
-                            style={{ width: `${Math.max(percentage, 2)}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* Examples */}
-                <div className="space-y-1.5">
-                    {examples.slice(0, 2).map((example, idx) => {
-                        const source = questionSources?.[example];
-                        return source ? (
-                            <Link
-                                key={idx}
-                                href={`/conversations/${source.sessionId}?conversation_number=${source.conversationNumber}&highlight=${encodeURIComponent(example)}`}
-                                className="block text-[13px] text-zinc-400 hover:text-blue-400 transition-colors truncate"
+                    {/* Examples */}
+                    <div className="space-y-1.5">
+                        {examples.slice(0, 2).map((example, idx) => {
+                            const source = questionSources?.[example];
+                            return source ? (
+                                <Link
+                                    key={idx}
+                                    href={`/conversations/${source.sessionId}?conversation_number=${source.conversationNumber}&highlight=${encodeURIComponent(example)}`}
+                                    className="block text-[13px] text-zinc-400 hover:text-blue-400 transition-colors truncate"
+                                >
+                                    &ldquo;{example}&rdquo;
+                                </Link>
+                            ) : (
+                                <p key={idx} className="text-[13px] text-zinc-500 truncate">
+                                    &ldquo;{example}&rdquo;
+                                </p>
+                            );
+                        })}
+                        {examples.length > 2 && (
+                            <button
+                                onClick={() => setModalOpen(true)}
+                                className="text-[11px] text-zinc-600 hover:text-blue-400 transition-colors mt-1"
                             >
-                                &ldquo;{example}&rdquo;
-                            </Link>
-                        ) : (
-                            <p key={idx} className="text-[13px] text-zinc-500 truncate">
-                                &ldquo;{example}&rdquo;
-                            </p>
-                        );
-                    })}
-                </div>
-
-                {/* Buying intent */}
-                {intentBreakdown.buying > 30 && (
-                    <div className="flex items-center gap-2 text-[11px] p-2 bg-emerald-500/[0.06] border border-emerald-500/15 rounded-lg">
-                        <DollarSign size={12} className="text-emerald-400 shrink-0" />
-                        <span className="text-emerald-400">{intentBreakdown.buying.toFixed(0)}% zamiar zakupu</span>
+                                +{examples.length - 2} więcej pytań →
+                            </button>
+                        )}
                     </div>
-                )}
 
-                {/* Gap warning */}
-                {isGap && gapReason && (
-                    <div className="flex items-center gap-2 text-[11px] p-2 bg-yellow-500/[0.06] border border-yellow-500/15 rounded-lg">
-                        <AlertTriangle size={12} className="text-yellow-400 shrink-0" />
-                        <span className="text-yellow-400 truncate">{gapReason}</span>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
+                    {/* Buying intent */}
+                    {intentBreakdown.buying > 30 && (
+                        <div className="flex items-center gap-2 text-[11px] p-2 bg-emerald-500/[0.06] border border-emerald-500/15 rounded-lg">
+                            <DollarSign size={12} className="text-emerald-400 shrink-0" />
+                            <span className="text-emerald-400">{intentBreakdown.buying.toFixed(0)}% zamiar zakupu</span>
+                        </div>
+                    )}
+
+                    {/* Gap warning */}
+                    {isGap && gapReason && (
+                        <div className="flex items-center gap-2 text-[11px] p-2 bg-yellow-500/[0.06] border border-yellow-500/15 rounded-lg">
+                            <AlertTriangle size={12} className="text-yellow-400 shrink-0" />
+                            <span className="text-yellow-400 truncate">{gapReason}</span>
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {modalOpen && (
+                <QuestionsModal
+                    topicName={topicName}
+                    examples={examples}
+                    questionSources={questionSources}
+                    onClose={() => setModalOpen(false)}
+                />
+            )}
+        </>
     );
 }
