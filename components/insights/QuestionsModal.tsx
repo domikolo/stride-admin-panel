@@ -1,29 +1,33 @@
 /**
- * QuestionsModal — scrollable overlay showing all question examples with conversation links
+ * QuestionsModal — scrollable overlay showing all question examples with conversation links.
+ * Uses createPortal to render into document.body, bypassing backdrop-filter stacking context
+ * issues that break position:fixed inside glass-card components.
  */
 
 'use client';
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import { X, MessageSquare, ExternalLink } from 'lucide-react';
 
 interface QuestionsModalProps {
   topicName: string;
+  totalCount: number;
   examples: string[];
   questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
   onClose: () => void;
 }
 
-export default function QuestionsModal({ topicName, examples, questionSources, onClose }: QuestionsModalProps) {
+export default function QuestionsModal({ topicName, totalCount, examples, questionSources, onClose }: QuestionsModalProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
   }, [onClose]);
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+  const modal = (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
@@ -33,7 +37,12 @@ export default function QuestionsModal({ topicName, examples, questionSources, o
         <div className="flex items-center justify-between p-4 border-b border-white/[0.06] shrink-0">
           <div>
             <h3 className="text-sm font-semibold text-white truncate pr-2">{topicName}</h3>
-            <p className="text-xs text-zinc-500 mt-0.5">{examples.length} pytań</p>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              {examples.length} przykładowych pytań
+              {totalCount > examples.length && (
+                <span className="text-zinc-600"> · temat pojawił się {totalCount} razy</span>
+              )}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -69,4 +78,6 @@ export default function QuestionsModal({ topicName, examples, questionSources, o
       </div>
     </div>
   );
+
+  return createPortal(modal, document.body);
 }

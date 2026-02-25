@@ -137,6 +137,7 @@ export default function GapCard({
             {modalOpen && (
                 <QuestionsModal
                     topicName={topicName}
+                    totalCount={count}
                     examples={displayExamples}
                     questionSources={questionSources}
                     onClose={() => setModalOpen(false)}

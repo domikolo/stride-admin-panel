@@ -144,6 +144,7 @@ export default function TrendingTopicCard({
             {modalOpen && (
                 <QuestionsModal
                     topicName={topicName}
+                    totalCount={count}
                     examples={examples}
                     questionSources={questionSources}
                     onClose={() => setModalOpen(false)}
