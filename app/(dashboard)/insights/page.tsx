@@ -22,7 +22,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
+import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw, Info } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -333,8 +334,16 @@ export default function InsightsPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
-          <p className="text-sm text-zinc-500 mt-1">
+          <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1.5">
             Analiza pytań i trendów użytkowników
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info size={13} className="text-zinc-600 hover:text-zinc-400 transition-colors cursor-help flex-shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-[300px]">
+                <p>Analizowane są wyłącznie pytania użytkowników. Odpowiedzi na pytania chatbota (np. &quot;implementuję systemy CRM&quot;) oraz wiadomości niebędące pytaniami są automatycznie pomijane.</p>
+              </TooltipContent>
+            </Tooltip>
             {refreshedAt && (
               <span className="ml-2">
                 · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
