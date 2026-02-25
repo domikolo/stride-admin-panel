@@ -94,6 +94,7 @@ export default function InsightsPage() {
       topicName: t.topicName,
       count: t.count,
       questionExamples: t.questionExamples,
+      gapExamples: t.gapExamples || [],
       questionSources: t.questionSources,
       gapReason: t.gapReason || '',
       suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`,
@@ -297,6 +298,7 @@ export default function InsightsPage() {
                     topicName={gap.topicName}
                     count={gap.count}
                     examples={gap.questionExamples}
+                    gapExamples={gap.gapExamples}
                     questionSources={gap.questionSources}
                     gapReason={gap.gapReason}
                     suggestion={gap.suggestion}

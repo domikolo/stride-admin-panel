@@ -91,6 +91,7 @@ export interface Topic {
   topicName: string;
   count: number;
   questionExamples: string[];
+  gapExamples?: string[];
   questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
   trend: 'up' | 'down' | 'stable' | 'new';
   intentBreakdown: {
@@ -110,6 +111,7 @@ export interface Gap {
   topicName: string;
   count: number;
   questionExamples: string[];
+  gapExamples?: string[];
   questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
   gapReason: string;
   suggestion: string;

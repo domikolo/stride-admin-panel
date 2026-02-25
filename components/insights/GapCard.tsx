@@ -16,6 +16,7 @@ interface GapCardProps {
     topicName: string;
     count: number;
     examples: string[];
+    gapExamples?: string[];
     questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
     gapReason: string;
     suggestion: string;
@@ -34,6 +35,7 @@ export default function GapCard({
     topicName,
     count,
     examples,
+    gapExamples,
     questionSources,
     gapReason,
     suggestion,
@@ -42,9 +44,8 @@ export default function GapCard({
 }: GapCardProps) {
     const [modalOpen, setModalOpen] = useState(false);
 
-    // Show only examples that have a traceable source (real questions that caused the gap)
-    const linkedExamples = examples.filter(e => questionSources?.[e]);
-    const displayExamples = linkedExamples.length > 0 ? linkedExamples : examples;
+    // Show only the specific questions that triggered gap detection (not all topic questions)
+    const displayExamples = (gapExamples && gapExamples.length > 0) ? gapExamples : examples;
 
     return (
         <>
