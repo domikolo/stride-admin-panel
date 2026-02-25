@@ -32,7 +32,10 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
 
     const handleClick = (activity: Activity) => {
         if (activity.type === 'conversation') {
-            router.push(`/conversations/${activity.id}`);
+            const url = activity.conversationNumber && activity.conversationNumber > 1
+                ? `/conversations/${activity.id}?conversation_number=${activity.conversationNumber}`
+                : `/conversations/${activity.id}`;
+            router.push(url);
         } else {
             router.push(`/appointments`);
         }
@@ -105,7 +108,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm text-white font-medium truncate">
                                     {activity.type === 'conversation' ? (
-                                        <>Rozmowa</>
+                                        <>Rozmowa{activity.conversationNumber && activity.conversationNumber > 1 ? ` #${activity.conversationNumber}` : ''}</>
                                     ) : (
                                         <>{activity.contactName || 'Spotkanie'}</>
                                     )}

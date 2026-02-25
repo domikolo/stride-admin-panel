@@ -119,6 +119,7 @@ export interface Gap {
 export interface Activity {
   type: 'conversation' | 'appointment';
   id: string;
+  conversationNumber?: number;
   preview?: string;
   keywords?: string;
   contactName?: string;
