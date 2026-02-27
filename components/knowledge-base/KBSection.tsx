@@ -216,6 +216,7 @@ export default function KBSection({
 
   const handleAcceptInline = useCallback(() => {
     if (!pendingInline) return;
+    const savedY = window.scrollY;
     const { originalText, editedText, selection: sel } = pendingInline;
     setContent(prev => prev.slice(0, sel.start) + editedText + prev.slice(sel.start + originalText.length));
     setDoneRange({ start: sel.start, end: sel.start + editedText.length });
@@ -223,14 +224,17 @@ export default function KBSection({
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
+    requestAnimationFrame(() => window.scrollTo(0, savedY));
     setTimeout(() => setDoneRange(null), 2500);
   }, [pendingInline]);
 
   const handleRejectInline = useCallback(() => {
+    const savedY = window.scrollY;
     setPendingInline(null);
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
+    requestAnimationFrame(() => window.scrollTo(0, savedY));
   }, []);
 
   const isDraft = entry.status === 'draft';
@@ -368,7 +372,7 @@ export default function KBSection({
     <div
       ref={containerRef}
       className={`rounded-lg border relative transition-shadow duration-200 ${pendingInline
-        ? 'border-purple-500/50 bg-purple-500/[0.02] shadow-lg shadow-purple-500/10 ring-1 ring-purple-500/15'
+        ? 'border-purple-500/40 bg-purple-500/[0.02] shadow-md shadow-purple-500/[0.08]'
         : isDraft
         ? 'border-dashed border-blue-500/30 bg-blue-500/[0.02]'
         : 'border-white/[0.06] bg-white/[0.02]'
@@ -601,38 +605,41 @@ export default function KBSection({
       {/* Content area — inline diff view when AI edit is pending */}
       {pendingInline ? (
         <div className="px-4 pt-3 pb-0">
-          <div className="flex items-center gap-1.5 mb-2 text-[11px] text-purple-400">
-            <Sparkles size={11} /> Propozycja AI — zaakceptuj lub odrzuć zmiany
+          <div className="flex items-center gap-1.5 mb-2.5 text-[11px] text-purple-400">
+            <Sparkles size={11} /> Propozycja AI
           </div>
-          <div className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words rounded-lg px-3 py-2.5 min-h-[7.5rem]">
+          <div className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words min-h-[7.5rem]">
             {content.slice(0, pendingInline.selection.start)}
-            <mark className="bg-red-500/20 text-red-300 line-through rounded-sm not-italic">{pendingInline.originalText}</mark>
-            <mark className="bg-green-500/20 text-green-300 rounded-sm not-italic">{pendingInline.editedText}</mark>
+            <mark className="bg-red-500/[0.15] text-red-300 line-through rounded-[3px] not-italic">{pendingInline.originalText}</mark>
+            <mark className="bg-green-500/[0.15] text-green-300 rounded-[3px] not-italic">{pendingInline.editedText}</mark>
             <button
               onClick={handleAcceptInline}
-              className="inline-flex items-center gap-0.5 align-middle ml-1 px-1.5 py-0.5 text-[10px] rounded bg-green-600 hover:bg-green-500 text-white font-medium transition-colors"
+              className="inline-flex items-center gap-0.5 align-middle ml-1.5 px-1.5 py-0.5 text-[10px] rounded bg-purple-500/20 border border-purple-500/30 text-purple-300 hover:bg-purple-500/30 transition-colors font-medium"
             >
               <Check size={9} /> Akceptuj
             </button>
             {content.slice(pendingInline.selection.end)}
           </div>
-          <div className="sticky bottom-0 flex items-center justify-between gap-3 -mx-4 px-4 py-2.5 mt-2 bg-zinc-950 border-t-2 border-purple-500/40 rounded-b-lg">
-            <span className="text-[11px] text-purple-400 flex items-center gap-1.5">
-              <Sparkles size={11} />
-              Sprawdź zmiany powyżej
+          <div
+            style={{ overflowAnchor: 'none' }}
+            className="sticky bottom-0 flex items-center justify-between -mx-4 px-4 py-2 mt-3 bg-zinc-950 border-t border-purple-500/20"
+          >
+            <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
+              <Sparkles size={10} className="text-purple-400/70" />
+              Zatwierdź lub odrzuć zmiany
             </span>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleRejectInline}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-zinc-300 hover:text-white border border-zinc-700 hover:border-zinc-500 rounded-md transition-colors"
+                className="text-xs text-zinc-500 hover:text-zinc-200 px-3 h-7 rounded-md hover:bg-white/[0.06] transition-colors"
               >
-                <X size={12} /> Odrzuć
+                Odrzuć
               </button>
               <button
                 onClick={handleAcceptInline}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-green-600 hover:bg-green-500 text-white font-medium rounded-md transition-colors shadow-md shadow-green-900/50"
+                className="flex items-center gap-1.5 text-xs text-white bg-purple-600 hover:bg-purple-500 px-3 h-7 rounded-md font-medium transition-colors shadow-sm shadow-purple-900/60"
               >
-                <Check size={12} /> Akceptuj
+                <Check size={11} /> Akceptuj
               </button>
             </div>
           </div>
