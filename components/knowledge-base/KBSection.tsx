@@ -598,33 +598,31 @@ export default function KBSection({
 
       {/* Content area — inline diff view when AI edit is pending */}
       {pendingInline ? (
-        <div className="px-4 py-3">
-          <div className="flex items-center justify-between mb-2">
-            <span className="flex items-center gap-1.5 text-[11px] text-purple-400">
-              <Sparkles size={11} /> Propozycja AI — zaakceptuj lub odrzuć
-            </span>
-            <div className="flex gap-1">
-              <Button
-                variant="ghost" size="sm"
-                onClick={handleRejectInline}
-                className="h-6 px-2 text-xs gap-1 text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
-              >
-                <X size={11} /> Odrzuć
-              </Button>
-              <Button
-                variant="ghost" size="sm"
-                onClick={handleAcceptInline}
-                className="h-6 px-2 text-xs gap-1 text-green-400 hover:text-green-300 hover:bg-green-500/10"
-              >
-                <Check size={11} /> Akceptuj
-              </Button>
-            </div>
+        <div className="px-4 pt-3 pb-0">
+          <div className="flex items-center gap-1.5 mb-2 text-[11px] text-purple-400">
+            <Sparkles size={11} /> Propozycja AI
           </div>
           <div className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words border border-purple-500/20 rounded-lg px-3 py-2.5 bg-purple-500/[0.02] min-h-[7.5rem]">
             {content.slice(0, pendingInline.selection.start)}
             <mark className="bg-red-500/20 text-red-300 line-through rounded-sm not-italic">{pendingInline.originalText}</mark>
             <mark className="bg-green-500/20 text-green-300 rounded-sm not-italic">{pendingInline.editedText}</mark>
             {content.slice(pendingInline.selection.end)}
+          </div>
+          <div className="sticky bottom-0 flex justify-end gap-2 py-2 -mx-4 px-4 bg-zinc-900/95 backdrop-blur-sm border-t border-purple-500/15 mt-1">
+            <Button
+              variant="ghost" size="sm"
+              onClick={handleRejectInline}
+              className="h-7 px-3 text-xs gap-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
+            >
+              <X size={12} /> Odrzuć
+            </Button>
+            <Button
+              variant="ghost" size="sm"
+              onClick={handleAcceptInline}
+              className="h-7 px-3 text-xs gap-1.5 text-green-400 hover:text-green-300 hover:bg-green-500/10"
+            >
+              <Check size={12} /> Akceptuj
+            </Button>
           </div>
         </div>
       ) : (
