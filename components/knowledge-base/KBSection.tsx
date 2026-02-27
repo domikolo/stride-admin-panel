@@ -9,7 +9,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import {
   Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle,
-  MessageSquare, Paperclip, X, FileText, FileSpreadsheet, Clock,
+  MessageSquare, Paperclip, X, FileText, FileSpreadsheet, Clock, GitCompare,
 } from 'lucide-react';
 import { KBEntry, KBVersion } from '@/lib/types';
 import InlineEditBar from './InlineEditBar';
@@ -50,6 +50,32 @@ function formatChars(n: number): string {
 function FileIcon({ ext }: { ext: string }) {
   if (ext === 'csv') return <FileSpreadsheet size={16} className="text-green-400 shrink-0" />;
   return <FileText size={16} className="text-blue-400 shrink-0" />;
+}
+
+type DiffLine = { type: 'same' | 'added' | 'removed'; text: string };
+
+function computeLineDiff(oldText: string, newText: string): DiffLine[] {
+  const a = oldText.split('\n');
+  const b = newText.split('\n');
+  const m = a.length, n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      dp[i][j] = a[i] === b[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
+    }
+  }
+  const result: DiffLine[] = [];
+  let i = 0, j = 0;
+  while (i < m || j < n) {
+    if (i < m && j < n && a[i] === b[j]) {
+      result.push({ type: 'same', text: a[i] }); i++; j++;
+    } else if (i < m && (j >= n || dp[i + 1][j] >= dp[i][j + 1])) {
+      result.push({ type: 'removed', text: a[i] }); i++;
+    } else {
+      result.push({ type: 'added', text: b[j] }); j++;
+    }
+  }
+  return result;
 }
 
 function getDefaultPrompt(topic: string, hasContent: boolean, hasFile: boolean): string {
@@ -115,9 +141,17 @@ export default function KBSection({
   // Inline edit
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
-  const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
+  const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'preview' | 'done'>('idle');
   const [inputFocused, setInputFocused] = useState(false);
   const [doneRange, setDoneRange] = useState<{ start: number; end: number } | null>(null);
+  const [pendingInline, setPendingInline] = useState<{
+    originalText: string;
+    editedText: string;
+    selection: { start: number; end: number };
+  } | null>(null);
+
+  // Version diff
+  const [selectedVersionSk, setSelectedVersionSk] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const selectionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -162,6 +196,7 @@ export default function KBSection({
     if (selectionTimer.current) clearTimeout(selectionTimer.current);
     setSelection(null); setPopupPos(null);
     setInlineEditState('idle'); setInputFocused(false);
+    setPendingInline(null);
   }, []);
 
   const handleInlineEdit = async (instruction: string) => {
@@ -171,13 +206,29 @@ export default function KBSection({
     setInputFocused(false);
     try {
       const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
-      setDoneRange({ start: selection.start, end: selection.start + edited.length });
-      setContent(prev => prev.slice(0, selection.start) + edited + prev.slice(selection.end));
-      setInlineEditState('done');
-      setTimeout(() => { setSelection(null); setPopupPos(null); setInlineEditState('idle'); setInputFocused(false); }, 1500);
-      setTimeout(() => setDoneRange(null), 2500);
+      setPendingInline({ originalText: selectedText, editedText: edited, selection });
+      setInlineEditState('preview');
     } catch { setInlineEditState('idle'); }
   };
+
+  const handleAcceptInline = useCallback(() => {
+    if (!pendingInline) return;
+    const { originalText, editedText, selection: sel } = pendingInline;
+    setContent(prev => prev.slice(0, sel.start) + editedText + prev.slice(sel.start + originalText.length));
+    setDoneRange({ start: sel.start, end: sel.start + editedText.length });
+    setPendingInline(null);
+    setSelection(null);
+    setPopupPos(null);
+    setInlineEditState('idle');
+    setTimeout(() => setDoneRange(null), 2500);
+  }, [pendingInline]);
+
+  const handleRejectInline = useCallback(() => {
+    setPendingInline(null);
+    setSelection(null);
+    setPopupPos(null);
+    setInlineEditState('idle');
+  }, []);
 
   const isDraft = entry.status === 'draft';
   const isDirty = topic !== entry.topic || content !== entry.content;
@@ -272,6 +323,7 @@ export default function KBSection({
   const handleToggleVersions = async () => {
     if (showVersions) {
       setShowVersions(false);
+      setSelectedVersionSk(null);
       return;
     }
     if (!onGetVersions) return;
@@ -290,6 +342,7 @@ export default function KBSection({
     try {
       await onRevert(entry.kbEntryId, versionSk);
       setShowVersions(false);
+      setSelectedVersionSk(null);
     } finally { setReverting(null); }
   };
 
@@ -392,22 +445,62 @@ export default function KBSection({
             <p className="text-xs text-zinc-500 py-2 px-1">Brak wcześniejszych wersji</p>
           ) : (
             <div className="space-y-1">
-              {versions.map(v => (
-                <div key={v.versionSk} className="flex items-center justify-between gap-3 py-1.5 px-2 rounded hover:bg-white/[0.03]">
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs text-zinc-300 truncate">{v.topic}</p>
-                    <p className="text-[11px] text-zinc-500">{formatVersionDate(v.versionTimestamp)}</p>
+              {versions.map(v => {
+                const diffLines = selectedVersionSk === v.versionSk
+                  ? computeLineDiff(v.content, content)
+                  : null;
+                return (
+                  <div key={v.versionSk}>
+                    <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-white/[0.03]">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs text-zinc-300 truncate">{v.topic}</p>
+                        <p className="text-[11px] text-zinc-500">{formatVersionDate(v.versionTimestamp)}</p>
+                      </div>
+                      <Button
+                        variant="ghost" size="sm"
+                        onClick={() => setSelectedVersionSk(sv => sv === v.versionSk ? null : v.versionSk)}
+                        className={`h-6 px-1.5 shrink-0 ${selectedVersionSk === v.versionSk ? 'text-purple-400 bg-purple-500/10' : 'text-zinc-600 hover:text-zinc-300'}`}
+                        title="Pokaż zmiany"
+                      >
+                        <GitCompare size={11} />
+                      </Button>
+                      <Button
+                        variant="ghost" size="sm"
+                        onClick={() => handleRevert(v.versionSk)}
+                        disabled={reverting !== null}
+                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-6 text-[11px] px-2 shrink-0"
+                      >
+                        {reverting === v.versionSk ? <Loader2 size={10} className="animate-spin" /> : 'Przywróć'}
+                      </Button>
+                    </div>
+                    {diffLines && (
+                      <div className="mx-1 mb-1.5 rounded border border-white/[0.06] overflow-hidden">
+                        <div className="max-h-52 overflow-y-auto font-mono text-[11px] leading-[1.6]">
+                          {diffLines.map((line, idx) => (
+                            <div
+                              key={idx}
+                              className={
+                                line.type === 'added'
+                                  ? 'flex gap-2 px-2 bg-green-500/10 text-green-300'
+                                  : line.type === 'removed'
+                                  ? 'flex gap-2 px-2 bg-red-500/10 text-red-300'
+                                  : 'flex gap-2 px-2 text-zinc-600'
+                              }
+                            >
+                              <span className="select-none shrink-0 w-3 text-right opacity-70">
+                                {line.type === 'added' ? '+' : line.type === 'removed' ? '−' : ' '}
+                              </span>
+                              <span className={line.type === 'removed' ? 'line-through' : ''}>
+                                {line.text || '\u00a0'}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  <Button
-                    variant="ghost" size="sm"
-                    onClick={() => handleRevert(v.versionSk)}
-                    disabled={reverting !== null}
-                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-6 text-[11px] px-2 shrink-0"
-                  >
-                    {reverting === v.versionSk ? <Loader2 size={10} className="animate-spin" /> : 'Przywróć'}
-                  </Button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -484,6 +577,10 @@ export default function KBSection({
           selectedText={content.slice(selection.start, selection.end)}
           onInputFocus={() => setInputFocused(true)}
           onInputBlur={() => setInputFocused(false)}
+          pendingOriginal={pendingInline?.originalText}
+          pendingEdited={pendingInline?.editedText}
+          onAccept={handleAcceptInline}
+          onReject={handleRejectInline}
         />
       )}
 
@@ -530,6 +627,7 @@ export default function KBSection({
             onChange={(e) => setContent(e.target.value)}
             onSelect={handleSelect}
             onMouseMove={handleMouseMove}
+            readOnly={!!pendingInline}
             minRows={5}
             className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
             placeholder="Wpisz treść, wklej cokolwiek, lub użyj AI Assist..."
