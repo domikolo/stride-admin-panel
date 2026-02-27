@@ -9,7 +9,7 @@ import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import {
   Sparkles, Upload, Trash2, Loader2, Undo2, AlertTriangle,
-  MessageSquare, Paperclip, X, FileText, FileSpreadsheet, Clock, GitCompare,
+  MessageSquare, Paperclip, X, Check, FileText, FileSpreadsheet, Clock, GitCompare,
 } from 'lucide-react';
 import { KBEntry, KBVersion } from '@/lib/types';
 import InlineEditBar from './InlineEditBar';
@@ -141,7 +141,7 @@ export default function KBSection({
   // Inline edit
   const [selection, setSelection] = useState<{ start: number; end: number } | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
-  const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'preview' | 'done'>('idle');
+  const [inlineEditState, setInlineEditState] = useState<'idle' | 'loading' | 'done'>('idle');
   const [inputFocused, setInputFocused] = useState(false);
   const [doneRange, setDoneRange] = useState<{ start: number; end: number } | null>(null);
   const [pendingInline, setPendingInline] = useState<{
@@ -207,7 +207,10 @@ export default function KBSection({
     try {
       const edited = await onAiInlineEdit(entry.kbEntryId, topic, content, selectedText, instruction);
       setPendingInline({ originalText: selectedText, editedText: edited, selection });
-      setInlineEditState('preview');
+      // Close popup — diff shows in the content area
+      setSelection(null);
+      setPopupPos(null);
+      setInlineEditState('idle');
     } catch { setInlineEditState('idle'); }
   };
 
@@ -444,67 +447,80 @@ export default function KBSection({
           ) : versions.length === 0 ? (
             <p className="text-xs text-zinc-500 py-2 px-1">Brak wcześniejszych wersji</p>
           ) : (
-            <div className="space-y-1">
-              {versions.map(v => {
-                const diffLines = selectedVersionSk === v.versionSk
-                  ? computeLineDiff(v.content, content)
-                  : null;
-                return (
-                  <div key={v.versionSk}>
-                    <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-white/[0.03]">
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xs text-zinc-300 truncate">{v.topic}</p>
-                        <p className="text-[11px] text-zinc-500">{formatVersionDate(v.versionTimestamp)}</p>
-                      </div>
-                      <Button
-                        variant="ghost" size="sm"
-                        onClick={() => setSelectedVersionSk(sv => sv === v.versionSk ? null : v.versionSk)}
-                        className={`h-6 px-1.5 shrink-0 ${selectedVersionSk === v.versionSk ? 'text-purple-400 bg-purple-500/10' : 'text-zinc-600 hover:text-zinc-300'}`}
-                        title="Pokaż zmiany"
-                      >
-                        <GitCompare size={11} />
-                      </Button>
-                      <Button
-                        variant="ghost" size="sm"
-                        onClick={() => handleRevert(v.versionSk)}
-                        disabled={reverting !== null}
-                        className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-6 text-[11px] px-2 shrink-0"
-                      >
-                        {reverting === v.versionSk ? <Loader2 size={10} className="animate-spin" /> : 'Przywróć'}
-                      </Button>
-                    </div>
-                    {diffLines && (
-                      <div className="mx-1 mb-1.5 rounded border border-white/[0.06] overflow-hidden">
-                        <div className="max-h-52 overflow-y-auto font-mono text-[11px] leading-[1.6]">
-                          {diffLines.map((line, idx) => (
-                            <div
-                              key={idx}
-                              className={
-                                line.type === 'added'
-                                  ? 'flex gap-2 px-2 bg-green-500/10 text-green-300'
-                                  : line.type === 'removed'
-                                  ? 'flex gap-2 px-2 bg-red-500/10 text-red-300'
-                                  : 'flex gap-2 px-2 text-zinc-600'
-                              }
-                            >
-                              <span className="select-none shrink-0 w-3 text-right opacity-70">
-                                {line.type === 'added' ? '+' : line.type === 'removed' ? '−' : ' '}
-                              </span>
-                              <span className={line.type === 'removed' ? 'line-through' : ''}>
-                                {line.text || '\u00a0'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+            <div className="space-y-0.5">
+              {versions.map(v => (
+                <div key={v.versionSk} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded hover:bg-white/[0.03]">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs text-zinc-300 truncate">{v.topic}</p>
+                    <p className="text-[11px] text-zinc-500">{formatVersionDate(v.versionTimestamp)}</p>
                   </div>
-                );
-              })}
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => setSelectedVersionSk(sv => sv === v.versionSk ? null : v.versionSk)}
+                    className={`h-6 px-1.5 shrink-0 ${selectedVersionSk === v.versionSk ? 'text-purple-400 bg-purple-500/10' : 'text-zinc-600 hover:text-zinc-300'}`}
+                    title="Pokaż zmiany"
+                  >
+                    <GitCompare size={11} />
+                  </Button>
+                  <Button
+                    variant="ghost" size="sm"
+                    onClick={() => handleRevert(v.versionSk)}
+                    disabled={reverting !== null}
+                    className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 h-6 text-[11px] px-2 shrink-0"
+                  >
+                    {reverting === v.versionSk ? <Loader2 size={10} className="animate-spin" /> : 'Przywróć'}
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
         </div>
       )}
+
+      {/* Version diff panel — full width, below history */}
+      {showVersions && selectedVersionSk && (() => {
+        const v = versions.find(vv => vv.versionSk === selectedVersionSk);
+        if (!v) return null;
+        const diffLines = computeLineDiff(v.content, content);
+        const hasChanges = diffLines.some(l => l.type !== 'same');
+        return (
+          <div className="mx-4 mt-2 mb-1 rounded-lg border border-white/[0.08] overflow-hidden">
+            <div className="flex items-center justify-between px-3 py-1.5 bg-white/[0.02] border-b border-white/[0.06]">
+              <span className="text-[11px] text-zinc-400">
+                Zmiany od: <span className="text-zinc-300">{formatVersionDate(v.versionTimestamp)}</span>
+              </span>
+              <button onClick={() => setSelectedVersionSk(null)} className="text-zinc-600 hover:text-zinc-300 p-0.5">
+                <X size={12} />
+              </button>
+            </div>
+            {hasChanges ? (
+              <div className="overflow-y-auto max-h-96 font-mono text-[11px] leading-[1.65]">
+                {diffLines.map((line, idx) => (
+                  <div
+                    key={idx}
+                    className={
+                      line.type === 'added'
+                        ? 'flex gap-2 px-3 bg-green-500/10 text-green-300'
+                        : line.type === 'removed'
+                        ? 'flex gap-2 px-3 bg-red-500/10 text-red-300'
+                        : 'flex gap-2 px-3 text-zinc-600'
+                    }
+                  >
+                    <span className="select-none shrink-0 w-3 opacity-60">
+                      {line.type === 'added' ? '+' : line.type === 'removed' ? '−' : ' '}
+                    </span>
+                    <span className={line.type === 'removed' ? 'line-through' : ''}>
+                      {line.text || '\u00a0'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="px-3 py-2 text-[11px] text-zinc-500">Brak zmian względem tej wersji.</p>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Gap context */}
       {gapContext && isDraft && (gapContext.gapReason || gapContext.questionExamples.length > 0) && (
@@ -577,63 +593,91 @@ export default function KBSection({
           selectedText={content.slice(selection.start, selection.end)}
           onInputFocus={() => setInputFocused(true)}
           onInputBlur={() => setInputFocused(false)}
-          pendingOriginal={pendingInline?.originalText}
-          pendingEdited={pendingInline?.editedText}
-          onAccept={handleAcceptInline}
-          onReject={handleRejectInline}
         />
       )}
 
-      {/* Content textarea */}
-      <div className="px-4 py-3">
-        <div className="relative">
-          {/* Inline edit highlight backdrop */}
-          {(() => {
-            const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
-            const showLoadingHighlight = selection && inlineEditState === 'loading';
-            const showDoneHighlight = doneRange && inlineEditState !== 'loading';
-            const highlightRange = showDoneHighlight ? doneRange
-              : (showLoadingHighlight || showIdleHighlight) ? selection : null;
-            const markClass = showDoneHighlight
-              ? 'bg-green-500/20 text-transparent rounded-sm'
-              : showLoadingHighlight
-              ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
-              : 'bg-purple-500/15 text-transparent rounded-sm';
-            if (!highlightRange) return null;
-            return (
+      {/* Content area — inline diff view when AI edit is pending */}
+      {pendingInline ? (
+        <div className="px-4 py-3">
+          <div className="flex items-center justify-between mb-2">
+            <span className="flex items-center gap-1.5 text-[11px] text-purple-400">
+              <Sparkles size={11} /> Propozycja AI — zaakceptuj lub odrzuć
+            </span>
+            <div className="flex gap-1">
+              <Button
+                variant="ghost" size="sm"
+                onClick={handleRejectInline}
+                className="h-6 px-2 text-xs gap-1 text-zinc-400 hover:text-zinc-200 hover:bg-white/5"
+              >
+                <X size={11} /> Odrzuć
+              </Button>
+              <Button
+                variant="ghost" size="sm"
+                onClick={handleAcceptInline}
+                className="h-6 px-2 text-xs gap-1 text-green-400 hover:text-green-300 hover:bg-green-500/10"
+              >
+                <Check size={11} /> Akceptuj
+              </Button>
+            </div>
+          </div>
+          <div className="text-sm leading-relaxed text-zinc-300 whitespace-pre-wrap break-words border border-purple-500/20 rounded-lg px-3 py-2.5 bg-purple-500/[0.02] min-h-[7.5rem]">
+            {content.slice(0, pendingInline.selection.start)}
+            <mark className="bg-red-500/20 text-red-300 line-through rounded-sm not-italic">{pendingInline.originalText}</mark>
+            <mark className="bg-green-500/20 text-green-300 rounded-sm not-italic">{pendingInline.editedText}</mark>
+            {content.slice(pendingInline.selection.end)}
+          </div>
+        </div>
+      ) : (
+        /* Normal content textarea */
+        <div className="px-4 py-3">
+          <div className="relative">
+            {/* Inline edit highlight backdrop */}
+            {(() => {
+              const showIdleHighlight = selection && inputFocused && inlineEditState === 'idle';
+              const showLoadingHighlight = selection && inlineEditState === 'loading';
+              const showDoneHighlight = doneRange && inlineEditState !== 'loading';
+              const highlightRange = showDoneHighlight ? doneRange
+                : (showLoadingHighlight || showIdleHighlight) ? selection : null;
+              const markClass = showDoneHighlight
+                ? 'bg-green-500/20 text-transparent rounded-sm'
+                : showLoadingHighlight
+                ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
+                : 'bg-purple-500/15 text-transparent rounded-sm';
+              if (!highlightRange) return null;
+              return (
+                <div
+                  aria-hidden
+                  className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${showDoneHighlight ? 'transition-opacity duration-1000' : ''}`}
+                  style={{ wordBreak: 'break-word' }}
+                >
+                  {content.slice(0, highlightRange.start)}
+                  <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
+                  {content.slice(highlightRange.end)}
+                </div>
+              );
+            })()}
+
+            {/* Generation flash overlay */}
+            {contentFlash && (
               <div
                 aria-hidden
-                className={`absolute inset-0 whitespace-pre-wrap break-words text-sm leading-relaxed text-transparent pointer-events-none overflow-hidden ${showDoneHighlight ? 'transition-opacity duration-1000' : ''}`}
-                style={{ wordBreak: 'break-word' }}
-              >
-                {content.slice(0, highlightRange.start)}
-                <mark className={markClass}>{content.slice(highlightRange.start, highlightRange.end)}</mark>
-                {content.slice(highlightRange.end)}
-              </div>
-            );
-          })()}
+                className="absolute inset-0 rounded bg-green-500/10 pointer-events-none transition-opacity duration-1000"
+              />
+            )}
 
-          {/* Generation flash overlay */}
-          {contentFlash && (
-            <div
-              aria-hidden
-              className="absolute inset-0 rounded bg-green-500/10 pointer-events-none transition-opacity duration-1000"
+            <TextareaAutosize
+              ref={textareaRef}
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onSelect={handleSelect}
+              onMouseMove={handleMouseMove}
+              minRows={5}
+              className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
+              placeholder="Wpisz treść, wklej cokolwiek, lub użyj AI Assist..."
             />
-          )}
-
-          <TextareaAutosize
-            ref={textareaRef}
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onSelect={handleSelect}
-            onMouseMove={handleMouseMove}
-            readOnly={!!pendingInline}
-            minRows={5}
-            className="w-full bg-transparent text-sm text-zinc-200 outline-none resize-none leading-relaxed placeholder:text-zinc-600 relative z-[1]"
-            placeholder="Wpisz treść, wklej cokolwiek, lub użyj AI Assist..."
-          />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Character counter */}
       <div className="px-4 -mt-1 mb-1 flex justify-end">

@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Sparkles, Loader2, X, Check, GripHorizontal } from 'lucide-react';
 
-type VisualState = 'idle' | 'loading' | 'preview' | 'done';
+type VisualState = 'idle' | 'loading' | 'done';
 
 interface InlineEditBarProps {
   onSubmit: (instruction: string) => Promise<void>;
@@ -14,18 +14,9 @@ interface InlineEditBarProps {
   selectedText: string;
   onInputFocus?: () => void;
   onInputBlur?: () => void;
-  // preview state
-  pendingOriginal?: string;
-  pendingEdited?: string;
-  onAccept?: () => void;
-  onReject?: () => void;
 }
 
-export default function InlineEditBar({
-  onSubmit, onClose, state, position, selectedText,
-  onInputFocus, onInputBlur,
-  pendingOriginal, pendingEdited, onAccept, onReject,
-}: InlineEditBarProps) {
+export default function InlineEditBar({ onSubmit, onClose, state, position, selectedText, onInputFocus, onInputBlur }: InlineEditBarProps) {
   const [instruction, setInstruction] = useState('');
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
@@ -40,7 +31,10 @@ export default function InlineEditBar({
 
     const handleMove = (ev: MouseEvent) => {
       if (!dragging.current) return;
-      setOffset({ x: ev.clientX - dragStart.current.x, y: ev.clientY - dragStart.current.y });
+      setOffset({
+        x: ev.clientX - dragStart.current.x,
+        y: ev.clientY - dragStart.current.y,
+      });
     };
     const handleUp = () => {
       dragging.current = false;
@@ -57,21 +51,23 @@ export default function InlineEditBar({
     onSubmit(trimmed);
   };
 
-  const preview = selectedText.length > 60 ? selectedText.slice(0, 57) + '...' : selectedText;
-  const isPreview = state === 'preview';
-  const popupWidth = isPreview ? 380 : 340;
+  const preview = selectedText.length > 60
+    ? selectedText.slice(0, 57) + '...'
+    : selectedText;
 
   return (
     <div
       ref={popupRef}
       onMouseDown={(e) => {
-        if ((e.target as HTMLElement).tagName !== 'INPUT') e.preventDefault();
+        if ((e.target as HTMLElement).tagName !== 'INPUT') {
+          e.preventDefault();
+        }
       }}
       style={{
         position: 'absolute',
         left: position.x + offset.x,
         top: position.y + offset.y,
-        width: popupWidth,
+        width: 340,
         zIndex: 50,
         animation: 'inlinePopupIn 200ms ease-out',
       }}
@@ -79,8 +75,14 @@ export default function InlineEditBar({
     >
       <style jsx>{`
         @keyframes inlinePopupIn {
-          from { opacity: 0; transform: translateY(6px) scale(0.97); }
-          to   { opacity: 1; transform: translateY(0) scale(1); }
+          from {
+            opacity: 0;
+            transform: translateY(6px) scale(0.97);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
       `}</style>
 
@@ -95,10 +97,13 @@ export default function InlineEditBar({
             &ldquo;{preview}&rdquo;
           </span>
         </div>
-        {(state === 'idle' || state === 'preview') && (
+        {state === 'idle' && (
           <button
-            onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-            onClick={state === 'preview' ? onReject : onClose}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
             className="text-zinc-500 hover:text-zinc-300 p-0.5 shrink-0"
           >
             <X size={13} />
@@ -126,7 +131,8 @@ export default function InlineEditBar({
               className="flex-1 bg-transparent text-sm text-zinc-200 outline-none placeholder:text-zinc-500"
             />
             <Button
-              variant="ghost" size="sm"
+              variant="ghost"
+              size="sm"
               onMouseDown={(e) => e.preventDefault()}
               onClick={handleSubmit}
               disabled={!instruction.trim()}
@@ -142,41 +148,6 @@ export default function InlineEditBar({
           <div className="flex items-center gap-2 py-0.5">
             <Loader2 size={14} className="text-purple-400 animate-spin shrink-0" />
             <span className="text-sm text-purple-300">Edytuję...</span>
-          </div>
-        )}
-
-        {state === 'preview' && pendingOriginal !== undefined && pendingEdited !== undefined && (
-          <div className="space-y-2">
-            {/* Diff */}
-            <div className="space-y-1.5 text-[11px]">
-              <div className="flex gap-1.5 items-start rounded bg-red-500/10 px-2 py-1.5">
-                <span className="text-red-400 font-mono shrink-0 mt-px select-none">−</span>
-                <span className="text-red-300 leading-relaxed line-clamp-4 break-words">{pendingOriginal}</span>
-              </div>
-              <div className="flex gap-1.5 items-start rounded bg-green-500/10 px-2 py-1.5">
-                <span className="text-green-400 font-mono shrink-0 mt-px select-none">+</span>
-                <span className="text-green-300 leading-relaxed line-clamp-4 break-words">{pendingEdited}</span>
-              </div>
-            </div>
-            {/* Accept / Reject */}
-            <div className="flex gap-2 pt-1 border-t border-white/[0.06]">
-              <Button
-                variant="ghost" size="sm"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onReject}
-                className="flex-1 text-zinc-400 hover:text-zinc-200 hover:bg-white/5 h-7 text-xs gap-1"
-              >
-                <X size={12} /> Odrzuć
-              </Button>
-              <Button
-                variant="ghost" size="sm"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={onAccept}
-                className="flex-1 text-green-400 hover:text-green-300 hover:bg-green-500/10 h-7 text-xs gap-1"
-              >
-                <Check size={12} /> Akceptuj
-              </Button>
-            </div>
           </div>
         )}
 
