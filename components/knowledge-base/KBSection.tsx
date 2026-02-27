@@ -5,6 +5,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import TextareaAutosize from 'react-textarea-autosize';
 import { Button } from '@/components/ui/button';
 import {
@@ -216,7 +217,6 @@ export default function KBSection({
 
   const handleAcceptInline = useCallback(() => {
     if (!pendingInline) return;
-    const savedY = window.scrollY;
     const { originalText, editedText, selection: sel } = pendingInline;
     setContent(prev => prev.slice(0, sel.start) + editedText + prev.slice(sel.start + originalText.length));
     setDoneRange({ start: sel.start, end: sel.start + editedText.length });
@@ -224,17 +224,14 @@ export default function KBSection({
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
-    requestAnimationFrame(() => window.scrollTo(0, savedY));
     setTimeout(() => setDoneRange(null), 2500);
   }, [pendingInline]);
 
   const handleRejectInline = useCallback(() => {
-    const savedY = window.scrollY;
     setPendingInline(null);
     setSelection(null);
     setPopupPos(null);
     setInlineEditState('idle');
-    requestAnimationFrame(() => window.scrollTo(0, savedY));
   }, []);
 
   const isDraft = entry.status === 'draft';
@@ -604,7 +601,7 @@ export default function KBSection({
 
       {/* Content area — inline diff view when AI edit is pending */}
       {pendingInline ? (
-        <div className="px-4 pt-3 pb-0">
+        <div className="px-4 pt-3 pb-4">
           <div className="flex items-center gap-1.5 mb-2.5 text-[11px] text-purple-400">
             <Sparkles size={11} /> Propozycja AI
           </div>
@@ -619,29 +616,6 @@ export default function KBSection({
               <Check size={9} /> Akceptuj
             </button>
             {content.slice(pendingInline.selection.end)}
-          </div>
-          <div
-            style={{ overflowAnchor: 'none' }}
-            className="sticky bottom-0 flex items-center justify-between -mx-4 px-4 py-2 mt-3 bg-zinc-950 border-t border-purple-500/20"
-          >
-            <span className="text-[11px] text-zinc-500 flex items-center gap-1.5">
-              <Sparkles size={10} className="text-purple-400/70" />
-              Zatwierdź lub odrzuć zmiany
-            </span>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={handleRejectInline}
-                className="text-xs text-zinc-500 hover:text-zinc-200 px-3 h-7 rounded-md hover:bg-white/[0.06] transition-colors"
-              >
-                Odrzuć
-              </button>
-              <button
-                onClick={handleAcceptInline}
-                className="flex items-center gap-1.5 text-xs text-white bg-purple-600 hover:bg-purple-500 px-3 h-7 rounded-md font-medium transition-colors shadow-sm shadow-purple-900/60"
-              >
-                <Check size={11} /> Akceptuj
-              </button>
-            </div>
           </div>
         </div>
       ) : (
@@ -694,6 +668,27 @@ export default function KBSection({
             />
           </div>
         </div>
+      )}
+
+      {/* Floating pill — portal outside DOM tree, zero layout impact */}
+      {pendingInline && typeof document !== 'undefined' && createPortal(
+        <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-1 pl-3.5 pr-1.5 py-1.5 rounded-full bg-zinc-900 border border-purple-500/30 shadow-2xl shadow-black/50 backdrop-blur-md">
+          <Sparkles size={11} className="text-purple-400 shrink-0" />
+          <span className="text-[11px] text-purple-300 mr-2 whitespace-nowrap">Propozycja AI</span>
+          <button
+            onClick={handleRejectInline}
+            className="px-3 h-7 text-xs text-zinc-400 hover:text-zinc-200 rounded-full hover:bg-white/[0.07] transition-colors"
+          >
+            Odrzuć
+          </button>
+          <button
+            onClick={handleAcceptInline}
+            className="flex items-center gap-1.5 pl-2.5 pr-3 h-7 text-xs text-white bg-purple-600 hover:bg-purple-500 rounded-full font-medium transition-colors"
+          >
+            <Check size={11} /> Akceptuj
+          </button>
+        </div>,
+        document.body
       )}
 
       {/* Character counter */}
