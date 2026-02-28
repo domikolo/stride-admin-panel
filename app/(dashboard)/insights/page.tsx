@@ -56,7 +56,7 @@ export default function InsightsPage() {
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   // Lazy load per tab — null key when tab is inactive
   const { data: dailyRaw, isLoading: dailyLoading, mutate: mutateDaily } = useSWR<{ topics: Topic[] }>(
@@ -127,6 +127,7 @@ export default function InsightsPage() {
   const refreshedAt = dailyRaw || weeklyRaw || monthlyRaw ? new Date() : null;
 
   const handleResolveGap = async (topicId: string) => {
+    if (!clientId) return;
     const gap = current?.gaps.find(g => g.topicId === topicId);
     const topicName = gap?.topicName || '';
     const previousResolved = [...resolvedGaps];

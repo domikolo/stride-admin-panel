@@ -36,7 +36,7 @@ export default function AppointmentsPage() {
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   const { data: apptData, isLoading, error: apptError, mutate } = useSWR<{ appointments: Appointment[]; count: number }>(
     clientId ? `/clients/${clientId}/appointments` : null, fetcher

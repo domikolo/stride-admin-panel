@@ -38,8 +38,8 @@ export default function KnowledgeBasePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const processedGapRef = useRef<string | null>(null);
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-  const getClientId = () => clientId;
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const getClientId = () => clientId!;
 
   const { data: entriesData, isLoading: entriesLoading, mutate: mutateEntries } = useSWR<{ entries: KBEntry[]; count: number }>(
     clientId ? `/clients/${clientId}/knowledge-base` : null, fetcher

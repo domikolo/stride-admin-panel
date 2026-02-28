@@ -131,7 +131,7 @@ function getGapColor(count: number) {
 
 export default function LivePage() {
   const { user } = useAuth();
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   // State
   const [sessions, setSessions] = useState<LiveSession[]>([]);
@@ -167,7 +167,7 @@ export default function LivePage() {
 
   // On-demand AI suggestion fetch
   const fetchSuggestion = useCallback(async () => {
-    if (!selectedSessionId || !selectedSession) return;
+    if (!clientId || !selectedSessionId || !selectedSession) return;
     setSuggestion(null);
     setSuggestionLoading(true);
     try {
@@ -193,6 +193,7 @@ export default function LivePage() {
   // ─── Load sessions via REST + prefetch messages ───────────────
 
   const loadSessions = useCallback(async () => {
+    if (!clientId) return;
     try {
       const data = await getLiveSessions(clientId);
       setSessions(data.sessions);

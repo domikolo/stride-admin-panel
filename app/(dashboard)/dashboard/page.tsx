@@ -28,7 +28,7 @@ import { pl } from 'date-fns/locale';
 export default function DashboardPage() {
   const { user } = useAuth();
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   // SWR hooks — null key prevents fetching until clientId is available
   const { data: stats, mutate: mutateStats } = useSWR<ClientStats>(
@@ -65,6 +65,7 @@ export default function DashboardPage() {
   }
 
   const handleRefreshBriefing = async () => {
+    if (!clientId) return;
     try {
       setBriefingRefreshing(true);
       const data = await getDailyBriefing(clientId, true);

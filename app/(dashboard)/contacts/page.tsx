@@ -422,7 +422,7 @@ export default function ContactsPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
     clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher
@@ -512,6 +512,7 @@ export default function ContactsPage() {
   };
 
   const handleAddStage = async (label: string, hex: string) => {
+    if (!clientId) return;
     const id = 'custom_' + Date.now();
     const updated = [...customStages, { id, label, hex }];
     await updateContactStages(clientId, updated).catch(console.error);
@@ -519,6 +520,7 @@ export default function ContactsPage() {
   };
 
   const handleDeleteStage = async (id: string) => {
+    if (!clientId) return;
     const updated = customStages.filter(s => s.id !== id);
     await updateContactStages(clientId, updated).catch(console.error);
     mutateStages();
@@ -703,7 +705,7 @@ export default function ContactsPage() {
       )}
 
       {/* Detail panel */}
-      {selectedId && (
+      {selectedId && clientId && (
         <DetailPanel
           profileId={selectedId}
           clientId={clientId}

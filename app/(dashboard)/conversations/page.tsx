@@ -106,7 +106,7 @@ export default function ConversationsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
-  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
   const itemsPerPage = 15;
 
   const { data, isLoading: loading, error: swrError, mutate } = useSWR<{ conversations: Conversation[]; count: number }>(

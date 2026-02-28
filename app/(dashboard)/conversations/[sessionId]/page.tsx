@@ -134,7 +134,8 @@ export default function ConversationDetailPage() {
 
   const loadConversation = async () => {
     try {
-      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+      const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+      if (!clientId) return;
       const data = await getConversationDetails(clientId, sessionId, conversationNumber);
       setMessages(data.messages);
       setError(null);
