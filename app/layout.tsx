@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/hooks/useAuth";
 import ToastProvider from "@/components/ui/toast-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { SWRConfig } from "swr";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,12 +36,14 @@ export default async function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className={inter.className}>
-        <AuthProvider>
-          <TooltipProvider>
-            <ToastProvider />
-            {children}
-          </TooltipProvider>
-        </AuthProvider>
+        <SWRConfig value={{ revalidateOnFocus: false, dedupingInterval: 30_000 }}>
+          <AuthProvider>
+            <TooltipProvider>
+              <ToastProvider />
+              {children}
+            </TooltipProvider>
+          </AuthProvider>
+        </SWRConfig>
       </body>
     </html>
   );

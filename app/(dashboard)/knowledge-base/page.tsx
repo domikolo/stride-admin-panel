@@ -4,12 +4,12 @@
 
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useSWR, fetcher } from '@/lib/swr';
 import {
-  getKBEntries,
   createKBEntry,
   updateKBEntry,
   deleteKBEntry,
@@ -17,9 +17,7 @@ import {
   publishKBEntry,
   unpublishKBEntry,
   importKBFromS3,
-  getGaps,
   resolveGap,
-  getResolvedGaps,
   inlineEditKB,
   getKBVersions,
   revertKBEntry,
@@ -30,49 +28,37 @@ import KBSection from '@/components/knowledge-base/KBSection';
 import GapsBar from '@/components/knowledge-base/GapsBar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { BookOpen, Plus, Download, Loader2, Search, X } from 'lucide-react';
+import { BookOpen, Plus, Download, Loader2, Search, X, RefreshCw } from 'lucide-react';
 
 export default function KnowledgeBasePage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
 
-  const [entries, setEntries] = useState<KBEntry[]>([]);
-  const [gaps, setGaps] = useState<Gap[]>([]);
-  const [loading, setLoading] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const processedGapRef = useRef<string | null>(null);
 
-  const getClientId = () =>
-    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const getClientId = () => clientId;
 
-  // Load entries + gaps
-  const loadData = useCallback(async () => {
-    if (!user) return;
-    try {
-      const cid = getClientId();
-      const [kbData, gapsData, resolvedData] = await Promise.all([
-        getKBEntries(cid),
-        getGaps(cid, 'week').catch(() => ({ gaps: [] as Gap[] })),
-        getResolvedGaps(cid).catch(() => ({ resolvedGapIds: [] as string[] })),
-      ]);
-      const resolvedNames = resolvedData.resolvedGapIds || [];
-      const allGaps = (gapsData as { gaps: Gap[] }).gaps || [];
-      setEntries(kbData.entries);
-      setGaps(allGaps.filter(g => !resolvedNames.includes(g.topicName)));
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load KB:', err);
-      setError('Nie udalo sie zaladowac bazy wiedzy.');
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+  const { data: entriesData, isLoading: entriesLoading, mutate: mutateEntries } = useSWR<{ entries: KBEntry[]; count: number }>(
+    clientId ? `/clients/${clientId}/knowledge-base` : null, fetcher
+  );
+  const { data: gapsData } = useSWR<{ gaps: Gap[] }>(
+    clientId ? `/clients/${clientId}/trending-topics?timeframe=week&include_gaps=true` : null, fetcher
+  );
+  const { data: resolvedData } = useSWR<{ resolvedGapIds: string[] }>(
+    clientId ? `/clients/${clientId}/gaps/resolved` : null, fetcher
+  );
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
+  const entries: KBEntry[] = entriesData?.entries ?? [];
+  const loading = entriesLoading;
+  const error = null; // errors handled via toast
+
+  // Compute visible gaps (not resolved)
+  const resolvedNames = resolvedData?.resolvedGapIds ?? [];
+  const allGaps = (gapsData as { gaps?: Gap[] } | undefined)?.gaps ?? [];
+  const gaps: Gap[] = allGaps.filter(g => !resolvedNames.includes(g.topicName));
 
   // Handle fix_gap query param from Insights
   useEffect(() => {
@@ -112,10 +98,10 @@ export default function KnowledgeBasePage() {
           gapReason: gapReason || '',
         });
       }
-      setEntries(prev => [entry, ...prev]);
+      mutateEntries();
     } catch (err) {
       console.error('Failed to create entry:', err);
-      setError('Nie udalo sie utworzyc wpisu.');
+      toast.error('Nie udało się utworzyć wpisu.');
     }
   };
 
@@ -125,18 +111,13 @@ export default function KnowledgeBasePage() {
   );
 
   const handleSave = async (entryId: string, topic: string, content: string) => {
-    const updated = await updateKBEntry(getClientId(), entryId, { topic, content });
-    setEntries(prev =>
-      prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-    );
+    await updateKBEntry(getClientId(), entryId, { topic, content });
+    mutateEntries();
   };
 
   const handlePublish = async (entryId: string) => {
     try {
-      const updated = await publishKBEntry(getClientId(), entryId);
-      setEntries(prev =>
-        prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-      );
+      await publishKBEntry(getClientId(), entryId);
       toast.success('Wpis opublikowany');
 
       // Auto-resolve gap if this entry came from a gap
@@ -144,8 +125,8 @@ export default function KnowledgeBasePage() {
       if (entry?.sourceGapId) {
         const gap = gaps.find(g => g.topicId === entry.sourceGapId);
         resolveGap(getClientId(), entry.sourceGapId, gap?.topicName || entry.topic).catch(() => { });
-        setGaps(prev => prev.filter(g => g.topicId !== entry.sourceGapId));
       }
+      mutateEntries();
     } catch (err) {
       console.error('Failed to publish entry:', err);
       toast.error('Nie udało się opublikować wpisu');
@@ -154,11 +135,9 @@ export default function KnowledgeBasePage() {
 
   const handleUnpublish = async (entryId: string) => {
     try {
-      const updated = await unpublishKBEntry(getClientId(), entryId);
-      setEntries(prev =>
-        prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-      );
+      await unpublishKBEntry(getClientId(), entryId);
       toast.success('Publikacja cofnięta');
+      mutateEntries();
     } catch (err) {
       console.error('Failed to unpublish entry:', err);
       toast.error('Nie udało się cofnąć publikacji');
@@ -168,9 +147,9 @@ export default function KnowledgeBasePage() {
   const handleDelete = async (entryId: string) => {
     try {
       await deleteKBEntry(getClientId(), entryId);
-      setEntries(prev => prev.filter(e => e.kbEntryId !== entryId));
       gapContextRef.current.delete(entryId);
       toast.success('Wpis usunięty');
+      mutateEntries();
     } catch (err) {
       console.error('Failed to delete entry:', err);
       toast.error('Nie udało się usunąć wpisu');
@@ -211,13 +190,11 @@ export default function KnowledgeBasePage() {
   const handleImport = async () => {
     setImporting(true);
     try {
-      const result = await importKBFromS3(getClientId());
-      if (result.entries.length > 0) {
-        setEntries(prev => [...prev, ...result.entries]);
-      }
+      await importKBFromS3(getClientId());
+      mutateEntries();
     } catch (err) {
       console.error('Failed to import:', err);
-      setError('Nie udalo sie zaimportowac bazy wiedzy z S3.');
+      toast.error('Nie udało się zaimportować bazy wiedzy z S3.');
     } finally {
       setImporting(false);
     }
@@ -240,10 +217,8 @@ export default function KnowledgeBasePage() {
 
   const handleRevert = async (entryId: string, versionSk: string) => {
     const cid = getClientId();
-    const updated = await revertKBEntry(cid, entryId, versionSk);
-    setEntries(prev =>
-      prev.map(e => (e.kbEntryId === entryId ? { ...e, ...updated } : e))
-    );
+    await revertKBEntry(cid, entryId, versionSk);
+    mutateEntries();
   };
 
   // Filter + split entries
@@ -347,6 +322,15 @@ export default function KnowledgeBasePage() {
             )}
           </div>
           <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => mutateEntries()}
+            className="gap-1.5 text-zinc-400 hover:text-white"
+          >
+            <RefreshCw size={14} />
+            Odśwież
+          </Button>
+          <Button
             onClick={() => handleAddDraft()}
             size="sm"
             className="gap-1.5 bg-blue-600 hover:bg-blue-700"
@@ -356,13 +340,6 @@ export default function KnowledgeBasePage() {
           </Button>
         </div>
       </div>
-
-      {/* Error */}
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
-          {error}
-        </div>
-      )}
 
       {/* Gaps bar */}
       <GapsBar gaps={gaps} onFixGap={handleFixGap} />

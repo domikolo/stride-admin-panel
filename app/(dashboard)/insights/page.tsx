@@ -5,11 +5,13 @@
 
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getTrendingTopics, Timeframe, resolveGap, getResolvedGaps } from '@/lib/api';
+import { useSWR, fetcher } from '@/lib/swr';
+import { resolveGap } from '@/lib/api';
+import { Timeframe } from '@/lib/api';
 import { Topic, Gap } from '@/lib/types';
 import toast from 'react-hot-toast';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
@@ -51,42 +53,28 @@ export default function InsightsPage() {
     : 'daily';
 
   const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
-
-  const [periodData, setPeriodData] = useState<Record<Period, PeriodData | null>>({
-    daily: null,
-    weekly: null,
-    monthly: null,
-  });
-  const [periodLoading, setPeriodLoading] = useState<Record<Period, boolean>>({
-    daily: false,
-    weekly: false,
-    monthly: false,
-  });
-  const loadedPeriods = useRef<Set<Period>>(new Set());
-
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
-  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  const getClientId = () =>
-    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+
+  // Lazy load per tab — null key when tab is inactive
+  const { data: dailyRaw, isLoading: dailyLoading, mutate: mutateDaily } = useSWR<{ topics: Topic[] }>(
+    clientId && activePeriod === 'daily' ? `/clients/${clientId}/trending-topics?timeframe=yesterday&include_gaps=true` : null, fetcher
+  );
+  const { data: weeklyRaw, isLoading: weeklyLoading, mutate: mutateWeekly } = useSWR<{ topics: Topic[] }>(
+    clientId && activePeriod === 'weekly' ? `/clients/${clientId}/trending-topics?timeframe=week&include_gaps=true` : null, fetcher
+  );
+  const { data: monthlyRaw, isLoading: monthlyLoading, mutate: mutateMonthly } = useSWR<{ topics: Topic[] }>(
+    clientId && activePeriod === 'monthly' ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
+  );
+  const { data: resolvedData } = useSWR<{ resolvedGapIds: string[] }>(
+    clientId ? `/clients/${clientId}/gaps/resolved` : null, fetcher
+  );
 
   useEffect(() => {
-    if (user) {
-      getResolvedGaps(getClientId())
-        .then(data => setResolvedGaps(data.resolvedGapIds || []))
-        .catch(() => {
-          toast.error('Nie udało się załadować listy naprawionych luk');
-        });
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (user) {
-      loadPeriod(initialPeriod);
-    }
-  }, [user]);
+    if (resolvedData) setResolvedGaps(resolvedData.resolvedGapIds || []);
+  }, [resolvedData]);
 
   const topicsToGaps = (topics: Topic[]): Gap[] =>
     topics.filter(t => t.isGap).map(t => ({
@@ -100,48 +88,43 @@ export default function InsightsPage() {
       suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`,
     }));
 
-  const buildPeriodData = (data: { topics: Topic[] }): PeriodData => {
-    const gaps = topicsToGaps(data.topics);
+  const buildPeriodData = (raw: { topics: Topic[] } | undefined): PeriodData | null => {
+    if (!raw) return null;
+    const gaps = topicsToGaps(raw.topics);
     return {
-      topics: data.topics,
+      topics: raw.topics,
       gaps,
       summary: {
-        totalTopics: data.topics.length,
-        totalQuestions: data.topics.reduce((sum, t) => sum + t.count, 0),
+        totalTopics: raw.topics.length,
+        totalQuestions: raw.topics.reduce((sum, t) => sum + t.count, 0),
         gapsCount: gaps.length,
       },
     };
   };
 
-  const loadPeriod = async (period: Period, force = false) => {
-    if (!user) return;
-    if (!force && loadedPeriods.current.has(period)) return;
+  const periodData: Record<Period, PeriodData | null> = {
+    daily: buildPeriodData(dailyRaw),
+    weekly: buildPeriodData(weeklyRaw),
+    monthly: buildPeriodData(monthlyRaw),
+  };
 
-    setPeriodLoading(prev => ({ ...prev, [period]: true }));
-    try {
-      const cid = getClientId();
-      const data = await getTrendingTopics(cid, PERIOD_TO_TIMEFRAME[period], true);
-      setPeriodData(prev => ({ ...prev, [period]: buildPeriodData(data) }));
-      loadedPeriods.current.add(period);
-      setRefreshedAt(new Date());
-      setError(null);
-    } catch (err) {
-      console.error(`Failed to load insights for ${period}:`, err);
-      setError('Nie udało się załadować danych. Spróbuj ponownie.');
-    } finally {
-      setPeriodLoading(prev => ({ ...prev, [period]: false }));
-    }
+  const periodLoading: Record<Period, boolean> = {
+    daily: dailyLoading,
+    weekly: weeklyLoading,
+    monthly: monthlyLoading,
   };
 
   const handleTabChange = (period: Period) => {
     setActivePeriod(period);
-    loadPeriod(period);
   };
 
   const handleRefresh = () => {
-    loadedPeriods.current.delete(activePeriod);
-    loadPeriod(activePeriod, true);
+    if (activePeriod === 'daily') mutateDaily();
+    else if (activePeriod === 'weekly') mutateWeekly();
+    else mutateMonthly();
   };
+
+  const refreshedAt = dailyRaw || weeklyRaw || monthlyRaw ? new Date() : null;
 
   const handleResolveGap = async (topicId: string) => {
     const gap = current?.gaps.find(g => g.topicId === topicId);
@@ -151,7 +134,7 @@ export default function InsightsPage() {
     setResolvingGaps(prev => new Set(prev).add(topicId));
 
     try {
-      await resolveGap(getClientId(), topicId, gap?.topicName || '');
+      await resolveGap(clientId, topicId, gap?.topicName || '');
       toast.success('Luka oznaczona jako naprawiona');
     } catch (err) {
       console.error('Failed to resolve gap:', err);
@@ -364,12 +347,6 @@ export default function InsightsPage() {
           Odśwież
         </Button>
       </div>
-
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-          {error}
-        </div>
-      )}
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">

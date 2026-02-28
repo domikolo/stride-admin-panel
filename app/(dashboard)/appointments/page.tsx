@@ -5,10 +5,10 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getClientAppointments, getClientStats } from '@/lib/api';
+import { useSWR, fetcher } from '@/lib/swr';
 import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -21,7 +21,7 @@ import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
 import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
 import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
@@ -30,42 +30,25 @@ type StatusFilter = 'all' | 'verified' | 'pending' | 'cancelled';
 export default function AppointmentsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [stats, setStats] = useState<ClientStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<ViewType>('table');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
 
-  const getClientId = () =>
-    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-  useEffect(() => {
-    if (user) {
-      loadData();
-    }
-  }, [user]);
+  const { data: apptData, isLoading, error: apptError, mutate } = useSWR<{ appointments: Appointment[]; count: number }>(
+    clientId ? `/clients/${clientId}/appointments` : null, fetcher
+  );
+  const { data: statsData } = useSWR<ClientStats>(
+    clientId ? `/clients/${clientId}/stats?period=MONTHLY` : null, fetcher
+  );
 
-  const loadData = async () => {
-    try {
-      const clientId = getClientId();
-      const [appointmentsData, statsData] = await Promise.all([
-        getClientAppointments(clientId),
-        getClientStats(clientId, 'MONTHLY'),
-      ]);
-      setAppointments(appointmentsData.appointments);
-      setStats(statsData);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load data:', err);
-      setError('Nie udało się załadować danych. Spróbuj ponownie.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const appointments: Appointment[] = apptData?.appointments ?? [];
+  const stats: ClientStats | null = statsData ?? null;
+  const loading = isLoading;
+  const error = apptError ? 'Nie udało się załadować danych. Spróbuj ponownie.' : null;
 
   // Filter appointments
   const filteredAppointments = useMemo(() => {
@@ -153,8 +136,12 @@ export default function AppointmentsPage() {
           </p>
         </div>
 
-        {/* View Toggle */}
-        <div className="flex gap-1 bg-[#111113] p-1 rounded-lg border border-white/[0.06]">
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => mutate()} className="text-zinc-400 hover:text-white gap-2">
+            <RefreshCw size={14} />Odśwież
+          </Button>
+          {/* View Toggle */}
+          <div className="flex gap-1 bg-[#111113] p-1 rounded-lg border border-white/[0.06]">
           <Button
             variant="ghost"
             size="sm"
@@ -173,6 +160,7 @@ export default function AppointmentsPage() {
             <Calendar size={16} className="mr-2" />
             Kalendarz
           </Button>
+          </div>
         </div>
       </div>
 

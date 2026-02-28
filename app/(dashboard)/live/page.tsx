@@ -9,7 +9,7 @@
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { getLiveSessions, getConversationDetails, getLiveAiSuggestion } from '@/lib/api';
-import { getIdToken } from '@/lib/auth';
+import { getIdToken } from '@/lib/token';
 import { wsClient, WSEvent } from '@/lib/websocket';
 import { LiveSession, LiveMessage } from '@/lib/types';
 import { Card } from '@/components/ui/card';
@@ -245,7 +245,7 @@ export default function LivePage() {
     let cleanups: Array<() => void> = [];
 
     const initWs = async () => {
-      const token = await getIdToken();
+      const token = getIdToken();
       if (!token) return;
 
       wsClient.connect(token);

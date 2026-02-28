@@ -5,13 +5,14 @@
 
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
-  getClientContacts, getContact, updateContact, deleteContact,
-  getContactStages, updateContactStages,
+  getContact, updateContact, deleteContact,
+  updateContactStages,
 } from '@/lib/api';
+import { useSWR, fetcher } from '@/lib/swr';
 import { ContactProfile } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -410,9 +411,6 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId }: {
 
 export default function ContactsPage() {
   const { user } = useAuth();
-  const [contacts, setContacts] = useState<ContactProfile[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
@@ -422,10 +420,21 @@ export default function ContactsPage() {
   const [sortField, setSortField] = useState<SortField>('lastSeen');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(1);
-  const [customStages, setCustomStages] = useState<CustomStage[]>([]);
   const PAGE_SIZE = 20;
 
   const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
+
+  const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
+    clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher
+  );
+  const { data: stagesData, mutate: mutateStages } = useSWR<{ stages: CustomStage[] }>(
+    clientId ? `/clients/${clientId}/contacts/stages` : null, fetcher
+  );
+
+  const contacts: ContactProfile[] = contactsData?.contacts ?? [];
+  const customStages: CustomStage[] = stagesData?.stages ?? [];
+  const loading = contactsLoading;
+  const error = contactsError ? 'Nie udało się załadować kontaktów.' : null;
 
   const allStages: StageConfig[] = useMemo(() => [
     ...DEFAULT_STAGES,
@@ -433,27 +442,6 @@ export default function ContactsPage() {
       value: cs.id, label: cs.label, hex: cs.hex, isCustom: true as const,
     })),
   ], [customStages]);
-
-  // Load stages from backend
-  useEffect(() => {
-    if (!user) return;
-    getContactStages(clientId).then(d => setCustomStages(d.stages || [])).catch(() => {});
-  }, [user, clientId]);
-
-  const loadContacts = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await getClientContacts(clientId, { limit: 200 });
-      setContacts(data.contacts);
-      setPage(1);
-    } catch (e) {
-      console.error(e);
-      setError('Nie udało się załadować kontaktów.');
-    } finally { setLoading(false); }
-  };
-
-  useEffect(() => { if (user) loadContacts(); }, [user]);
 
   // Client-side filter
   const filtered = useMemo(() => {
@@ -501,6 +489,8 @@ export default function ContactsPage() {
     return groups;
   }, [sorted, allStages]);
 
+  const loadContacts = () => mutateContacts();
+
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
     else { setSortField(field); setSortDir('desc'); }
@@ -524,22 +514,26 @@ export default function ContactsPage() {
   const handleAddStage = async (label: string, hex: string) => {
     const id = 'custom_' + Date.now();
     const updated = [...customStages, { id, label, hex }];
-    setCustomStages(updated);
     await updateContactStages(clientId, updated).catch(console.error);
+    mutateStages();
   };
 
   const handleDeleteStage = async (id: string) => {
     const updated = customStages.filter(s => s.id !== id);
-    setCustomStages(updated);
     await updateContactStages(clientId, updated).catch(console.error);
+    mutateStages();
   };
 
   const handleUpdated = (patch: Partial<ContactProfile> & { profileId: string }) => {
-    setContacts(prev => prev.map(c => c.profileId === patch.profileId ? { ...c, ...patch } : c));
+    mutateContacts(prev => prev
+      ? { ...prev, contacts: prev.contacts.map(c => c.profileId === patch.profileId ? { ...c, ...patch } : c) }
+      : prev, false);
   };
 
   const handleDeleted = (pid: string) => {
-    setContacts(prev => prev.filter(c => c.profileId !== pid));
+    mutateContacts(prev => prev
+      ? { ...prev, contacts: prev.contacts.filter(c => c.profileId !== pid) }
+      : prev, false);
     setSelectedId(null);
   };
 

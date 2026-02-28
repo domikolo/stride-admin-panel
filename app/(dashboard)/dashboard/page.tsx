@@ -5,15 +5,11 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useSWR, fetcher } from '@/lib/swr';
 import {
-  getClientStats,
-  getClientDailyStats,
-  getTrendingTopics,
-  getGaps,
-  getRecentActivity,
   getDailyBriefing,
 } from '@/lib/api';
 import { ClientStats, DailyStat, Topic, Activity, DailyBriefing } from '@/lib/types';
@@ -32,71 +28,45 @@ import { pl } from 'date-fns/locale';
 export default function DashboardPage() {
   const { user } = useAuth();
 
-  // State
-  const [stats, setStats] = useState<ClientStats | null>(null);
-  const [dailyStats, setDailyStats] = useState<DailyStat[]>([]);
-  const [topics, setTopics] = useState<Topic[]>([]);
-  const [gapsCount, setGapsCount] = useState(0);
-  const [activities, setActivities] = useState<Activity[]>([]);
-  const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
+  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
 
-  const [loading, setLoading] = useState(true);
-  const [briefingLoading, setBriefingLoading] = useState(true);
+  // SWR hooks — null key prevents fetching until clientId is available
+  const { data: stats, mutate: mutateStats } = useSWR<ClientStats>(
+    clientId ? `/clients/${clientId}/stats?period=MONTHLY` : null, fetcher
+  );
+  const { data: dailyData, mutate: mutateDailyStats } = useSWR<{ clientId: string; dailyStats: DailyStat[]; count: number }>(
+    clientId ? `/clients/${clientId}/stats/daily?days=7` : null, fetcher
+  );
+  const { data: topicsData, mutate: mutateTopics } = useSWR<{ topics: Topic[] }>(
+    clientId ? `/clients/${clientId}/trending-topics?timeframe=yesterday` : null, fetcher
+  );
+  const { data: gapsData, mutate: mutateGaps } = useSWR<{ gaps: { length: number }[] }>(
+    clientId ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
+  );
+  const { data: activityData, mutate: mutateActivity } = useSWR<{ activities: Activity[] }>(
+    clientId ? `/clients/${clientId}/recent-activity?limit=10` : null, fetcher
+  );
+
+  // Briefing keeps its own sessionStorage cache
+  const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
+  const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingRefreshing, setBriefingRefreshing] = useState(false);
   const [briefingIsNew, setBriefingIsNew] = useState(false);
-  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [briefingLoaded, setBriefingLoaded] = useState(false);
 
-  const getClientId = () =>
-    user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-
-  useEffect(() => {
-    if (user) {
-      loadAllData();
-    }
-  }, [user]);
-
-  const loadAllData = async () => {
-    const clientId = getClientId();
-
-    // Load briefing independently (slow - AI generation)
+  // Load briefing once clientId is ready
+  if (clientId && !briefingLoaded && !briefingLoading) {
     setBriefingLoading(true);
-    setBriefingIsNew(false);
+    setBriefingLoaded(true);
     getDailyBriefing(clientId)
-      .then((data) => setBriefing(data))
+      .then(data => setBriefing(data))
       .catch(() => setBriefing(null))
       .finally(() => setBriefingLoading(false));
-
-    // Load everything else (fast - DB queries)
-    try {
-      setLoading(true);
-      const [statsData, dailyData, topicsData, gapsData, activityData] = await Promise.all([
-        getClientStats(clientId, 'MONTHLY').catch(() => null),
-        getClientDailyStats(clientId, 7).catch(() => ({ dailyStats: [] })),
-        getTrendingTopics(clientId, 'yesterday').catch(() => ({ topics: [] })),
-        getGaps(clientId, 'month').catch(() => ({ gaps: [] })),
-        getRecentActivity(clientId, 10).catch(() => ({ activities: [] })),
-      ]);
-
-      setStats(statsData);
-      setDailyStats(dailyData.dailyStats);
-      setTopics(topicsData.topics);
-      setGapsCount(gapsData.gaps?.length || 0);
-      setActivities(activityData.activities);
-      setRefreshedAt(new Date());
-      setError(null);
-    } catch (err) {
-      console.error('Failed to load dashboard data:', err);
-      setError('Nie udalo sie zaladowac danych.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }
 
   const handleRefreshBriefing = async () => {
     try {
       setBriefingRefreshing(true);
-      const clientId = getClientId();
       const data = await getDailyBriefing(clientId, true);
       setBriefing(data);
       setBriefingIsNew(true);
@@ -107,6 +77,21 @@ export default function DashboardPage() {
     }
   };
 
+  const handleRefreshAll = () => {
+    mutateStats();
+    mutateDailyStats();
+    mutateTopics();
+    mutateGaps();
+    mutateActivity();
+  };
+
+  const dailyStats = dailyData?.dailyStats ?? [];
+  const topics = topicsData?.topics ?? [];
+  const gapsCount = (gapsData as { gaps?: unknown[] } | undefined)?.gaps?.length ?? 0;
+  const activities = activityData?.activities ?? [];
+
+  const loading = !stats && !dailyData && !topicsData && !gapsData && !activityData;
+
   // Build 7-day chart with all days (fill missing days with 0)
   const chartData = (() => {
     const statsMap = new Map(dailyStats.map(d => [d.date, d]));
@@ -114,7 +99,6 @@ export default function DashboardPage() {
     for (let i = 6; i >= 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
-      // Use local date to match backend keys (avoid UTC timezone shift)
       const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
       const stat = statsMap.get(key);
       days.push({
@@ -126,7 +110,7 @@ export default function DashboardPage() {
     return days;
   })();
 
-  if (loading) {
+  if (loading && clientId) {
     return (
       <div className="space-y-8">
         <Skeleton className="h-10 w-48" />
@@ -162,9 +146,9 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
             Przegląd aktywności i statystyk
-            {refreshedAt && (
+            {stats && (
               <span className="ml-2">
-                · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
+                · Zaktualizowano {formatDistanceToNow(new Date(), { addSuffix: true, locale: pl })}
               </span>
             )}
           </p>
@@ -172,19 +156,13 @@ export default function DashboardPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={loadAllData}
+          onClick={handleRefreshAll}
           className="text-zinc-400 hover:text-white gap-2 mt-1"
         >
           <RefreshCw size={14} />
           Odśwież dane
         </Button>
       </div>
-
-      {error && (
-        <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
-          {error}
-        </div>
-      )}
 
       {/* AI Daily Briefing */}
       <AIDailyBriefing
@@ -249,59 +227,57 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* 7-day Activity Chart */}
-      {!loading && (
-        <Card className="glass-card p-5">
-          <h3 className="text-sm font-medium text-zinc-500 mb-4">
-            Aktywność — ostatnie 7 dni
-          </h3>
-          <div className="h-[240px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={chartData}>
-                <defs>
-                  <linearGradient id="colorRozmowy" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis
-                  dataKey="label"
-                  stroke="#71717a"
-                  tick={{ fill: '#71717a', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  interval={0}
-                />
-                <YAxis
-                  stroke="#71717a"
-                  tick={{ fill: '#71717a', fontSize: 12 }}
-                  axisLine={false}
-                  tickLine={false}
-                  allowDecimals={false}
-                  domain={[0, 'auto']}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#111113',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: '8px',
-                    fontSize: '13px',
-                  }}
-                  labelStyle={{ color: '#a1a1aa' }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="rozmowy"
-                  stroke="#3b82f6"
-                  strokeWidth={2}
-                  fill="url(#colorRozmowy)"
-                  name="Rozmowy"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-      )}
+      <Card className="glass-card p-5">
+        <h3 className="text-sm font-medium text-zinc-500 mb-4">
+          Aktywność — ostatnie 7 dni
+        </h3>
+        <div className="h-[240px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData}>
+              <defs>
+                <linearGradient id="colorRozmowy" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <XAxis
+                dataKey="label"
+                stroke="#71717a"
+                tick={{ fill: '#71717a', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                interval={0}
+              />
+              <YAxis
+                stroke="#71717a"
+                tick={{ fill: '#71717a', fontSize: 12 }}
+                axisLine={false}
+                tickLine={false}
+                allowDecimals={false}
+                domain={[0, 'auto']}
+              />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#111113',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: '8px',
+                  fontSize: '13px',
+                }}
+                labelStyle={{ color: '#a1a1aa' }}
+              />
+              <Area
+                type="monotone"
+                dataKey="rozmowy"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                fill="url(#colorRozmowy)"
+                name="Rozmowy"
+              />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
 
       {/* Main Content: Insights + Recent Activity */}
       <motion.div

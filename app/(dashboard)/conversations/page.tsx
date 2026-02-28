@@ -4,10 +4,10 @@
 
 'use client';
 
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
-import { getClientConversations } from '@/lib/api';
+import { useSWR, fetcher } from '@/lib/swr';
 import { Conversation } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -99,39 +99,22 @@ function SortableHeader({
 export default function ConversationsPage() {
   const { user } = useAuth();
   const router = useRouter();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
-  const [refreshedAt, setRefreshedAt] = useState<Date | null>(null);
 
+  const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
   const itemsPerPage = 15;
 
-  useEffect(() => {
-    if (user) {
-      loadConversations();
-    }
-  }, [user]);
-
-  const loadConversations = async () => {
-    try {
-      const clientId = user?.role === 'owner' ? 'stride-services' : user?.clientId || 'stride-services';
-      const data = await getClientConversations(clientId);
-      setConversations(data.conversations);
-      setRefreshedAt(new Date());
-      setError(null);
-    } catch (error) {
-      console.error('Failed to load conversations:', error);
-      setError('Nie udało się załadować rozmów. Spróbuj ponownie.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data, isLoading: loading, error: swrError, mutate } = useSWR<{ conversations: Conversation[]; count: number }>(
+    clientId ? `/clients/${clientId}/conversations?limit=50` : null, fetcher
+  );
+  const conversations = data?.conversations ?? [];
+  const error = swrError ? 'Nie udało się załadować rozmów. Spróbuj ponownie.' : null;
+  const refreshedAt = data ? new Date() : null;
 
   const handleSort = (key: SortKey) => {
     if (sortKey === key) {
@@ -311,7 +294,7 @@ export default function ConversationsPage() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={loadConversations}
+          onClick={() => mutate()}
           className="text-zinc-400 hover:text-white gap-2 mt-1"
         >
           <RefreshCw size={14} />

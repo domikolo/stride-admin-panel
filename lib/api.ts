@@ -2,7 +2,7 @@
  * API Client with JWT Authentication
  */
 
-import { getIdToken } from './auth';
+import { getIdToken } from './token';
 import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
@@ -25,8 +25,8 @@ function camelCaseKeys(obj: any): any {
 }
 
 class ApiClient {
-  private async getHeaders(): Promise<HeadersInit> {
-    const token = await getIdToken();
+  private getHeaders(): HeadersInit {
+    const token = getIdToken();
     return {
       'Content-Type': 'application/json',
       ...(token && { Authorization: `Bearer ${token}` }),
@@ -34,7 +34,7 @@ class ApiClient {
   }
 
   async get<T>(endpoint: string): Promise<T> {
-    const headers = await this.getHeaders();
+    const headers = this.getHeaders();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       headers,
@@ -52,7 +52,7 @@ class ApiClient {
   async post<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'POST',
-      headers: await this.getHeaders(),
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
 
@@ -68,7 +68,7 @@ class ApiClient {
   async put<T>(endpoint: string, data: unknown): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'PUT',
-      headers: await this.getHeaders(),
+      headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
 
@@ -84,7 +84,7 @@ class ApiClient {
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
-      headers: await this.getHeaders(),
+      headers: this.getHeaders(),
     });
 
     if (!response.ok) {
