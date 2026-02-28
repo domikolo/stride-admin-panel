@@ -10,10 +10,15 @@ import { signIn as cognitoSignIn, signOut as cognitoSignOut } from '@/lib/auth';
 import { setTokens } from '@/lib/token';
 import { AuthUser } from '@/lib/types';
 
+export interface MfaPending {
+  mfaPending: true;
+  submitCode: (code: string) => Promise<void>;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<MfaPending | void>;
   signOut: () => void;
 }
 
@@ -38,9 +43,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
-  const signIn = async (email: string, password: string) => {
-    const { user } = await cognitoSignIn(email, password);
-    setUser(user);
+  const signIn = async (email: string, password: string): Promise<MfaPending | void> => {
+    const result = await cognitoSignIn(email, password);
+    if ('mfaPending' in result) {
+      return {
+        mfaPending: true,
+        submitCode: async (code: string) => {
+          const { user } = await result.submitCode(code);
+          setUser(user);
+          router.push('/dashboard');
+        },
+      };
+    }
+    setUser(result.user);
     router.push('/dashboard');
   };
 

@@ -36,11 +36,40 @@ const poolData = {
 
 const userPool = new CognitoUserPool(poolData);
 
+export type SignInResult =
+  | { user: AuthUser }
+  | { mfaPending: true; submitCode: (code: string) => Promise<{ user: AuthUser }> };
+
+// ─── Shared: extract user + store tokens after a successful session ────────────
+async function finaliseSession(session: CognitoUserSession): Promise<{ user: AuthUser }> {
+  const idToken = session.getIdToken().getJwtToken();
+  const accessToken = session.getAccessToken().getJwtToken();
+  const refreshToken = session.getRefreshToken().getToken();
+
+  setTokens(idToken, accessToken);
+
+  await fetch('/api/auth/store', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken }),
+  });
+
+  const payload = session.getIdToken().payload;
+  const role = (payload['custom:role'] as string) || 'client';
+  const user: AuthUser = {
+    email: payload.email as string,
+    role: (role === 'owner' ? 'owner' : 'client') as 'owner' | 'client',
+    clientId: payload['custom:client_id'] as string | undefined,
+    groups: (payload['cognito:groups'] as string[]) || [],
+  };
+  return { user };
+}
+
 /**
  * Sign in user with email and password (SRP — no plain-text password to Lambda).
- * After success: stores tokens in-memory + sends refresh token to httpOnly cookie.
+ * Returns { user } on success or { mfaPending, submitCode } when TOTP is required.
  */
-export const signIn = async (email: string, password: string): Promise<{ user: AuthUser }> => {
+export const signIn = async (email: string, password: string): Promise<SignInResult> => {
   const authenticationDetails = new AuthenticationDetails({
     Username: email,
     Password: password,
@@ -52,38 +81,30 @@ export const signIn = async (email: string, password: string): Promise<{ user: A
     Storage: memoryStorage,
   });
 
-  const session = await new Promise<CognitoUserSession>((resolve, reject) => {
+  return new Promise<SignInResult>((resolve, reject) => {
     cognitoUser.authenticateUser(authenticationDetails, {
-      onSuccess: resolve,
+      onSuccess: async (session) => {
+        try { resolve(await finaliseSession(session)); }
+        catch (e) { reject(e); }
+      },
       onFailure: reject,
+      totpRequired: () => {
+        resolve({
+          mfaPending: true,
+          submitCode: (code: string) =>
+            new Promise<{ user: AuthUser }>((res, rej) => {
+              cognitoUser.sendMFACode(code, {
+                onSuccess: async (session) => {
+                  try { res(await finaliseSession(session)); }
+                  catch (e) { rej(e); }
+                },
+                onFailure: rej,
+              }, 'SOFTWARE_TOKEN_MFA');
+            }),
+        });
+      },
     });
   });
-
-  const idToken = session.getIdToken().getJwtToken();
-  const accessToken = session.getAccessToken().getJwtToken();
-  const refreshToken = session.getRefreshToken().getToken();
-
-  // Store id+access tokens in memory
-  setTokens(idToken, accessToken);
-
-  // Store refresh token in httpOnly cookie
-  await fetch('/api/auth/store', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ refreshToken }),
-  });
-
-  // Extract user from id token payload
-  const payload = session.getIdToken().payload;
-  const role = (payload['custom:role'] as string) || 'client';
-  const user = {
-    email: payload.email as string,
-    role: (role === 'owner' ? 'owner' : 'client') as 'owner' | 'client',
-    clientId: payload['custom:client_id'] as string | undefined,
-    groups: (payload['cognito:groups'] as string[]) || [],
-  };
-
-  return { user };
 };
 
 /**
