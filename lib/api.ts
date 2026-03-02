@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './token';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -442,3 +442,20 @@ export const deleteContact = (clientId: string, profileId: string) =>
   api.delete<{ status: string; profileId: string }>(
     `/clients/${clientId}/contacts/${profileId}`
   );
+
+// ─── Audit Log ──────────────────────────────────────────────────
+
+export const getAuditLog = (
+  clientId: string,
+  params?: { limit?: number; action?: string; resource_type?: string }
+) => {
+  const query = params
+    ? '?' + Object.entries(params)
+        .filter(([, v]) => v !== undefined && v !== '')
+        .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)
+        .join('&')
+    : '';
+  return api.get<{ events: AuditEvent[]; count: number }>(
+    `/clients/${clientId}/audit-log${query}`
+  );
+};

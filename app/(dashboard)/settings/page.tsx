@@ -1,19 +1,23 @@
 /**
- * Settings Page — profile info, change password, MFA (owner), logout
+ * Settings Page — profile info, change password, MFA (owner), logout, audit log
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
+import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
+import { getAuditLog } from '@/lib/api';
+import { AuditEvent } from '@/lib/types';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
 import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor } from 'lucide-react';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -226,6 +230,120 @@ function MfaSection({ email }: { email: string }) {
   );
 }
 
+// ─── Audit Log Section (owner only) ───────────────────────────────────────────
+
+const ACTION_LABELS: Record<string, string> = {
+  'knowledge_base:create':    'Dodano wpis KB',
+  'knowledge_base:update':    'Zaktualizowano wpis KB',
+  'knowledge_base:delete':    'Usunięto wpis KB',
+  'knowledge_base:publish':   'Opublikowano wpis KB',
+  'knowledge_base:unpublish': 'Cofnięto publikację KB',
+  'contact:update':           'Zaktualizowano kontakt',
+  'contact:delete':           'Usunięto kontakt',
+  'pipeline:update':          'Zmieniono etapy pipeline',
+};
+
+function ResourceIcon({ type }: { type: string }) {
+  if (type === 'knowledge_base') return <BookOpen size={13} className="text-blue-400 shrink-0" />;
+  if (type === 'contact') return <User size={13} className="text-emerald-400 shrink-0" />;
+  if (type === 'pipeline') return <Layers size={13} className="text-purple-400 shrink-0" />;
+  return null;
+}
+
+function formatTs(iso: string) {
+  try {
+    return new Date(iso).toLocaleString('pl-PL', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function AuditLogSection({ clientId }: { clientId: string }) {
+  const { data, isLoading, error } = useSWR(
+    clientId ? ['audit-log', clientId] : null,
+    () => getAuditLog(clientId, { limit: 100 }),
+    { refreshInterval: 60000 }
+  );
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center gap-2 text-zinc-500 text-sm py-8 justify-center">
+        <Loader2 size={16} className="animate-spin" />
+        Ładowanie dziennika…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-sm text-red-400 py-4">
+        Nie udało się załadować dziennika zmian.
+      </div>
+    );
+  }
+
+  const events: AuditEvent[] = data?.events ?? [];
+
+  if (events.length === 0) {
+    return (
+      <div className="text-sm text-zinc-500 py-8 text-center">
+        Brak zarejestrowanych zdarzeń.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-zinc-500">
+        Ostatnie {events.length} zdarzeń · odświeżanie co 60 s
+      </p>
+      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium w-40">Czas</th>
+              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Użytkownik</th>
+              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Akcja</th>
+              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium hidden md:table-cell">ID zasobu</th>
+            </tr>
+          </thead>
+          <tbody>
+            {events.map((ev) => {
+              const key = `${ev.resourceType}:${ev.action}`;
+              const label = ACTION_LABELS[key] ?? `${ev.resourceType} — ${ev.action}`;
+              return (
+                <tr
+                  key={ev.sk}
+                  className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
+                >
+                  <td className="px-4 py-2.5 text-zinc-500 text-xs whitespace-nowrap">
+                    {formatTs(ev.timestamp)}
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-400 text-xs truncate max-w-[160px]">
+                    {ev.userEmail}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <div className="flex items-center gap-2">
+                      <ResourceIcon type={ev.resourceType} />
+                      <span className="text-zinc-200 text-xs">{label}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-600 text-xs font-mono truncate max-w-[120px] hidden md:table-cell">
+                    {ev.resourceId || '—'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -291,137 +409,170 @@ export default function SettingsPage() {
         <p className="text-sm text-zinc-500 mt-1">Zarządzaj kontem i hasłem</p>
       </div>
 
-      {/* Profile */}
-      <Card className="glass-card p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <User size={16} className="text-zinc-400" />
-          <h2 className="text-sm font-semibold text-white">Profil</h2>
-        </div>
-        <div className="space-y-3">
-          <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Email</label>
-            <div className="px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-zinc-400 select-all">
-              {user?.email || '—'}
-            </div>
-          </div>
-          <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Rola</label>
-            <div className="flex items-center">
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
-                {badge.label}
-              </span>
-            </div>
-          </div>
-          {user?.clientId && (
-            <div>
-              <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Client ID</label>
-              <div className="px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-zinc-400 font-mono">
-                {user.clientId}
-              </div>
-            </div>
+      <Tabs defaultValue="general">
+        <TabsList className="mb-6">
+          <TabsTrigger value="general">Ogólne</TabsTrigger>
+          {user?.role === 'owner' && (
+            <TabsTrigger value="audit" className="flex items-center gap-1.5">
+              <ClipboardList size={13} />
+              Dziennik zmian
+            </TabsTrigger>
           )}
-        </div>
-      </Card>
+        </TabsList>
 
-      {/* Appearance */}
-      <Card className="glass-card p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <Sun size={16} className="text-zinc-400" />
-          <h2 className="text-sm font-semibold text-white">Wygląd</h2>
-        </div>
-        <div className="flex gap-2">
-          {([
-            { value: 'light', label: 'Jasny', Icon: Sun },
-            { value: 'dark',  label: 'Ciemny', Icon: Moon },
-            { value: 'system', label: 'System', Icon: Monitor },
-          ] as const).map(({ value, label, Icon }) => (
-            <button
-              key={value}
-              onClick={() => setTheme(value)}
-              className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-lg border text-sm transition-colors ${
-                theme === value
-                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
-                  : 'border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/20'
-              }`}
-            >
-              <Icon size={16} />
-              {label}
-            </button>
-          ))}
-        </div>
-      </Card>
+        <TabsContent value="general">
+          <div className="space-y-8">
+            {/* Profile */}
+            <Card className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <User size={16} className="text-zinc-400" />
+                <h2 className="text-sm font-semibold text-white">Profil</h2>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Email</label>
+                  <div className="px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-zinc-400 select-all">
+                    {user?.email || '—'}
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Rola</label>
+                  <div className="flex items-center">
+                    <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${badge.className}`}>
+                      {badge.label}
+                    </span>
+                  </div>
+                </div>
+                {user?.clientId && (
+                  <div>
+                    <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1">Client ID</label>
+                    <div className="px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-zinc-400 font-mono">
+                      {user.clientId}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
 
-      {/* MFA — owner only */}
-      {user?.role === 'owner' && <MfaSection email={user.email} />}
+            {/* Appearance */}
+            <Card className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Sun size={16} className="text-zinc-400" />
+                <h2 className="text-sm font-semibold text-white">Wygląd</h2>
+              </div>
+              <div className="flex gap-2">
+                {([
+                  { value: 'light', label: 'Jasny', Icon: Sun },
+                  { value: 'dark',  label: 'Ciemny', Icon: Moon },
+                  { value: 'system', label: 'System', Icon: Monitor },
+                ] as const).map(({ value, label, Icon }) => (
+                  <button
+                    key={value}
+                    onClick={() => setTheme(value)}
+                    className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-lg border text-sm transition-colors ${
+                      theme === value
+                        ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+                        : 'border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/20'
+                    }`}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </Card>
 
-      {/* Change password */}
-      <Card className="glass-card p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <Lock size={16} className="text-zinc-400" />
-          <h2 className="text-sm font-semibold text-white">Zmień hasło</h2>
-        </div>
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Aktualne hasło</label>
-            <div className="relative">
-              <input
-                type={showOld ? 'text' : 'password'}
-                value={oldPassword}
-                onChange={e => { setOldPassword(e.target.value); setErrors(prev => ({ ...prev, oldPassword: '' })); }}
-                className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all pr-10 ${errors.oldPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
-                placeholder="••••••••"
-              />
-              <button type="button" onClick={() => setShowOld(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
-                {showOld ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
+            {/* MFA — owner only */}
+            {user?.role === 'owner' && <MfaSection email={user.email} />}
+
+            {/* Change password */}
+            <Card className="glass-card p-6 space-y-4">
+              <div className="flex items-center gap-3">
+                <Lock size={16} className="text-zinc-400" />
+                <h2 className="text-sm font-semibold text-white">Zmień hasło</h2>
+              </div>
+              <form onSubmit={handleChangePassword} className="space-y-4">
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Aktualne hasło</label>
+                  <div className="relative">
+                    <input
+                      type={showOld ? 'text' : 'password'}
+                      value={oldPassword}
+                      onChange={e => { setOldPassword(e.target.value); setErrors(prev => ({ ...prev, oldPassword: '' })); }}
+                      className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all pr-10 ${errors.oldPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
+                      placeholder="••••••••"
+                    />
+                    <button type="button" onClick={() => setShowOld(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                      {showOld ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.oldPassword && <p className="text-xs text-red-400 mt-1">{errors.oldPassword}</p>}
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Nowe hasło</label>
+                  <div className="relative">
+                    <input
+                      type={showNew ? 'text' : 'password'}
+                      value={newPassword}
+                      onChange={e => { setNewPassword(e.target.value); setErrors(prev => ({ ...prev, newPassword: '' })); }}
+                      className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all pr-10 ${errors.newPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
+                      placeholder="••••••••"
+                    />
+                    <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
+                      {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  {errors.newPassword && <p className="text-xs text-red-400 mt-1">{errors.newPassword}</p>}
+                </div>
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Potwierdź nowe hasło</label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
+                    className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all ${errors.confirmPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
+                    placeholder="••••••••"
+                  />
+                  {errors.confirmPassword && <p className="text-xs text-red-400 mt-1">{errors.confirmPassword}</p>}
+                </div>
+                <Button type="submit" disabled={changing} className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+                  {changing ? 'Zmieniam...' : 'Zmień hasło'}
+                </Button>
+              </form>
+            </Card>
+
+            {/* Logout */}
+            <Card className="glass-card p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <LogOut size={16} className="text-zinc-400" />
+                <h2 className="text-sm font-semibold text-white">Sesja</h2>
+              </div>
+              <p className="text-sm text-zinc-500 mb-4">Wylogowanie kończy bieżącą sesję na tym urządzeniu.</p>
+              <Button onClick={signOut} variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50">
+                <LogOut size={15} className="mr-2" />
+                Wyloguj się
+              </Button>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {user?.role === 'owner' && (
+          <TabsContent value="audit">
+            <div className="space-y-4">
+              <div>
+                <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                  <ClipboardList size={16} className="text-zinc-400" />
+                  Dziennik zmian
+                </h2>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Historia operacji na danych panelu (KB, kontakty, pipeline).
+                </p>
+              </div>
+              <AuditLogSection clientId={user.clientId ?? ''} />
             </div>
-            {errors.oldPassword && <p className="text-xs text-red-400 mt-1">{errors.oldPassword}</p>}
-          </div>
-          <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Nowe hasło</label>
-            <div className="relative">
-              <input
-                type={showNew ? 'text' : 'password'}
-                value={newPassword}
-                onChange={e => { setNewPassword(e.target.value); setErrors(prev => ({ ...prev, newPassword: '' })); }}
-                className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all pr-10 ${errors.newPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
-                placeholder="••••••••"
-              />
-              <button type="button" onClick={() => setShowNew(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300">
-                {showNew ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
-            </div>
-            {errors.newPassword && <p className="text-xs text-red-400 mt-1">{errors.newPassword}</p>}
-          </div>
-          <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">Potwierdź nowe hasło</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={e => { setConfirmPassword(e.target.value); setErrors(prev => ({ ...prev, confirmPassword: '' })); }}
-              className={`w-full px-3 py-2.5 bg-white/[0.03] border rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 transition-all ${errors.confirmPassword ? 'border-red-500/40 focus:ring-red-500/20' : 'border-white/[0.06] focus:ring-blue-500/20 focus:border-blue-500/30'}`}
-              placeholder="••••••••"
-            />
-            {errors.confirmPassword && <p className="text-xs text-red-400 mt-1">{errors.confirmPassword}</p>}
-          </div>
-          <Button type="submit" disabled={changing} className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
-            {changing ? 'Zmieniam...' : 'Zmień hasło'}
-          </Button>
-        </form>
-      </Card>
-
-      {/* Logout */}
-      <Card className="glass-card p-6">
-        <div className="flex items-center gap-3 mb-4">
-          <LogOut size={16} className="text-zinc-400" />
-          <h2 className="text-sm font-semibold text-white">Sesja</h2>
-        </div>
-        <p className="text-sm text-zinc-500 mb-4">Wylogowanie kończy bieżącą sesję na tym urządzeniu.</p>
-        <Button onClick={signOut} variant="outline" className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50">
-          <LogOut size={15} className="mr-2" />
-          Wyloguj się
-        </Button>
-      </Card>
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
   );
 }

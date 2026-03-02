@@ -212,6 +212,18 @@ export interface ContactSource {
   createdAt: number;
 }
 
+// Audit Log Types
+export interface AuditEvent {
+  clientId: string;
+  sk: string;
+  timestamp: string;
+  userEmail: string;
+  resourceType: string;
+  action: string;
+  resourceId: string;
+  details?: Record<string, unknown>;
+}
+
 export interface ContactProfile {
   profileId: string;
   contactInfo: string;       // email or phone number
