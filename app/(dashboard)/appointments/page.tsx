@@ -141,7 +141,7 @@ export default function AppointmentsPage() {
             <RefreshCw size={14} />Odśwież
           </Button>
           {/* View Toggle */}
-          <div className="flex gap-1 bg-[#111113] p-1 rounded-lg border border-white/[0.06]">
+          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
           <Button
             variant="ghost"
             size="sm"
@@ -374,7 +374,7 @@ export default function AppointmentsPage() {
             const appt = filteredAppointments.find(a => a.appointmentId === expandedAppointmentId);
             if (!appt) return null;
             return (
-              <div className="mt-4 p-4 bg-[#1a1a1e] rounded-xl border border-white/[0.04]">
+              <div className="mt-4 p-4 bg-muted rounded-xl border border-border">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">

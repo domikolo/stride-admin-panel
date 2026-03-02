@@ -32,7 +32,7 @@ function KeywordTags({ keywords }: { keywords?: string }) {
   return (
     <div className="flex flex-wrap gap-1">
       {tags.map((tag, i) => (
-        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/50">
+        <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border">
           {tag}
         </span>
       ))}
@@ -318,7 +318,7 @@ export default function ConversationsPage() {
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-[#111113] border border-white/[0.06] rounded-lg text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150 text-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150 text-sm"
           />
         </div>
 

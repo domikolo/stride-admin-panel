@@ -90,6 +90,7 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.895 0 0);
   --sidebar-ring: oklch(0.65 0 0);
+  --widget-shadow: 0 8px 30px rgba(0,0,0,0.1), 0 0 0 1px var(--border);
 }
 
 .dark {
@@ -124,6 +125,7 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: rgba(255, 255, 255, 0.06);
   --sidebar-ring: rgba(59, 130, 246, 0.3);
+  --widget-shadow: 0 25px 60px rgba(0,0,0,0.6), 0 0 0 1px rgba(255, 255, 255, 0.06);
 }
 
 @layer base {
@@ -367,10 +369,10 @@ html:not(.dark) .border-white\/\[0\.08\] { border-color: rgba(0,0,0,0.12); }
 html:not(.dark) .border-white\/\[0\.20\] { border-color: rgba(0,0,0,0.2); }
 
 /* Hardcoded dark hex backgrounds → semantic tokens */
-html:not(.dark) .bg-\[#111113\] { background-color: var(--muted); }
-html:not(.dark) .bg-\[#0c0c0e\] { background-color: var(--background); }
-html:not(.dark) .bg-\[#0e0e10\] { background-color: var(--card); }
-html:not(.dark) .bg-\[#1a1a1e\] { background-color: oklch(0.94 0 0); }
+html:not(.dark) .bg-\[\#111113\] { background-color: var(--muted); }
+html:not(.dark) .bg-\[\#0c0c0e\] { background-color: var(--background); }
+html:not(.dark) .bg-\[\#0e0e10\] { background-color: var(--card); }
+html:not(.dark) .bg-\[\#1a1a1e\] { background-color: oklch(0.94 0 0); }
 html:not(.dark) .bg-zinc-900 { background-color: var(--card); }
 html:not(.dark) .bg-zinc-900\/95 { background-color: color-mix(in srgb, var(--card) 95%, transparent); }
 html:not(.dark) .bg-zinc-800 { background-color: var(--muted); }
@@ -380,3 +382,10 @@ html:not(.dark) .border-zinc-700\/50 { border-color: var(--border); }
 /* Placeholder text */
 html:not(.dark) .placeholder-zinc-600::placeholder { color: oklch(0.52 0 0); }
 html:not(.dark) .placeholder\:text-zinc-600::placeholder { color: oklch(0.52 0 0); }
+
+/* Yellow/amber → high-contrast amber in light mode */
+html:not(.dark) .bg-yellow-500\/\[0\.06\] { background-color: #fef9ec; }
+html:not(.dark) .bg-yellow-500\/10 { background-color: #fef3c7; }
+html:not(.dark) .hover\:bg-yellow-500\/20:hover { background-color: #fde68a; }
+html:not(.dark) .border-yellow-500\/20 { border-color: #d97706; }
+html:not(.dark) .text-yellow-400 { color: #92400e; }

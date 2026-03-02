@@ -32,9 +32,9 @@ export default function QuestionsModal({ topicName, totalCount, examples, questi
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative z-10 w-full max-w-md bg-[#111113] border border-white/[0.08] rounded-xl shadow-2xl flex flex-col max-h-[70vh]">
+      <div className="relative z-10 w-full max-w-md bg-card border border-border rounded-xl shadow-2xl flex flex-col max-h-[70vh]">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-white/[0.06] shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
           <div>
             <h3 className="text-sm font-semibold text-white truncate pr-2">{topicName}</h3>
             <p className="text-xs text-zinc-500 mt-0.5">

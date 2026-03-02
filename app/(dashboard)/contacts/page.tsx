@@ -592,7 +592,7 @@ export default function ContactsPage() {
           <Button variant="ghost" size="sm" onClick={exportCsv} disabled={sorted.length === 0} className="text-zinc-400 hover:text-white gap-1.5">
             <Download size={14} />Eksport CSV
           </Button>
-          <div className="flex gap-1 bg-[#111113] p-1 rounded-lg border border-white/[0.06]">
+          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
             <Button variant="ghost" size="sm" onClick={() => setView('table')}
               className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
               <List size={15} className="mr-1.5" />Tabela
@@ -613,18 +613,18 @@ export default function ContactsPage() {
           onChange={e => { setSearch(e.target.value); setPage(1); }}
           className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors w-48" />
         <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
-          className="bg-[#111113] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-300 focus:outline-none cursor-pointer">
+          className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none cursor-pointer">
           <option value="">Wszystkie statusy</option>
           {allStages.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
         </select>
         <select value={filterSource} onChange={e => { setFilterSource(e.target.value); setPage(1); }}
-          className="bg-[#111113] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-300 focus:outline-none cursor-pointer">
+          className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none cursor-pointer">
           <option value="">Wszystkie źródła</option>
           <option value="appointment">Spotkanie</option>
           <option value="conversation">Rozmowa</option>
         </select>
         <select value={filterType} onChange={e => { setFilterType(e.target.value); setPage(1); }}
-          className="bg-[#111113] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-zinc-300 focus:outline-none cursor-pointer">
+          className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none cursor-pointer">
           <option value="">Email i telefon</option>
           <option value="email">Email</option>
           <option value="phone">Telefon</option>

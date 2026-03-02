@@ -27,7 +27,7 @@ export default function GapsBar({ gaps, onFixGap }: GapsBarProps) {
         </div>
         <Link
           href="/insights"
-          className="text-xs text-zinc-400 hover:text-white transition-colors flex items-center gap-1"
+          className="text-xs text-zinc-400 hover:text-foreground transition-colors flex items-center gap-1"
         >
           Insights <ArrowRight size={12} />
         </Link>

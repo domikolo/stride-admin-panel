@@ -351,7 +351,7 @@ export default function InsightsPage() {
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">
-        <TabsList className="bg-[#111113] mb-4 border border-white/[0.06]">
+        <TabsList className="mb-4">
           <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
             Wczoraj
           </TabsTrigger>
