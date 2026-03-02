@@ -212,6 +212,19 @@ export interface ContactSource {
   createdAt: number;
 }
 
+// API Key Types
+export interface ApiKey {
+  keyId: string;
+  name: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  callCountTotal: number;
+  callCountToday: number;
+  dailyLimit: number;
+  status: 'active' | 'revoked';
+  rawKey?: string; // present only immediately after creation
+}
+
 // Audit Log Types
 export interface AuditEvent {
   clientId: string;

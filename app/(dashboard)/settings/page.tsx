@@ -9,15 +9,15 @@ import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
-import { getAuditLog } from '@/lib/api';
-import { AuditEvent } from '@/lib/types';
+import { getAuditLog, getApiKeys, createApiKey, revokeApiKey } from '@/lib/api';
+import { AuditEvent, ApiKey } from '@/lib/types';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
 import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList } from 'lucide-react';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +32,195 @@ async function callMfa(path: string, body: Record<string, string>) {
     throw new Error(d.error || 'Błąd serwera');
   }
   return res.json();
+}
+
+// ─── API Keys Section ──────────────────────────────────────────────────────────
+
+function ApiKeysSection({ clientId }: { clientId: string }) {
+  const { data, mutate, isLoading } = useSWR(
+    clientId ? ['api-keys', clientId] : null,
+    () => getApiKeys(clientId)
+  );
+
+  const [newKeyName, setNewKeyName]   = useState('');
+  const [creating, setCreating]       = useState(false);
+  const [showForm, setShowForm]       = useState(false);
+  const [newKey, setNewKey]           = useState<ApiKey | null>(null);
+  const [copied, setCopied]           = useState(false);
+
+  const keys: ApiKey[] = (data?.keys ?? []).filter(k => k.status === 'active');
+
+  const handleCreate = async () => {
+    if (!newKeyName.trim()) return;
+    setCreating(true);
+    try {
+      const created = await createApiKey(clientId, newKeyName.trim());
+      setNewKey(created);
+      setNewKeyName('');
+      setShowForm(false);
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Nie udało się utworzyć klucza');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleRevoke = async (keyId: string, name: string) => {
+    if (!confirm(`Odwołać klucz "${name}"? Zapytania używające tego klucza przestaną działać natychmiast.`)) return;
+    try {
+      await revokeApiKey(clientId, keyId);
+      toast.success('Klucz odwołany');
+      mutate();
+    } catch (err: any) {
+      toast.error(err.message || 'Błąd przy odwoływaniu klucza');
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!newKey?.rawKey) return;
+    await navigator.clipboard.writeText(newKey.rawKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+
+  return (
+    <Card className="glass-card p-6 space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Key size={16} className="text-zinc-400" />
+          <h2 className="text-sm font-semibold text-white">Klucze API</h2>
+        </div>
+        {!showForm && !newKey && (
+          <Button
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-xs h-7 px-3"
+          >
+            <Plus size={13} className="mr-1" />
+            Nowy klucz
+          </Button>
+        )}
+      </div>
+
+      <p className="text-xs text-zinc-500">
+        Klucze API umożliwiają zewnętrznym aplikacjom (Zapier, Make, własny kod) odczyt Twoich danych.
+        Każdy klucz ma limit {(1000).toLocaleString('pl-PL')} zapytań dziennie.
+      </p>
+
+      {/* New key revealed */}
+      {newKey?.rawKey && (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4 space-y-3">
+          <p className="text-xs text-emerald-400 font-medium">
+            Klucz utworzony — skopiuj go teraz, nie zostanie pokazany ponownie.
+          </p>
+          <div className="flex items-center gap-2">
+            <code className="flex-1 px-3 py-2 bg-black/30 rounded-lg text-xs text-emerald-300 font-mono break-all select-all">
+              {newKey.rawKey}
+            </code>
+            <button
+              onClick={handleCopy}
+              className="shrink-0 p-2 rounded-lg border border-white/[0.08] text-zinc-400 hover:text-white transition-colors"
+            >
+              {copied ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+            </button>
+          </div>
+          <p className="text-xs text-zinc-500">
+            Endpoint: <code className="text-zinc-400">{API_BASE}/clients/{clientId}/contacts</code>
+            {' · '}Nagłówek: <code className="text-zinc-400">X-API-Key: {newKey.rawKey.slice(0, 16)}…</code>
+          </p>
+          <Button
+            onClick={() => setNewKey(null)}
+            variant="outline"
+            className="border-white/[0.08] text-zinc-400 hover:text-white text-xs h-7"
+          >
+            Zamknij
+          </Button>
+        </div>
+      )}
+
+      {/* Create form */}
+      {showForm && (
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={newKeyName}
+            onChange={e => setNewKeyName(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleCreate()}
+            placeholder="Nazwa klucza (np. Zapier)"
+            autoFocus
+            className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30"
+          />
+          <Button
+            onClick={handleCreate}
+            disabled={creating || !newKeyName.trim()}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm shrink-0"
+          >
+            {creating ? <Loader2 size={14} className="animate-spin" /> : 'Utwórz'}
+          </Button>
+          <Button
+            onClick={() => { setShowForm(false); setNewKeyName(''); }}
+            variant="outline"
+            className="border-white/[0.08] text-zinc-400 hover:text-white text-sm shrink-0"
+          >
+            Anuluj
+          </Button>
+        </div>
+      )}
+
+      {/* Keys list */}
+      {isLoading ? (
+        <div className="flex items-center gap-2 text-zinc-500 text-sm">
+          <Loader2 size={14} className="animate-spin" />Ładowanie…
+        </div>
+      ) : keys.length === 0 && !newKey ? (
+        <p className="text-sm text-zinc-600">Brak aktywnych kluczy.</p>
+      ) : keys.length > 0 && (
+        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <th className="text-left px-4 py-2 text-xs text-zinc-500 font-medium">Nazwa</th>
+                <th className="text-left px-4 py-2 text-xs text-zinc-500 font-medium hidden sm:table-cell">Utworzony</th>
+                <th className="text-left px-4 py-2 text-xs text-zinc-500 font-medium">Dziś</th>
+                <th className="text-left px-4 py-2 text-xs text-zinc-500 font-medium hidden sm:table-cell">Łącznie</th>
+                <th className="px-4 py-2 w-8" />
+              </tr>
+            </thead>
+            <tbody>
+              {keys.map(k => (
+                <tr key={k.keyId} className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02]">
+                  <td className="px-4 py-2.5 text-zinc-200 text-xs font-medium">{k.name}</td>
+                  <td className="px-4 py-2.5 text-zinc-500 text-xs hidden sm:table-cell whitespace-nowrap">
+                    {new Date(k.createdAt).toLocaleDateString('pl-PL')}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs">
+                    <span className={k.callCountToday >= k.dailyLimit ? 'text-red-400' : 'text-zinc-400'}>
+                      {k.callCountToday.toLocaleString('pl-PL')}
+                    </span>
+                    <span className="text-zinc-600"> / {k.dailyLimit.toLocaleString('pl-PL')}</span>
+                  </td>
+                  <td className="px-4 py-2.5 text-zinc-500 text-xs hidden sm:table-cell">
+                    {k.callCountTotal.toLocaleString('pl-PL')}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <button
+                      onClick={() => handleRevoke(k.keyId, k.name)}
+                      className="text-zinc-600 hover:text-red-400 transition-colors"
+                      title="Odwołaj klucz"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
 }
 
 // ─── MFA Section (owner only) ─────────────────────────────────────────────────
@@ -495,6 +684,9 @@ export default function SettingsPage() {
                 )}
               </div>
             </Card>
+
+            {/* API Keys */}
+            <ApiKeysSection clientId={user?.role === 'owner' ? 'stride-services' : (user?.clientId ?? '')} />
 
             {/* Appearance */}
             <Card className="glass-card p-6 space-y-4">
