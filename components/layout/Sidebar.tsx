@@ -9,6 +9,8 @@ import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from 'next-themes';
+import { useEffect, useState } from 'react';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -34,6 +36,10 @@ interface SidebarProps {
 export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  const logoSrc = mounted && resolvedTheme === 'light' ? '/FO51AA85ACF83a1-02.png' : '/logo.png';
 
   const clientLinks = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -96,7 +102,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.06]">
           <Link href="/dashboard" className="flex items-center gap-3 md:justify-center lg:justify-start" onClick={handleLinkClick}>
             <img
-              src="/logo.png"
+              src={logoSrc}
               alt="Stride"
               className="h-7 w-auto md:h-6 lg:h-7"
             />

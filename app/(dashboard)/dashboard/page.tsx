@@ -8,6 +8,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useTheme } from 'next-themes';
 import { useSWR, fetcher } from '@/lib/swr';
 import {
   getDailyBriefing,
@@ -27,6 +28,13 @@ import { pl } from 'date-fns/locale';
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme !== 'light';
+  const chartGridColor = isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.06)';
+  const chartAxisColor = isDark ? '#71717a' : '#9ca3af';
+  const chartTooltipBg = isDark ? '#111113' : '#ffffff';
+  const chartTooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
+  const chartTooltipLabel = isDark ? '#a1a1aa' : '#6b7280';
 
   const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
@@ -241,18 +249,18 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+              <CartesianGrid strokeDasharray="3 3" stroke={chartGridColor} />
               <XAxis
                 dataKey="label"
-                stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 12 }}
+                stroke={chartAxisColor}
+                tick={{ fill: chartAxisColor, fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
                 interval={0}
               />
               <YAxis
-                stroke="#71717a"
-                tick={{ fill: '#71717a', fontSize: 12 }}
+                stroke={chartAxisColor}
+                tick={{ fill: chartAxisColor, fontSize: 12 }}
                 axisLine={false}
                 tickLine={false}
                 allowDecimals={false}
@@ -260,12 +268,12 @@ export default function DashboardPage() {
               />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#111113',
-                  border: '1px solid rgba(255,255,255,0.08)',
+                  backgroundColor: chartTooltipBg,
+                  border: `1px solid ${chartTooltipBorder}`,
                   borderRadius: '8px',
                   fontSize: '13px',
                 }}
-                labelStyle={{ color: '#a1a1aa' }}
+                labelStyle={{ color: chartTooltipLabel }}
               />
               <Area
                 type="monotone"

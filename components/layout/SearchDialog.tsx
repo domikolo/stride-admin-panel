@@ -107,12 +107,12 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
       {/* Dialog */}
       <div className="fixed inset-0 z-[101] flex items-start justify-center pt-[20vh]">
         <div
-          className="w-full max-w-lg bg-zinc-900 border border-zinc-700/50 rounded-xl shadow-2xl overflow-hidden"
+          className="w-full max-w-lg bg-popover border border-border rounded-xl shadow-2xl overflow-hidden"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Input */}
-          <div className="flex items-center gap-3 px-4 py-3 border-b border-zinc-800">
-            <Search size={18} className="text-zinc-500 flex-shrink-0" />
+          <div className="flex items-center gap-3 px-4 py-3 border-b border-border">
+            <Search size={18} className="text-muted-foreground flex-shrink-0" />
             <input
               ref={inputRef}
               type="text"
@@ -120,9 +120,9 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Szukaj stron..."
-              className="flex-1 bg-transparent text-white text-sm outline-none placeholder:text-zinc-500"
+              className="flex-1 bg-transparent text-foreground text-sm outline-none placeholder:text-muted-foreground"
             />
-            <kbd className="text-[10px] text-zinc-500 bg-zinc-800 px-1.5 py-0.5 rounded border border-zinc-700">
+            <kbd className="text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded border border-border">
               ESC
             </kbd>
           </div>
@@ -130,13 +130,13 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
           {/* Results */}
           <div className="max-h-72 overflow-y-auto py-2">
             {filtered.length === 0 ? (
-              <p className="text-sm text-zinc-500 text-center py-8">
+              <p className="text-sm text-muted-foreground text-center py-8">
                 Brak wynikow
               </p>
             ) : (
               sections.map((section) => (
                 <div key={section.name}>
-                  <p className="text-[10px] text-zinc-500 uppercase tracking-wider font-semibold px-4 py-1.5">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold px-4 py-1.5">
                     {section.name}
                   </p>
                   {section.items.map((item) => {
@@ -148,7 +148,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
                         onClick={() => navigate(item)}
                         onMouseEnter={() => setSelectedIndex(item.globalIndex)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          isSelected ? 'bg-white/10 text-white' : 'text-zinc-400 hover:text-white'
+                          isSelected ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground'
                         }`}
                       >
                         <Icon size={16} className="flex-shrink-0" />
@@ -162,9 +162,9 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
           </div>
 
           {/* Footer hint */}
-          <div className="px-4 py-2 border-t border-zinc-800 flex items-center gap-4 text-[10px] text-zinc-500">
-            <span><kbd className="bg-zinc-800 px-1 py-0.5 rounded border border-zinc-700 mr-1">↑↓</kbd> nawigacja</span>
-            <span><kbd className="bg-zinc-800 px-1 py-0.5 rounded border border-zinc-700 mr-1">↵</kbd> otwórz</span>
+          <div className="px-4 py-2 border-t border-border flex items-center gap-4 text-[10px] text-muted-foreground">
+            <span><kbd className="bg-muted px-1 py-0.5 rounded border border-border mr-1">↑↓</kbd> nawigacja</span>
+            <span><kbd className="bg-muted px-1 py-0.5 rounded border border-border mr-1">↵</kbd> otwórz</span>
           </div>
         </div>
       </div>

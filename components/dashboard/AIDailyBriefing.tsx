@@ -5,6 +5,7 @@
 
 'use client';
 
+import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -23,6 +24,10 @@ interface AIDailyBriefingProps {
 }
 
 export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshing, isNew = false }: AIDailyBriefingProps) {
+    const { resolvedTheme } = useTheme();
+    const isDark = resolvedTheme !== 'light';
+    const iconLogoSrc = isDark ? '/icon-logo-biale.png' : '/icon-logo-czarne.png';
+
     const formatDate = (dateStr: string | null) => {
         if (!dateStr) return '';
         try {
@@ -37,7 +42,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
             <Card className="glass-card p-6 md:p-8">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                        <img src="/icon-logo-biale.png" alt="Stride" className="w-9 h-9 object-contain animate-pulse" />
+                        <img src={iconLogoSrc} alt="Stride" className="w-9 h-9 object-contain animate-pulse" />
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
@@ -59,7 +64,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
         return (
             <Card className="glass-card p-6 md:p-8 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                    <img src="/icon-logo-biale.png" alt="Stride" className="w-9 h-9 object-contain" />
+                    <img src={iconLogoSrc} alt="Stride" className="w-9 h-9 object-contain" />
                 </div>
                 <div>
                     <h2 className="text-lg font-semibold text-white">AI Daily Briefing</h2>
@@ -73,13 +78,15 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
         <Card
             className="glass-card p-6 md:p-8 relative overflow-hidden"
             style={{
-                background: 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.07) 0%, transparent 70%), #111113',
+                background: isDark
+                    ? 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.07) 0%, transparent 70%), #111113'
+                    : 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.05) 0%, transparent 70%)',
             }}
         >
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
-                        <img src="/icon-logo-biale.png" alt="Stride" className="w-9 h-9 object-contain" />
+                        <img src={iconLogoSrc} alt="Stride" className="w-9 h-9 object-contain" />
                     </div>
                     <div>
                         <h2 className="text-lg font-semibold text-white">Daily Briefing</h2>
