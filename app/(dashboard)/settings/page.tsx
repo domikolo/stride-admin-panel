@@ -568,7 +568,7 @@ export default function SettingsPage() {
                   Historia operacji na danych panelu (KB, kontakty, pipeline).
                 </p>
               </div>
-              <AuditLogSection clientId={user.clientId ?? ''} />
+              <AuditLogSection clientId={user.role === 'owner' ? 'stride-services' : (user.clientId ?? '')} />
             </div>
           </TabsContent>
         )}
