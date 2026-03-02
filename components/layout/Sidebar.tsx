@@ -39,7 +39,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const logoSrc = mounted && resolvedTheme === 'light' ? '/FO51AA85ACF83a1-02.png' : '/logo.png';
+  const logoFilter = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
 
   const clientLinks = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -88,7 +88,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
       <aside
         className={cn(
-          'bg-background h-screen flex flex-col z-50 border-r border-border',
+          'bg-card h-screen flex flex-col z-50 border-r border-border',
           // Width: collapsed on md, full on lg
           'w-64 md:w-16 lg:w-64',
           // Mobile: fixed, slide in/out
@@ -102,9 +102,10 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.06]">
           <Link href="/dashboard" className="flex items-center gap-3 md:justify-center lg:justify-start" onClick={handleLinkClick}>
             <img
-              src={logoSrc}
+              src="/logo.png"
               alt="Stride"
               className="h-7 w-auto md:h-6 lg:h-7"
+              style={logoFilter ? { filter: logoFilter } : undefined}
             />
           </Link>
         </div>

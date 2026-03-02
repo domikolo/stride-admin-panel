@@ -27,7 +27,7 @@ export default function DashboardLayout({
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const logoSrc = mounted && resolvedTheme === 'light' ? '/FO51AA85ACF83a1-02.png' : '/logo.png';
+  const logoFilter = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
 
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
@@ -62,7 +62,7 @@ export default function DashboardLayout({
           >
             <Menu size={22} />
           </button>
-          <img src={logoSrc} alt="Stride" className="h-6 w-auto" />
+          <img src="/logo.png" alt="Stride" className="h-6 w-auto" style={logoFilter ? { filter: logoFilter } : undefined} />
           <button
             onClick={() => setSearchOpen(true)}
             className="ml-auto p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
