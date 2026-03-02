@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { ThemeToggle } from '@/components/ui/ThemeToggle';
 
 interface SidebarProps {
   open?: boolean;
@@ -81,7 +82,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
       <aside
         className={cn(
-          'bg-[#0c0c0e] h-screen flex flex-col z-50',
+          'bg-background h-screen flex flex-col z-50 border-r border-border',
           // Width: collapsed on md, full on lg
           'w-64 md:w-16 lg:w-64',
           // Mobile: fixed, slide in/out
@@ -90,9 +91,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
           // Desktop: always visible, static
           'md:translate-x-0 md:static'
         )}
-        style={{
-          borderRight: '1px solid rgba(255,255,255,0.06)',
-        }}
       >
         {/* Logo */}
         <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.06]">
@@ -185,6 +183,16 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <span className="text-[10px] text-zinc-600 capitalize">{user?.role}</span>
             </div>
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div>
+                <ThemeToggle />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="md:block lg:hidden hidden">
+              Zmień motyw
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button

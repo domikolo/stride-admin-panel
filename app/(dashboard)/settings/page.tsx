@@ -10,9 +10,10 @@ import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
+import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2 } from 'lucide-react';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -229,6 +230,7 @@ function MfaSection({ email }: { email: string }) {
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
 
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -318,6 +320,34 @@ export default function SettingsPage() {
               </div>
             </div>
           )}
+        </div>
+      </Card>
+
+      {/* Appearance */}
+      <Card className="glass-card p-6 space-y-4">
+        <div className="flex items-center gap-3">
+          <Sun size={16} className="text-zinc-400" />
+          <h2 className="text-sm font-semibold text-white">Wygląd</h2>
+        </div>
+        <div className="flex gap-2">
+          {([
+            { value: 'light', label: 'Jasny', Icon: Sun },
+            { value: 'dark',  label: 'Ciemny', Icon: Moon },
+            { value: 'system', label: 'System', Icon: Monitor },
+          ] as const).map(({ value, label, Icon }) => (
+            <button
+              key={value}
+              onClick={() => setTheme(value)}
+              className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-lg border text-sm transition-colors ${
+                theme === value
+                  ? 'border-blue-500/50 bg-blue-500/10 text-blue-400'
+                  : 'border-white/[0.06] text-zinc-500 hover:text-zinc-300 hover:border-white/20'
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
         </div>
       </Card>
 

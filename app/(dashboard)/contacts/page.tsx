@@ -6,6 +6,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import {
@@ -186,8 +187,16 @@ function DetailPanel({ profileId, clientId, allStages, onClose, onUpdated, onDel
 
   const handleDelete = async () => {
     setSaving(true);
-    try { await deleteContact(clientId, profileId); onDeleted(profileId); onClose(); }
-    catch (e) { console.error(e); setSaving(false); }
+    try {
+      await deleteContact(clientId, profileId);
+      onDeleted(profileId);
+      onClose();
+      toast.success('Kontakt usunięty');
+    } catch (e) {
+      console.error(e);
+      toast.error('Nie udało się usunąć kontaktu');
+      setSaving(false);
+    }
   };
 
   const handleAddStage = async (label: string, hex: string) => {
@@ -196,9 +205,9 @@ function DetailPanel({ profileId, clientId, allStages, onClose, onUpdated, onDel
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[380px] bg-[#0e0e10] border-l border-white/[0.06] z-50 flex flex-col shadow-2xl overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 w-[380px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-white/[0.06] sticky top-0 bg-[#0e0e10] z-10">
+      <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
         <h2 className="font-semibold text-white text-[15px]">Szczegóły kontaktu</h2>
         <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
           <X size={18} />
@@ -425,10 +434,10 @@ export default function ContactsPage() {
   const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
 
   const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
-    clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher
+    clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher, { refreshInterval: 30_000 }
   );
   const { data: stagesData, mutate: mutateStages } = useSWR<{ stages: CustomStage[] }>(
-    clientId ? `/clients/${clientId}/contacts/stages` : null, fetcher
+    clientId ? `/clients/${clientId}/contacts/stages` : null, fetcher, { refreshInterval: 30_000 }
   );
 
   const contacts: ContactProfile[] = contactsData?.contacts ?? [];
