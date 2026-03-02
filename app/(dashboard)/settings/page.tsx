@@ -261,7 +261,19 @@ function formatTs(iso: string) {
   }
 }
 
+const RESOURCE_LABELS: Record<string, string> = {
+  knowledge_base: 'KB',
+  contact: 'Kontakt',
+  pipeline: 'Pipeline',
+};
+
+type SortDir = 'desc' | 'asc';
+
 function AuditLogSection({ clientId }: { clientId: string }) {
+  const [filterResource, setFilterResource] = useState('');
+  const [filterAction, setFilterAction]     = useState('');
+  const [sortDir, setSortDir]               = useState<SortDir>('desc');
+
   const { data, isLoading, error } = useSWR(
     clientId ? ['audit-log', clientId] : null,
     () => getAuditLog(clientId, { limit: 100 }),
@@ -278,68 +290,98 @@ function AuditLogSection({ clientId }: { clientId: string }) {
   }
 
   if (error) {
-    return (
-      <div className="text-sm text-red-400 py-4">
-        Nie udało się załadować dziennika zmian.
-      </div>
-    );
+    return <div className="text-sm text-red-400 py-4">Nie udało się załadować dziennika zmian.</div>;
   }
 
-  const events: AuditEvent[] = data?.events ?? [];
+  const allEvents: AuditEvent[] = data?.events ?? [];
 
-  if (events.length === 0) {
-    return (
-      <div className="text-sm text-zinc-500 py-8 text-center">
-        Brak zarejestrowanych zdarzeń.
-      </div>
-    );
-  }
+  // Unique action values present in data (for dropdown)
+  const uniqueActions = Array.from(new Set(allEvents.map(e => e.action))).sort();
+
+  // Client-side filter + sort
+  let events = allEvents;
+  if (filterResource) events = events.filter(e => e.resourceType === filterResource);
+  if (filterAction)   events = events.filter(e => e.action === filterAction);
+  if (sortDir === 'asc') events = [...events].reverse();
+
+  const selectCls = 'px-2.5 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-xs text-zinc-300 focus:outline-none focus:ring-1 focus:ring-blue-500/20 cursor-pointer';
 
   return (
     <div className="space-y-3">
-      <p className="text-xs text-zinc-500">
-        Ostatnie {events.length} zdarzeń · odświeżanie co 60 s
-      </p>
-      <div className="rounded-lg border border-white/[0.06] overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-white/[0.06] bg-white/[0.02]">
-              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium w-40">Czas</th>
-              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Użytkownik</th>
-              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Akcja</th>
-              <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium hidden md:table-cell">ID zasobu</th>
-            </tr>
-          </thead>
-          <tbody>
-            {events.map((ev) => {
-              const key = `${ev.resourceType}:${ev.action}`;
-              const label = ACTION_LABELS[key] ?? `${ev.resourceType} — ${ev.action}`;
-              return (
-                <tr
-                  key={ev.sk}
-                  className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
-                >
-                  <td className="px-4 py-2.5 text-zinc-500 text-xs whitespace-nowrap">
-                    {formatTs(ev.timestamp)}
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-400 text-xs truncate max-w-[160px]">
-                    {ev.userEmail}
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex items-center gap-2">
-                      <ResourceIcon type={ev.resourceType} />
-                      <span className="text-zinc-200 text-xs">{label}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-2.5 text-zinc-600 text-xs font-mono truncate max-w-[120px] hidden md:table-cell">
-                    {ev.resourceId || '—'}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-2">
+        <select value={filterResource} onChange={e => setFilterResource(e.target.value)} className={selectCls}>
+          <option value="">Wszystkie zasoby</option>
+          <option value="knowledge_base">KB</option>
+          <option value="contact">Kontakt</option>
+          <option value="pipeline">Pipeline</option>
+        </select>
+
+        <select value={filterAction} onChange={e => setFilterAction(e.target.value)} className={selectCls}>
+          <option value="">Wszystkie akcje</option>
+          {uniqueActions.map(a => (
+            <option key={a} value={a}>{a}</option>
+          ))}
+        </select>
+
+        <button
+          onClick={() => setSortDir(d => d === 'desc' ? 'asc' : 'desc')}
+          className="px-2.5 py-1.5 rounded-lg border border-white/[0.06] bg-white/[0.03] text-xs text-zinc-300 hover:text-white hover:border-white/20 transition-colors flex items-center gap-1.5"
+        >
+          {sortDir === 'desc' ? '↓ Najnowsze' : '↑ Najstarsze'}
+        </button>
+
+        <span className="text-xs text-zinc-600 ml-auto">
+          {events.length} / {allEvents.length} zdarzeń
+        </span>
       </div>
+
+      {events.length === 0 ? (
+        <div className="text-sm text-zinc-500 py-8 text-center">
+          Brak zdarzeń spełniających kryteria.
+        </div>
+      ) : (
+        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-white/[0.06] bg-white/[0.02]">
+                <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium w-40">Czas</th>
+                <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Użytkownik</th>
+                <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium">Akcja</th>
+                <th className="text-left px-4 py-2.5 text-xs text-zinc-500 font-medium hidden md:table-cell">ID zasobu</th>
+              </tr>
+            </thead>
+            <tbody>
+              {events.map((ev) => {
+                const key = `${ev.resourceType}:${ev.action}`;
+                const label = ACTION_LABELS[key] ?? `${RESOURCE_LABELS[ev.resourceType] ?? ev.resourceType} — ${ev.action}`;
+                return (
+                  <tr
+                    key={ev.sk}
+                    className="border-b border-white/[0.04] last:border-0 hover:bg-white/[0.02] transition-colors"
+                  >
+                    <td className="px-4 py-2.5 text-zinc-500 text-xs whitespace-nowrap">
+                      {formatTs(ev.timestamp)}
+                    </td>
+                    <td className="px-4 py-2.5 text-zinc-400 text-xs truncate max-w-[160px]">
+                      {ev.userEmail}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-2">
+                        <ResourceIcon type={ev.resourceType} />
+                        <span className="text-zinc-200 text-xs">{label}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-2.5 text-zinc-600 text-xs font-mono truncate max-w-[120px] hidden md:table-cell">
+                      {ev.resourceId || '—'}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
