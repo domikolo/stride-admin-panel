@@ -111,8 +111,22 @@ export default function KnowledgeBasePage() {
   );
 
   const handleSave = async (entryId: string, topic: string, content: string) => {
-    await updateKBEntry(getClientId(), entryId, { topic, content });
-    mutateEntries();
+    const entry = entries.find(e => e.kbEntryId === entryId);
+    try {
+      await updateKBEntry(getClientId(), entryId, {
+        topic,
+        content,
+        expected_updated_at: entry?.updatedAt,
+      });
+      mutateEntries();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes('409') || msg.toLowerCase().includes('conflict')) {
+        toast.error('Ktoś właśnie zapisał ten wpis — odśwież stronę i spróbuj ponownie.');
+      } else {
+        throw err;
+      }
+    }
   };
 
   const handlePublish = async (entryId: string) => {
