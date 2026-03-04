@@ -203,7 +203,7 @@ export default function LivePage() {
     const sid = session.sessionId;
     if (scoringIds.has(sid)) return;
     const cached = leadScoresRef.current[sid];
-    if (!force && cached && Date.now() - cached.fetchedAt < SCORE_CACHE_TTL) return;
+    if (!force && cached) return; // has any score → skip; re-score only via force=true (new_message)
 
     setScoringIds(prev => new Set(prev).add(sid));
     try {
@@ -256,11 +256,8 @@ export default function LivePage() {
       const data = await getLiveSessions(clientId);
       setSessions(data.sessions);
 
-      // Auto-score sessions with stale or missing scores
-      const toScore = data.sessions.filter(s => {
-        const c = leadScoresRef.current[s.sessionId];
-        return !c || Date.now() - c.fetchedAt > SCORE_CACHE_TTL;
-      });
+      // Score only sessions that have never been scored (new sessions)
+      const toScore = data.sessions.filter(s => !leadScoresRef.current[s.sessionId]);
       toScore.forEach(s => fetchLeadScoreRef.current?.(s));
 
       // Prefetch messages for sessions not yet in cache (enables gap detection from first load)
