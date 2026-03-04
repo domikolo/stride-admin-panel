@@ -162,6 +162,7 @@ export default function LivePage() {
   // Lead scoring
   const [leadScores, setLeadScores] = useState<Record<string, LeadScore>>({});
   const [scoringIds, setScoringIds] = useState<Set<string>>(new Set());
+  const [scoreFlash, setScoreFlash] = useState<Record<string, 'up' | 'down'>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -172,7 +173,7 @@ export default function LivePage() {
   const leadScoresRef = useRef<Record<string, LeadScore>>({});
   const sessionsRef = useRef<LiveSession[]>([]);
   const scoreDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
-  const fetchLeadScoreRef = useRef<(session: LiveSession) => void>(() => {});
+  const fetchLeadScoreRef = useRef<(session: LiveSession, force?: boolean) => void>(() => {});
 
   useEffect(() => { selectedSessionIdRef.current = selectedSessionId; }, [selectedSessionId]);
   useEffect(() => { sessionMessagesRef.current = sessionMessages; }, [sessionMessages]);
@@ -196,21 +197,29 @@ export default function LivePage() {
     finally { setSuggestionLoading(false); }
   }, [clientId, selectedSessionId, selectedSession]);
 
-  // AI lead scoring
-  const fetchLeadScore = useCallback(async (session: LiveSession) => {
+  // AI lead scoring — force=true bypasses cache (used on new_message)
+  const fetchLeadScore = useCallback(async (session: LiveSession, force = false) => {
     if (!clientId) return;
     const sid = session.sessionId;
     if (scoringIds.has(sid)) return;
     const cached = leadScoresRef.current[sid];
-    if (cached && Date.now() - cached.fetchedAt < SCORE_CACHE_TTL) return;
+    if (!force && cached && Date.now() - cached.fetchedAt < SCORE_CACHE_TTL) return;
 
     setScoringIds(prev => new Set(prev).add(sid));
     try {
       const data = await getLeadScore(clientId, sid, session.conversationNumber);
-      setLeadScores(prev => ({
-        ...prev,
-        [sid]: { score: data.score, tier: data.tier, signals: data.signals, reasoning: data.reasoning, fetchedAt: Date.now() },
-      }));
+      setLeadScores(prev => {
+        const oldScore = prev[sid]?.score ?? -1;
+        if (oldScore >= 0 && data.score !== oldScore) {
+          const dir = data.score > oldScore ? 'up' : 'down';
+          setScoreFlash(p => ({ ...p, [sid]: dir }));
+          setTimeout(() => setScoreFlash(p => { const n = { ...p }; delete n[sid]; return n; }), 1500);
+        }
+        return {
+          ...prev,
+          [sid]: { score: data.score, tier: data.tier, signals: data.signals, reasoning: data.reasoning, fetchedAt: Date.now() },
+        };
+      });
     } catch {
       setLeadScores(prev => ({
         ...prev,
@@ -345,7 +354,7 @@ export default function LivePage() {
               clearTimeout(scoreDebounceTimers.current[sid]);
               scoreDebounceTimers.current[sid] = setTimeout(() => {
                 const s = sessionsRef.current.find(x => x.sessionId === sid);
-                if (s) fetchLeadScoreRef.current?.(s);
+                if (s) fetchLeadScoreRef.current?.(s, true); // force re-score on new message
               }, 2000);
             }
           }
@@ -614,7 +623,10 @@ export default function LivePage() {
                         </span>
                       ) : leadScores[session.sessionId]?.score >= 0 ? (
                         <span
-                          className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border cursor-default ${getScoreBadgeClass(leadScores[session.sessionId].tier)}`}
+                          className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border cursor-default transition-all duration-300 ${getScoreBadgeClass(leadScores[session.sessionId].tier)} ${
+                            scoreFlash[session.sessionId] === 'up' ? 'ring-1 ring-green-400/70 shadow-[0_0_6px_rgba(74,222,128,0.35)]' :
+                            scoreFlash[session.sessionId] === 'down' ? 'ring-1 ring-red-400/70 shadow-[0_0_6px_rgba(248,113,113,0.35)]' : ''
+                          }`}
                           title={[
                             `Score: ${leadScores[session.sessionId].score}/100`,
                             leadScores[session.sessionId].reasoning,
