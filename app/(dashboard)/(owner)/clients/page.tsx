@@ -336,24 +336,42 @@ export default function ClientsPage() {
                         {expandedClient === c.clientId && (
                           <TableRow key={`${c.clientId}-detail`}>
                             <TableCell colSpan={8} className="bg-white/5 py-3 px-4">
-                              <div className="text-xs text-zinc-400 mb-2 font-medium">
-                                Admin AI breakdown:
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {Object.entries(c.costByReason).length === 0 ? (
-                                  <span className="text-xs text-zinc-500">Brak danych admin AI</span>
-                                ) : (
-                                  Object.entries(c.costByReason)
-                                    .sort(([, a], [, b]) => b - a)
-                                    .map(([reason, cost]) => (
-                                      <span
-                                        key={reason}
-                                        className="px-2 py-1 bg-white/10 rounded text-xs text-zinc-300"
-                                      >
-                                        {REASON_LABELS[reason] ?? reason}: ${cost.toFixed(4)}
-                                      </span>
-                                    ))
-                                )}
+                              <div className="flex flex-col sm:flex-row gap-6">
+                                {/* Per-reason */}
+                                <div className="flex-1">
+                                  <div className="text-xs text-zinc-400 mb-2 font-medium">Po typie wywołania:</div>
+                                  <div className="flex flex-wrap gap-2">
+                                    {Object.entries(c.costByReason).length === 0 ? (
+                                      <span className="text-xs text-zinc-500">Brak danych</span>
+                                    ) : (
+                                      Object.entries(c.costByReason)
+                                        .sort(([, a], [, b]) => b - a)
+                                        .map(([reason, cost]) => (
+                                          <span key={reason} className="px-2 py-1 bg-white/10 rounded text-xs text-zinc-300">
+                                            {REASON_LABELS[reason] ?? reason}: ${cost.toFixed(4)}
+                                          </span>
+                                        ))
+                                    )}
+                                  </div>
+                                </div>
+                                {/* Per-user */}
+                                <div className="flex-1">
+                                  <div className="text-xs text-zinc-400 mb-2 font-medium">Po użytkowniku:</div>
+                                  <div className="flex flex-col gap-1.5">
+                                    {Object.entries(c.costByUser).length === 0 ? (
+                                      <span className="text-xs text-zinc-500">Brak danych</span>
+                                    ) : (
+                                      Object.entries(c.costByUser)
+                                        .sort(([, a], [, b]) => b - a)
+                                        .map(([email, cost]) => (
+                                          <div key={email} className="flex items-center justify-between gap-4">
+                                            <span className="text-xs text-zinc-300 font-mono">{email}</span>
+                                            <span className="text-xs text-zinc-400 font-mono">${cost.toFixed(4)}</span>
+                                          </div>
+                                        ))
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                             </TableCell>
                           </TableRow>

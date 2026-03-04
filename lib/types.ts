@@ -278,6 +278,7 @@ export interface ClientObsStats {
   chatbotCostUsd: number;
   adminCostUsd: number;
   costByReason: Record<string, number>;
+  costByUser: Record<string, number>;
   tokensInput: number;
   tokensOutput: number;
   tokensTotal: number;
