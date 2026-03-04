@@ -21,6 +21,7 @@ import {
   inlineEditKB,
   getKBVersions,
   revertKBEntry,
+  ApiError,
 } from '@/lib/api';
 import { KBEntry, Gap } from '@/lib/types';
 import toast from 'react-hot-toast';
@@ -120,8 +121,7 @@ export default function KnowledgeBasePage() {
       });
       mutateEntries();
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      if (msg.includes('409') || msg.toLowerCase().includes('conflict')) {
+      if (err instanceof ApiError && err.status === 409) {
         toast.error('Ktoś właśnie zapisał ten wpis — odśwież stronę i spróbuj ponownie.');
       } else {
         throw err;

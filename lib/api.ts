@@ -6,6 +6,16 @@ import { getIdToken } from './token';
 import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
+if (!API_BASE_URL && typeof window !== 'undefined') {
+  console.warn('[api] NEXT_PUBLIC_API_URL is not set — requests may fail');
+}
+
+class ApiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message);
+    this.name = 'ApiError';
+  }
+}
 
 // Helper to convert snake_case keys to camelCase recursively
 function camelCaseKeys(obj: any): any {
@@ -33,6 +43,14 @@ class ApiClient {
     };
   }
 
+  private async _handleError(response: Response): Promise<never> {
+    const errorData = await response.json().catch(() => ({}));
+    throw new ApiError(
+      errorData.error || `API error: ${response.statusText}`,
+      response.status
+    );
+  }
+
   async get<T>(endpoint: string): Promise<T> {
     const headers = this.getHeaders();
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -40,10 +58,7 @@ class ApiClient {
       headers,
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.statusText}`);
-    }
+    if (!response.ok) return this._handleError(response);
 
     const data = await response.json();
     return camelCaseKeys(data) as T;
@@ -56,10 +71,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.statusText}`);
-    }
+    if (!response.ok) return this._handleError(response);
 
     const responseData = await response.json();
     return camelCaseKeys(responseData) as T;
@@ -72,10 +84,7 @@ class ApiClient {
       body: JSON.stringify(data),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.statusText}`);
-    }
+    if (!response.ok) return this._handleError(response);
 
     const responseData = await response.json();
     return camelCaseKeys(responseData) as T;
@@ -87,16 +96,14 @@ class ApiClient {
       headers: this.getHeaders(),
     });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error || `API error: ${response.statusText}`);
-    }
+    if (!response.ok) return this._handleError(response);
 
     const responseData = await response.json();
     return camelCaseKeys(responseData) as T;
   }
 }
 
+export { ApiError };
 export const api = new ApiClient();
 
 // API functions

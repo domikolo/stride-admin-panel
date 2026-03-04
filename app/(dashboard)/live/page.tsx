@@ -387,7 +387,7 @@ export default function LivePage() {
           // Append system message indicating bot resumed
           if (event.sessionId === selectedSessionIdRef.current) {
             setMessages(prev => [...prev, {
-              role: 'system' as any,
+              role: 'system',
               text: 'Bot ponownie przejął rozmowę',
               timestamp: Math.floor(Date.now() / 1000),
               sentBy: 'system',

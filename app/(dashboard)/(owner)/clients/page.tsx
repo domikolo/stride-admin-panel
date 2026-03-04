@@ -119,7 +119,7 @@ export default function ClientsPage() {
   };
 
   // Max cost for progress bars
-  const maxCost = obsData
+  const maxCost = obsData && obsData.clients.length > 0
     ? Math.max(...obsData.clients.map(c => c.costUsd), 0.0001)
     : 1;
 
