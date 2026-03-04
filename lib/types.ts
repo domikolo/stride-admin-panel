@@ -260,3 +260,54 @@ export interface ContactProfile {
   sourceTypes?: string[];    // e.g. ['appointment', 'conversation'] — in list response
   sources?: ContactSource[]; // full list with session links — in get_detail only
 }
+
+// Observability Dashboard
+export interface LambdaMetricPoint { date: string; value: number; }
+export interface LambdaMetrics {
+  invocations: { total: number; datapoints: LambdaMetricPoint[] };
+  errors:      { total: number; datapoints: LambdaMetricPoint[] };
+  duration:    { total: number; datapoints: LambdaMetricPoint[] };
+  throttles:   { total: number; datapoints: LambdaMetricPoint[] };
+}
+export interface ClientObsStats {
+  clientId: string;
+  companyName: string;
+  status: string;
+  lambdaFunctionName: string;
+  costUsd: number;
+  chatbotCostUsd: number;
+  adminCostUsd: number;
+  costByReason: Record<string, number>;
+  tokensInput: number;
+  tokensOutput: number;
+  tokensTotal: number;
+  messages: number;
+  uniqueSessions: number;
+  appointments: number;
+  lambdaInvocations: number;
+  lambdaErrors: number;
+  lambdaErrorRate: number;
+  lambdaAvgDurationMs: number;
+  lambdaThrottles: number;
+  lambdaMetrics: LambdaMetrics;
+}
+export interface ObservabilityTotals {
+  costUsd: number;
+  chatbotCostUsd: number;
+  adminCostUsd: number;
+  tokensInput: number;
+  tokensOutput: number;
+  tokensTotal: number;
+  messages: number;
+  uniqueSessions: number;
+  appointments: number;
+  lambdaInvocations: number;
+  lambdaErrors: number;
+  lambdaErrorRate: number;
+}
+export interface ObservabilityData {
+  clients: ClientObsStats[];
+  totals: ObservabilityTotals;
+  periodDays: number;
+  generatedAt: string;
+}

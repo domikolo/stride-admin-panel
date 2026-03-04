@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './token';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -461,6 +461,9 @@ export const revokeApiKey = (clientId: string, keyId: string) =>
   api.delete<{ status: string; keyId: string }>(`/clients/${clientId}/api-keys/${keyId}`);
 
 // ─── Audit Log ──────────────────────────────────────────────────
+
+export const getObservability = (days = 30) =>
+  api.get<ObservabilityData>(`/clients/observability?days=${days}`);
 
 export const getAuditLog = (
   clientId: string,
