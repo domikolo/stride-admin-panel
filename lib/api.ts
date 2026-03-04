@@ -299,7 +299,7 @@ export const createKBEntry = (
 export const updateKBEntry = (
   clientId: string,
   entryId: string,
-  data: { topic?: string; content?: string }
+  data: { topic?: string; content?: string; expected_updated_at?: string; }
 ) =>
   api.put<KBEntry>(
     `/clients/${clientId}/knowledge-base/${entryId}`,
