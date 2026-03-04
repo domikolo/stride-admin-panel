@@ -202,6 +202,15 @@ export interface LiveMessage {
   conversationNumber: number;
 }
 
+export type LeadScoreTier = 'hot' | 'warm' | 'cold';
+export interface LeadScore {
+  score: number;
+  tier: LeadScoreTier;
+  signals: string[];
+  reasoning: string;
+  fetchedAt: number;  // Date.now() — do cache TTL
+}
+
 // Contacts / CRM-lite Types
 export type PipelineStage = 'new' | 'contacted' | 'proposal' | 'won' | 'lost';
 

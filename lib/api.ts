@@ -387,6 +387,12 @@ export const getLiveAiSuggestion = (
     { session_id: sessionId, conversation_number: conversationNumber }
   );
 
+export const getLeadScore = (clientId: string, sessionId: string, conversationNumber: number) =>
+  api.post<{ sessionId: string; score: number; tier: 'hot' | 'warm' | 'cold'; signals: string[]; reasoning: string }>(
+    `/clients/${clientId}/live/score`,
+    { session_id: sessionId, conversation_number: conversationNumber }
+  );
+
 // ─── Contacts (CRM-lite) ────────────────────────────────────────
 
 export const getContactStages = (clientId: string) =>

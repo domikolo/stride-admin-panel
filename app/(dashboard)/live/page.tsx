@@ -8,10 +8,10 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
-import { getLiveSessions, getConversationDetails, getLiveAiSuggestion } from '@/lib/api';
+import { getLiveSessions, getConversationDetails, getLiveAiSuggestion, getLeadScore } from '@/lib/api';
 import { getIdToken } from '@/lib/token';
 import { wsClient, WSEvent } from '@/lib/websocket';
-import { LiveSession, LiveMessage } from '@/lib/types';
+import { LiveSession, LiveMessage, LeadScore, LeadScoreTier } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +33,7 @@ import {
   X,
   ArrowRight,
   Loader2,
+  TrendingUp,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -128,6 +129,14 @@ function getGapColor(count: number) {
   return { border: 'border-l-red-500/60', bg: 'bg-red-500/[0.04]', text: 'text-red-400', badge: 'bg-red-500/15 text-red-400' };
 }
 
+const SCORE_CACHE_TTL = 3 * 60 * 1000;
+
+function getScoreBadgeClass(tier: LeadScoreTier) {
+  if (tier === 'hot')  return 'bg-red-500/20 text-red-400 border-red-500/30';
+  if (tier === 'warm') return 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+  return 'bg-zinc-700/50 text-zinc-400 border-zinc-600/30';
+}
+
 
 export default function LivePage() {
   const { user } = useAuth();
@@ -150,15 +159,25 @@ export default function LivePage() {
   // Sessions currently being prefetched (show spinner instead of 0 gaps)
   const [prefetchingSessionIds, setPrefetchingSessionIds] = useState<Set<string>>(new Set());
 
+  // Lead scoring
+  const [leadScores, setLeadScores] = useState<Record<string, LeadScore>>({});
+  const [scoringIds, setScoringIds] = useState<Set<string>>(new Set());
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Refs to avoid stale closures in WS event handlers
   const selectedSessionIdRef = useRef<string | null>(null);
   const sessionMessagesRef = useRef<Record<string, LiveMessage[]>>({});
+  const leadScoresRef = useRef<Record<string, LeadScore>>({});
+  const sessionsRef = useRef<LiveSession[]>([]);
+  const scoreDebounceTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const fetchLeadScoreRef = useRef<(session: LiveSession) => void>(() => {});
 
   useEffect(() => { selectedSessionIdRef.current = selectedSessionId; }, [selectedSessionId]);
   useEffect(() => { sessionMessagesRef.current = sessionMessages; }, [sessionMessages]);
+  useEffect(() => { leadScoresRef.current = leadScores; }, [leadScores]);
+  useEffect(() => { sessionsRef.current = sessions; }, [sessions]);
 
   // Get selected session object
   const selectedSession = sessions.find((s) => s.sessionId === selectedSessionId);
@@ -177,18 +196,48 @@ export default function LivePage() {
     finally { setSuggestionLoading(false); }
   }, [clientId, selectedSessionId, selectedSession]);
 
+  // AI lead scoring
+  const fetchLeadScore = useCallback(async (session: LiveSession) => {
+    if (!clientId) return;
+    const sid = session.sessionId;
+    if (scoringIds.has(sid)) return;
+    const cached = leadScoresRef.current[sid];
+    if (cached && Date.now() - cached.fetchedAt < SCORE_CACHE_TTL) return;
+
+    setScoringIds(prev => new Set(prev).add(sid));
+    try {
+      const data = await getLeadScore(clientId, sid, session.conversationNumber);
+      setLeadScores(prev => ({
+        ...prev,
+        [sid]: { score: data.score, tier: data.tier, signals: data.signals, reasoning: data.reasoning, fetchedAt: Date.now() },
+      }));
+    } catch {
+      setLeadScores(prev => ({
+        ...prev,
+        [sid]: { score: -1, tier: 'cold', signals: [], reasoning: '', fetchedAt: Date.now() },
+      }));
+    } finally {
+      setScoringIds(prev => { const n = new Set(prev); n.delete(sid); return n; });
+    }
+  }, [clientId, scoringIds]);
+
+  useEffect(() => { fetchLeadScoreRef.current = fetchLeadScore; }, [fetchLeadScore]);
+
   // Live gap detection for current conversation
   const currentGaps = useMemo(() => detectGapsInMessages(messages), [messages]);
 
-  // Sorted sessions: by gap count desc, then by lastActivity desc
+  // Sorted sessions: by gap count desc, then by lead score desc, then by lastActivity desc
   const sortedSessions = useMemo(() => {
     return [...sessions].sort((a, b) => {
       const gapsA = sessionMessages[a.sessionId] ? detectGapsInMessages(sessionMessages[a.sessionId]).count : 0;
       const gapsB = sessionMessages[b.sessionId] ? detectGapsInMessages(sessionMessages[b.sessionId]).count : 0;
       if (gapsB !== gapsA) return gapsB - gapsA;
+      const scoreA = leadScores[a.sessionId]?.score ?? -1;
+      const scoreB = leadScores[b.sessionId]?.score ?? -1;
+      if (scoreB !== scoreA) return scoreB - scoreA;
       return (b.lastActivity || 0) - (a.lastActivity || 0);
     });
-  }, [sessions, sessionMessages]);
+  }, [sessions, sessionMessages, leadScores]);
 
   // ─── Load sessions via REST + prefetch messages ───────────────
 
@@ -197,6 +246,13 @@ export default function LivePage() {
     try {
       const data = await getLiveSessions(clientId);
       setSessions(data.sessions);
+
+      // Auto-score sessions with stale or missing scores
+      const toScore = data.sessions.filter(s => {
+        const c = leadScoresRef.current[s.sessionId];
+        return !c || Date.now() - c.fetchedAt > SCORE_CACHE_TTL;
+      });
+      toScore.forEach(s => fetchLeadScoreRef.current?.(s));
 
       // Prefetch messages for sessions not yet in cache (enables gap detection from first load)
       const uncached = data.sessions.filter(s => !sessionMessagesRef.current[s.sessionId]);
@@ -285,6 +341,12 @@ export default function LivePage() {
               if (sid !== selectedSessionIdRef.current) {
                 setUnreadCounts(prev => ({ ...prev, [sid]: (prev[sid] || 0) + 1 }));
               }
+              // Debounced re-score after new message
+              clearTimeout(scoreDebounceTimers.current[sid]);
+              scoreDebounceTimers.current[sid] = setTimeout(() => {
+                const s = sessionsRef.current.find(x => x.sessionId === sid);
+                if (s) fetchLeadScoreRef.current?.(s);
+              }, 2000);
             }
           }
           loadSessions();
@@ -335,6 +397,7 @@ export default function LivePage() {
       cleanups.forEach((c) => c());
       clearInterval(interval);
       wsClient.disconnect();
+      Object.values(scoreDebounceTimers.current).forEach(clearTimeout);
     };
   }, [user, clientId, loadSessions]);
 
@@ -543,6 +606,24 @@ export default function LivePage() {
                           <AlertTriangle size={10} />
                           {sessionGaps.count} {sessionGaps.count === 1 ? 'luka' : 'luki'}
                         </Badge>
+                      ) : null}
+                      {/* Lead Score badge */}
+                      {scoringIds.has(session.sessionId) ? (
+                        <span className="flex items-center gap-0.5 text-[10px] text-zinc-600 px-1.5 py-0 rounded border border-zinc-700/50">
+                          <Loader2 size={8} className="animate-spin" /><span>AI</span>
+                        </span>
+                      ) : leadScores[session.sessionId]?.score >= 0 ? (
+                        <span
+                          className={`inline-flex items-center gap-0.5 text-[10px] font-semibold px-1.5 py-0 rounded border cursor-default ${getScoreBadgeClass(leadScores[session.sessionId].tier)}`}
+                          title={[
+                            `Score: ${leadScores[session.sessionId].score}/100`,
+                            leadScores[session.sessionId].reasoning,
+                            ...leadScores[session.sessionId].signals.map(s => `• ${s}`),
+                          ].join('\n')}
+                        >
+                          <TrendingUp size={8} />
+                          {leadScores[session.sessionId].tier.toUpperCase()} {leadScores[session.sessionId].score}
+                        </span>
                       ) : null}
                     </div>
                   </button>
