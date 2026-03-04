@@ -208,7 +208,8 @@ export interface LeadScore {
   tier: LeadScoreTier;
   signals: string[];
   reasoning: string;
-  fetchedAt: number;  // Date.now() — do cache TTL
+  fetchedAt: number;
+  messageCountAtScore: number;  // messageCount at time of scoring — triggers re-score on increase
 }
 
 // Contacts / CRM-lite Types

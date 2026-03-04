@@ -217,13 +217,13 @@ export default function LivePage() {
         }
         return {
           ...prev,
-          [sid]: { score: data.score, tier: data.tier, signals: data.signals, reasoning: data.reasoning, fetchedAt: Date.now() },
+          [sid]: { score: data.score, tier: data.tier, signals: data.signals, reasoning: data.reasoning, fetchedAt: Date.now(), messageCountAtScore: session.messageCount },
         };
       });
     } catch {
       setLeadScores(prev => ({
         ...prev,
-        [sid]: { score: -1, tier: 'cold', signals: [], reasoning: '', fetchedAt: Date.now() },
+        [sid]: { score: -1, tier: 'cold', signals: [], reasoning: '', fetchedAt: Date.now(), messageCountAtScore: session.messageCount },
       }));
     } finally {
       setScoringIds(prev => { const n = new Set(prev); n.delete(sid); return n; });
@@ -256,9 +256,13 @@ export default function LivePage() {
       const data = await getLiveSessions(clientId);
       setSessions(data.sessions);
 
-      // Score only sessions that have never been scored (new sessions)
-      const toScore = data.sessions.filter(s => !leadScoresRef.current[s.sessionId]);
-      toScore.forEach(s => fetchLeadScoreRef.current?.(s));
+      // Score new sessions; re-score any session where messageCount grew since last score
+      const toScore = data.sessions.filter(s => {
+        const cached = leadScoresRef.current[s.sessionId];
+        if (!cached) return true;
+        return s.messageCount > cached.messageCountAtScore;
+      });
+      toScore.forEach(s => fetchLeadScoreRef.current?.(s, true));
 
       // Prefetch messages for sessions not yet in cache (enables gap detection from first load)
       const uncached = data.sessions.filter(s => !sessionMessagesRef.current[s.sessionId]);
