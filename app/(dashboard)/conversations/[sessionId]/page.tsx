@@ -7,6 +7,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { getConversationDetails } from '@/lib/api';
 import { ConversationMessage } from '@/lib/types';
 import { Card } from '@/components/ui/card';
@@ -88,6 +89,7 @@ export default function ConversationDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const { user } = useAuth();
+  const clientId = useClientId();
   const sessionId = params.sessionId as string;
   const conversationNumber = searchParams.get('conversation_number')
     ? parseInt(searchParams.get('conversation_number')!)
@@ -134,7 +136,6 @@ export default function ConversationDetailPage() {
 
   const loadConversation = async () => {
     try {
-      const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
       if (!clientId) return;
       const data = await getConversationDetails(clientId, sessionId, conversationNumber);
       setMessages(data.messages);

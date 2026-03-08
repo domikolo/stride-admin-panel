@@ -7,6 +7,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { Conversation } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -106,7 +107,7 @@ export default function ConversationsPage() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
   const itemsPerPage = 15;
 
   const { data, isLoading: loading, error: swrError, mutate } = useSWR<{ conversations: Conversation[]; count: number }>(
@@ -270,6 +271,14 @@ export default function ConversationsPage() {
           <Skeleton className="h-10 w-32" />
         </div>
         <Skeleton className="h-96" />
+      </div>
+    );
+  }
+
+  if (error && !conversations.length) {
+    return (
+      <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+        {error}
       </div>
     );
   }

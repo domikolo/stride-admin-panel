@@ -8,6 +8,7 @@
 
 import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { getLiveSessions, getConversationDetails, getLiveAiSuggestion, getLeadScore } from '@/lib/api';
 import { getIdToken } from '@/lib/token';
 import { wsClient, WSEvent } from '@/lib/websocket';
@@ -140,7 +141,7 @@ function getScoreBadgeClass(tier: LeadScoreTier) {
 
 export default function LivePage() {
   const { user } = useAuth();
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
 
   // State
   const [sessions, setSessions] = useState<LiveSession[]>([]);

@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react';
 import useSWR from 'swr';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
 import { getAuditLog, getApiKeys, createApiKey, revokeApiKey } from '@/lib/api';
@@ -579,6 +580,7 @@ function AuditLogSection({ clientId }: { clientId: string }) {
 
 export default function SettingsPage() {
   const { user, signOut } = useAuth();
+  const clientId = useClientId();
   const { theme, setTheme } = useTheme();
 
   const [oldPassword, setOldPassword] = useState('');
@@ -686,7 +688,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* API Keys */}
-            <ApiKeysSection clientId={user?.role === 'owner' ? 'stride-services' : (user?.clientId ?? '')} />
+            <ApiKeysSection clientId={clientId ?? ''} />
 
             {/* Appearance */}
             <Card className="glass-card p-6 space-y-4">
@@ -802,7 +804,7 @@ export default function SettingsPage() {
                   Historia operacji na danych panelu (KB, kontakty, pipeline).
                 </p>
               </div>
-              <AuditLogSection clientId={user.role === 'owner' ? 'stride-services' : (user.clientId ?? '')} />
+              <AuditLogSection clientId={clientId ?? ''} />
             </div>
           </TabsContent>
         )}

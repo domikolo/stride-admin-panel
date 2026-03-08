@@ -145,7 +145,7 @@ const NOTIFICATION_MESSAGES = [
   'Masz pytanie? Napisz!',
 ];
 
-export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
+function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
   const router = useRouter();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -391,6 +391,8 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
       <button
         id="floating-chat-btn"
         onClick={() => isOpen ? animateClose() : animateOpen()}
+        aria-label={isOpen ? 'Zamknij czat asystenta' : 'Otwórz czat asystenta'}
+        aria-expanded={isOpen}
         className="group fixed overflow-visible pointer-events-auto"
         style={{
           top: '50%',
@@ -733,3 +735,5 @@ export default function FloatingChatWidget({ clientId }: FloatingChatWidgetProps
     </>
   );
 }
+
+export default React.memo(FloatingChatWidget);

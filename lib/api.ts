@@ -18,18 +18,18 @@ class ApiError extends Error {
 }
 
 // Helper to convert snake_case keys to camelCase recursively
-function camelCaseKeys(obj: any): any {
+function camelCaseKeys<T>(obj: T): T {
   if (Array.isArray(obj)) {
-    return obj.map(camelCaseKeys);
+    return obj.map(camelCaseKeys) as T;
   }
   if (obj && typeof obj === 'object') {
-    const newObj: any = {};
+    const newObj: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(obj)) {
       const parts = k.split('_');
       const camel = parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
       newObj[camel] = camelCaseKeys(v);
     }
-    return newObj;
+    return newObj as T;
   }
   return obj;
 }

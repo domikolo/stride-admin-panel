@@ -8,6 +8,7 @@
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -36,7 +37,7 @@ export default function AppointmentsPage() {
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
 
   const { data: apptData, isLoading, error: apptError, mutate } = useSWR<{ appointments: Appointment[]; count: number }>(
     clientId ? `/clients/${clientId}/appointments` : null, fetcher

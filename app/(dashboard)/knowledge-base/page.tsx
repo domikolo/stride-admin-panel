@@ -8,6 +8,7 @@ import { useEffect, useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import {
   createKBEntry,
@@ -39,7 +40,7 @@ export default function KnowledgeBasePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const processedGapRef = useRef<string | null>(null);
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
   const getClientId = () => clientId!;
 
   const { data: entriesData, isLoading: entriesLoading, mutate: mutateEntries } = useSWR<{ entries: KBEntry[]; count: number }>(

@@ -1,17 +1,17 @@
 'use client';
 
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { usePathname } from 'next/navigation';
 import FloatingChatWidget from './FloatingChatWidget';
 
 export default function FloatingChatWrapper() {
   const { user } = useAuth();
+  const clientId = useClientId();
   const pathname = usePathname();
 
-  if (!user) return null;
+  if (!user || !clientId) return null;
   if (pathname === '/live') return null;
-
-  const clientId = user.role === 'owner' ? 'stride-services' : user.clientId || 'stride-services';
 
   return <FloatingChatWidget clientId={clientId} />;
 }

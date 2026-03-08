@@ -9,6 +9,7 @@ import { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import {
   getContact, updateContact, deleteContact,
   updateContactStages,
@@ -142,6 +143,7 @@ interface DetailPanelProps {
   profileId: string;
   clientId: string;
   allStages: StageConfig[];
+  contacts: ContactProfile[];
   onClose: () => void;
   onUpdated: (patch: Partial<ContactProfile> & { profileId: string }) => void;
   onDeleted: (profileId: string) => void;
@@ -149,7 +151,7 @@ interface DetailPanelProps {
   onDeleteStage: (id: string) => Promise<void>;
 }
 
-function DetailPanel({ profileId, clientId, allStages, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage }: DetailPanelProps) {
+function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage }: DetailPanelProps) {
   const router = useRouter();
   const [contact, setContact] = useState<ContactProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -161,9 +163,20 @@ function DetailPanel({ profileId, clientId, allStages, onClose, onUpdated, onDel
   const [showAddStage, setShowAddStage] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     setConfirmDelete(false);
     setShowAddStage(false);
+    // Pre-populate from list data to avoid loading flash
+    const fromList = contacts.find(c => c.profileId === profileId);
+    if (fromList) {
+      setContact(fromList);
+      setEditName(fromList.displayName || '');
+      setEditNotes(fromList.notes || '');
+      setEditStatus(fromList.status);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+    // Fetch full detail (includes sources array)
     getContact(clientId, profileId).then(c => {
       setContact(c);
       setEditName(c.displayName || '');
@@ -431,7 +444,7 @@ export default function ContactsPage() {
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
 
   const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
     clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher, { refreshInterval: 30_000 }
@@ -719,6 +732,7 @@ export default function ContactsPage() {
           profileId={selectedId}
           clientId={clientId}
           allStages={allStages}
+          contacts={contacts}
           onClose={() => setSelectedId(null)}
           onUpdated={handleUpdated}
           onDeleted={handleDeleted}

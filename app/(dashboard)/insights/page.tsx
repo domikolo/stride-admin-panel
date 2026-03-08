@@ -9,6 +9,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { resolveGap } from '@/lib/api';
 import { Timeframe } from '@/lib/api';
@@ -56,7 +57,7 @@ export default function InsightsPage() {
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
 
   // Lazy load per tab — null key when tab is inactive
   const { data: dailyRaw, isLoading: dailyLoading, mutate: mutateDaily } = useSWR<{ topics: Topic[] }>(

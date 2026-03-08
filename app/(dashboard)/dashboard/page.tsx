@@ -5,9 +5,10 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '@/hooks/useAuth';
+import { useClientId } from '@/hooks/useClientId';
 import { useTheme } from 'next-themes';
 import { useSWR, fetcher } from '@/lib/swr';
 import {
@@ -36,7 +37,7 @@ export default function DashboardPage() {
   const chartTooltipBorder = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.1)';
   const chartTooltipLabel = isDark ? '#a1a1aa' : '#6b7280';
 
-  const clientId = user ? (user.role === 'owner' ? 'stride-services' : (user.clientId ?? null)) : null;
+  const clientId = useClientId();
 
   // SWR hooks — null key prevents fetching until clientId is available
   const { data: stats, mutate: mutateStats } = useSWR<ClientStats>(
@@ -60,17 +61,16 @@ export default function DashboardPage() {
   const [briefingLoading, setBriefingLoading] = useState(false);
   const [briefingRefreshing, setBriefingRefreshing] = useState(false);
   const [briefingIsNew, setBriefingIsNew] = useState(false);
-  const [briefingLoaded, setBriefingLoaded] = useState(false);
 
   // Load briefing once clientId is ready
-  if (clientId && !briefingLoaded && !briefingLoading) {
+  useEffect(() => {
+    if (!clientId) return;
     setBriefingLoading(true);
-    setBriefingLoaded(true);
     getDailyBriefing(clientId)
       .then(data => setBriefing(data))
       .catch(() => setBriefing(null))
       .finally(() => setBriefingLoading(false));
-  }
+  }, [clientId]);
 
   const handleRefreshBriefing = async () => {
     if (!clientId) return;
