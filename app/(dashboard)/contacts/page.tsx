@@ -8,6 +8,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter } from 'next/navigation';
+import { useSearchHighlight, flashElement } from '@/hooks/useSearchHighlight';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import {
@@ -544,6 +545,7 @@ export default function ContactsPage() {
   const [bulkStatus, setBulkStatus] = useState('');
 
   const clientId = useClientId();
+  const highlightRef = useSearchHighlight();
 
   const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
     clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher, { refreshInterval: 30_000 }
@@ -556,6 +558,24 @@ export default function ContactsPage() {
   const customStages: CustomStage[] = stagesData?.stages ?? [];
   const loading = contactsLoading;
   const error = contactsError ? 'Nie udało się załadować kontaktów.' : null;
+
+  // Open panel + scroll to + flash row when navigated from search
+  useEffect(() => {
+    const hl = highlightRef.current;
+    if (!hl || hl.type !== 'contact' || !contacts.length) return;
+    const found = contacts.find(c => c.profileId === hl.targetId);
+    if (!found) return;
+    highlightRef.current = null;
+    setView('table');
+    setSelectedId(hl.targetId);
+    const idx = contacts.findIndex(c => c.profileId === hl.targetId);
+    const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
+    setPage(targetPage);
+    setTimeout(() => {
+      const el = document.querySelector(`[data-profile-id="${hl.targetId}"]`);
+      if (el) flashElement(el);
+    }, 120);
+  }, [contacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allStages: StageConfig[] = useMemo(() => [
     ...DEFAULT_STAGES,
@@ -830,6 +850,7 @@ export default function ContactsPage() {
                 <TableBody>
                   {paginated.map(c => (
                     <TableRow key={c.profileId}
+                      data-profile-id={c.profileId}
                       className={`hover:bg-white/[0.04] cursor-pointer transition-colors ${selectedId === c.profileId ? 'bg-white/[0.06]' : ''} ${selectedIds.has(c.profileId) ? 'bg-blue-500/[0.04]' : ''}`}
                       onClick={() => setSelectedId(c.profileId === selectedId ? null : c.profileId)}>
                       <TableCell onClick={e => e.stopPropagation()}>

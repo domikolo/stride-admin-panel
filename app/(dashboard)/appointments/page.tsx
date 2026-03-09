@@ -12,6 +12,7 @@ import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { updateAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
 import toast from 'react-hot-toast';
+import { useSearchHighlight, flashElement } from '@/hooks/useSearchHighlight';
 import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -174,6 +175,7 @@ export default function AppointmentsPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   const clientId = useClientId();
+  const highlightRef = useSearchHighlight();
 
   const { data: apptData, isLoading, error: apptError, mutate } = useSWR<{ appointments: Appointment[]; count: number }>(
     clientId ? `/clients/${clientId}/appointments` : null, fetcher
@@ -195,6 +197,20 @@ export default function AppointmentsPage() {
     if (statusFilter === 'all') return appointments;
     return appointments.filter(a => a.status === statusFilter);
   }, [appointments, statusFilter]);
+
+  // Scroll to + flash row when navigated from search
+  useEffect(() => {
+    const hl = highlightRef.current;
+    if (!hl || hl.type !== 'appointment' || !filteredAppointments.length) return;
+    const found = filteredAppointments.find(a => a.appointmentId === hl.targetId);
+    if (!found) return;
+    highlightRef.current = null;
+    setView('table');
+    setTimeout(() => {
+      const el = document.querySelector(`[data-appt-id="${hl.targetId}"]`);
+      if (el) flashElement(el);
+    }, 120);
+  }, [filteredAppointments]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get appointments for a specific day (calendar view)
   const getAppointmentsForDay = (day: Date) => {
@@ -418,7 +434,7 @@ export default function AppointmentsPage() {
               </TableHeader>
               <TableBody>
                 {filteredAppointments.map((appt) => (
-                  <TableRow key={appt.appointmentId} className="hover:bg-white/5">
+                  <TableRow key={appt.appointmentId} data-appt-id={appt.appointmentId} className="hover:bg-white/5">
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">

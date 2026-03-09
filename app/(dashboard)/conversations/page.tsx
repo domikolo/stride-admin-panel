@@ -11,6 +11,7 @@ import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { Conversation } from '@/lib/types';
 import { updateConversationAnnotations } from '@/lib/api';
+import { useSearchHighlight, flashElement } from '@/hooks/useSearchHighlight';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -245,6 +246,7 @@ export default function ConversationsPage() {
 
   const clientId = useClientId();
   const itemsPerPage = 15;
+  const highlightRef = useSearchHighlight();
 
   const { data, isLoading: loading, error: swrError, mutate } = useSWR<{ conversations: Conversation[]; count: number }>(
     clientId ? `/clients/${clientId}/conversations?limit=50` : null, fetcher
@@ -434,6 +436,21 @@ export default function ConversationsPage() {
   useEffect(() => {
     setCurrentPage(1);
   }, [filter, searchQuery, ratingFilter]);
+
+  // Scroll to + flash row when navigated from search
+  useEffect(() => {
+    const hl = highlightRef.current;
+    if (!hl || hl.type !== 'conversation' || !groupData.length) return;
+    const idx = groupData.findIndex(g => g.sessionId === hl.targetId);
+    if (idx === -1) return;
+    highlightRef.current = null;
+    const targetPage = Math.floor(idx / itemsPerPage) + 1;
+    setCurrentPage(targetPage);
+    setTimeout(() => {
+      const el = document.querySelector(`[data-session-id="${hl.targetId}"]`);
+      if (el) flashElement(el);
+    }, 120);
+  }, [groupData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Find conversation data for annotation panel
   const annotationSession = selectedAnnotationSession
@@ -628,6 +645,7 @@ export default function ConversationsPage() {
                     <React.Fragment key={group.sessionId}>
                       {/* Parent Group Row */}
                       <TableRow
+                        data-session-id={group.sessionId}
                         className={`
                           transition-colors duration-150 border-b border-white/[0.06] relative cursor-pointer hover:bg-white/[0.06]
                           ${isAnnotationOpen ? 'bg-white/[0.06]' : ''}

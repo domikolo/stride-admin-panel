@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientId } from '@/hooks/useClientId';
-import { searchGlobal, SearchResult } from '@/lib/api';
+import { getClientConversations, getClientContacts, getClientAppointments } from '@/lib/api';
+import { Conversation, ContactProfile, Appointment } from '@/lib/types';
 import {
   LayoutDashboard, MessageSquare, Calendar, Flame, Clock,
   Search, Users, Radio, BookOpen, Settings, Rocket,
@@ -35,11 +36,17 @@ const NAV_ITEMS: NavItem[] = [
   { kind: 'nav', label: 'Pierwsze kroki',      href: '/getting-started',         icon: Rocket,          section: 'Nawigacja', keywords: ['help', 'guide', 'pomoc'] },
 ];
 
-// ─── API result types ─────────────────────────────────────────────────────────
+// ─── Data result types ────────────────────────────────────────────────────────
 
-type ApiResult = SearchResult & { kind: SearchResult['type'] };
+interface DataResult {
+  kind: 'conversation' | 'contact' | 'appointment';
+  id: string;
+  label: string;
+  sublabel?: string;
+  targetId: string;
+}
 
-type AnyItem = (NavItem | ApiResult) & { globalIndex: number };
+type AnyItem = (NavItem | DataResult) & { globalIndex: number };
 
 interface Section {
   name: string;
@@ -68,6 +75,22 @@ const KIND_COLOR: Record<string, string> = {
   appointment: 'text-violet-400',
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Returns a ~60-char excerpt centred on the first match, or empty string. */
+function matchSnippet(fields: (string | undefined | null)[], q: string): string {
+  const ql = q.toLowerCase();
+  for (const f of fields) {
+    if (!f) continue;
+    const idx = f.toLowerCase().indexOf(ql);
+    if (idx === -1) continue;
+    const s = Math.max(0, idx - 28);
+    const e = Math.min(f.length, idx + q.length + 28);
+    return (s > 0 ? '…' : '') + f.slice(s, e) + (e < f.length ? '…' : '');
+  }
+  return '';
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 interface SearchDialogProps {
@@ -77,59 +100,114 @@ interface SearchDialogProps {
 
 export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   const [query, setQuery] = useState('');
-  const [apiResults, setApiResults] = useState<ApiResult[]>([]);
-  const [loading, setLoading] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Cached datasets — loaded once per open, cleared on close
+  const [dataLoading, setDataLoading] = useState(false);
+  const [allConversations, setAllConversations] = useState<Conversation[]>([]);
+  const [allContacts, setAllContacts]           = useState<ContactProfile[]>([]);
+  const [allAppointments, setAllAppointments]   = useState<Appointment[]>([]);
+  const dataLoadedRef = useRef(false);
+
   const inputRef = useRef<HTMLInputElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
   const clientId = useClientId();
 
-  // Reset on open
+  // Reset & load data on open
   useEffect(() => {
-    if (open) {
-      setQuery('');
-      setApiResults([]);
-      setSelectedIndex(0);
-      setLoading(false);
-      setTimeout(() => inputRef.current?.focus(), 50);
+    if (!open) {
+      dataLoadedRef.current = false;
+      return;
     }
-  }, [open]);
+    setQuery('');
+    setSelectedIndex(0);
+    setTimeout(() => inputRef.current?.focus(), 50);
+
+    if (dataLoadedRef.current || !clientId) return;
+    setDataLoading(true);
+    Promise.all([
+      getClientConversations(clientId, 500),
+      getClientContacts(clientId, { limit: 500 }),
+      getClientAppointments(clientId),
+    ]).then(([convResp, contactResp, apptResp]) => {
+      setAllConversations(convResp.conversations || []);
+      setAllContacts(contactResp.contacts || []);
+      setAllAppointments(apptResp.appointments || []);
+      dataLoadedRef.current = true;
+    }).catch(() => {
+      dataLoadedRef.current = true; // don't retry
+    }).finally(() => {
+      setDataLoading(false);
+    });
+  }, [open, clientId]);
 
   // Reset selection on query change
   useEffect(() => { setSelectedIndex(0); }, [query]);
 
-  // Debounced API search
-  useEffect(() => {
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+  // ── Build results ────────────────────────────────────────────────────────────
 
-    const trimmed = query.trim();
-    if (trimmed.length < 2 || !clientId) {
-      setApiResults([]);
-      setLoading(false);
-      return;
+  const dataResults = useMemo<DataResult[]>(() => {
+    const q = query.trim();
+    if (q.length < 2) return [];
+
+    const results: DataResult[] = [];
+
+    // Conversations
+    for (const conv of allConversations) {
+      const fields = [
+        conv.preview, conv.keywords,
+        conv.adminNotes, conv.adminTags?.join(' '), conv.sessionId,
+      ];
+      const snippet = matchSnippet(fields, q);
+      if (!snippet) continue;
+      results.push({
+        kind: 'conversation',
+        id: conv.sessionId,
+        label: (conv.preview || conv.sessionId).slice(0, 70),
+        sublabel: snippet,
+        targetId: conv.sessionId,
+      });
     }
 
-    setLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      try {
-        const data = await searchGlobal(clientId, trimmed);
-        setApiResults((data.results || []).map(r => ({ ...r, kind: r.type })));
-      } catch {
-        // silently ignore — nav items always work
-      } finally {
-        setLoading(false);
-      }
-    }, 300);
+    // Contacts
+    for (const c of allContacts) {
+      const fields = [c.displayName, c.contactInfo, c.notes, c.tags?.join(' ')];
+      const snippet = matchSnippet(fields, q);
+      if (!snippet) continue;
+      results.push({
+        kind: 'contact',
+        id: c.profileId,
+        label: c.displayName || c.contactInfo,
+        sublabel: snippet,
+        targetId: c.profileId,
+      });
+    }
 
-    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query, clientId]);
+    // Appointments
+    for (const a of allAppointments) {
+      const fields = [
+        a.contactInfo?.name, a.contactInfo?.email,
+        a.contactInfo?.phone, a.notes,
+      ];
+      const snippet = matchSnippet(fields, q);
+      if (!snippet) continue;
+      results.push({
+        kind: 'appointment',
+        id: a.appointmentId,
+        label: a.contactInfo?.name || a.contactInfo?.email || a.contactInfo?.phone || 'Wizyta',
+        sublabel: snippet || a.datetime?.slice(0, 10),
+        targetId: a.appointmentId,
+      });
+    }
 
-  // Build combined list
-  const allItems: AnyItem[] = (() => {
+    return results;
+  }, [query, allConversations, allContacts, allAppointments]);
+
+  // ── Build combined list ───────────────────────────────────────────────────────
+
+  const allItems: AnyItem[] = useMemo(() => {
     const trimmed = query.trim().toLowerCase();
 
-    // Nav items — always shown, filtered by query when query exists
     const navFiltered: NavItem[] = trimmed.length < 2
       ? NAV_ITEMS
       : NAV_ITEMS.filter(item =>
@@ -138,27 +216,21 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
           item.keywords?.some(k => k.includes(trimmed))
         );
 
-    const combined: (NavItem | ApiResult)[] = [...navFiltered, ...apiResults];
-
-    // Group by section and assign global index
-    const sectionMap = new Map<string, (NavItem | ApiResult)[]>();
+    const combined: (NavItem | DataResult)[] = [...navFiltered, ...dataResults];
+    const sectionMap = new Map<string, (NavItem | DataResult)[]>();
     for (const item of combined) {
       const sec = item.kind === 'nav' ? (item as NavItem).section : KIND_SECTION[item.kind];
       if (!sectionMap.has(sec)) sectionMap.set(sec, []);
       sectionMap.get(sec)!.push(item);
     }
-
-    // Sort sections and flatten
     const sorted = Array.from(sectionMap.entries()).sort(
       ([a], [b]) => (SECTION_ORDER[a] ?? 99) - (SECTION_ORDER[b] ?? 99)
     );
-
     let idx = 0;
     return sorted.flatMap(([, items]) => items.map(item => ({ ...item, globalIndex: idx++ })));
-  })();
+  }, [query, dataResults]);
 
-  // Build section groups for rendering
-  const sections: Section[] = (() => {
+  const sections: Section[] = useMemo(() => {
     const map = new Map<string, AnyItem[]>();
     for (const item of allItems) {
       const sec = item.kind === 'nav' ? (item as NavItem).section : KIND_SECTION[item.kind];
@@ -168,20 +240,28 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
     return Array.from(map.entries())
       .sort(([a], [b]) => (SECTION_ORDER[a] ?? 99) - (SECTION_ORDER[b] ?? 99))
       .map(([name, items]) => ({ name, items }));
-  })();
+  }, [allItems]);
+
+  // ── Navigation ────────────────────────────────────────────────────────────────
 
   const navigate = useCallback((item: AnyItem) => {
     onClose();
     if (item.kind === 'nav') {
       router.push((item as NavItem).href);
-    } else if (item.kind === 'conversation') {
-      router.push(`/conversations/${(item as ApiResult).sessionId}`);
-    } else if (item.kind === 'contact') {
-      router.push(`/contacts`);
-    } else if (item.kind === 'appointment') {
-      router.push(`/appointments`);
+      return;
     }
-  }, [onClose, router]);
+    const q = query.trim();
+    if (q.length >= 2) {
+      sessionStorage.setItem('searchHighlight', JSON.stringify({
+        query: q,
+        targetId: (item as DataResult).targetId,
+        type: item.kind,
+      }));
+    }
+    if (item.kind === 'conversation') router.push('/conversations');
+    else if (item.kind === 'contact')  router.push('/contacts');
+    else if (item.kind === 'appointment') router.push('/appointments');
+  }, [onClose, router, query]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'ArrowDown') {
@@ -199,6 +279,9 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   }, [allItems, selectedIndex, navigate, onClose]);
 
   if (!open) return null;
+
+  const loading = dataLoading;
+  const hasQuery = query.trim().length >= 2;
 
   return (
     <>
@@ -231,9 +314,11 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
 
           {/* Results */}
           <div className="max-h-80 overflow-y-auto py-1.5">
-            {allItems.length === 0 ? (
+            {loading && !hasQuery ? (
+              <p className="text-sm text-muted-foreground text-center py-8">Ładowanie danych…</p>
+            ) : allItems.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-8">
-                {loading ? 'Szukam...' : 'Brak wyników'}
+                {hasQuery ? 'Brak wyników' : 'Wpisz frazę aby wyszukać'}
               </p>
             ) : (
               sections.map(section => (
@@ -249,7 +334,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
 
                     return (
                       <button
-                        key={`${item.kind}-${isNav ? (item as NavItem).href : (item as ApiResult).id}`}
+                        key={`${item.kind}-${isNav ? (item as NavItem).href : (item as DataResult).id}`}
                         onClick={() => navigate(item)}
                         onMouseEnter={() => setSelectedIndex(item.globalIndex)}
                         className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
@@ -258,10 +343,10 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
                       >
                         <Icon size={15} className={`flex-shrink-0 ${colorClass}`} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate">{item.label}</p>
-                          {!isNav && (item as ApiResult).sublabel && (
-                            <p className="text-[11px] text-muted-foreground truncate font-mono">
-                              {(item as ApiResult).sublabel}
+                          <p className="text-sm truncate text-foreground">{item.label}</p>
+                          {!isNav && (item as DataResult).sublabel && (
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              {(item as DataResult).sublabel}
                             </p>
                           )}
                         </div>
@@ -277,8 +362,12 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
           <div className="px-4 py-2 border-t border-border flex items-center gap-4 text-[10px] text-muted-foreground">
             <span><kbd className="bg-muted px-1 py-0.5 rounded border border-border mr-1">↑↓</kbd>nawigacja</span>
             <span><kbd className="bg-muted px-1 py-0.5 rounded border border-border mr-1">↵</kbd>otwórz</span>
-            {query.trim().length >= 2 && (
-              <span className="ml-auto">{apiResults.length > 0 ? `${apiResults.length} wyników z bazy` : loading ? 'szukam...' : 'brak wyników z bazy'}</span>
+            {hasQuery && (
+              <span className="ml-auto">
+                {loading ? 'ładuję…' : dataResults.length > 0
+                  ? `${dataResults.length} wynik${dataResults.length === 1 ? '' : dataResults.length < 5 ? 'i' : 'ów'}`
+                  : 'brak wyników'}
+              </span>
             )}
           </div>
         </div>

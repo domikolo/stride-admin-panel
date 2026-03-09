@@ -389,3 +389,14 @@ html:not(.dark) .bg-yellow-500\/10 { background-color: #fef3c7; }
 html:not(.dark) .hover\:bg-yellow-500\/20:hover { background-color: #fde68a; }
 html:not(.dark) .border-yellow-500\/20 { border-color: #d97706; }
 html:not(.dark) .text-yellow-400 { color: #92400e; }
+
+/* ─── Search highlight flash ─── */
+@keyframes search-flash {
+  0%   { background-color: transparent; }
+  15%  { background-color: rgba(234, 179, 8, 0.22); }
+  75%  { background-color: rgba(234, 179, 8, 0.22); }
+  100% { background-color: transparent; }
+}
+.search-flash {
+  animation: search-flash 2s ease-in-out;
+}
