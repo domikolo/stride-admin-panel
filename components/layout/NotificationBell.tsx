@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Bell, X, CalendarPlus, CalendarCheck, CalendarX,
@@ -83,6 +83,8 @@ export default function NotificationBell({ clientId }: Props) {
   const [unreadCount, setUnread]      = useState(0);
   const [loading, setLoading]         = useState(false);
   const [hasHighPriority, setHighPri] = useState(false);
+  const [panelPos, setPanelPos]       = useState({ top: 0, left: 0 });
+  const btnRef  = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
@@ -108,15 +110,28 @@ export default function NotificationBell({ clientId }: Props) {
     return () => clearInterval(id);
   }, [fetchNotif]);
 
-  // Re-fetch when panel opens
-  useEffect(() => { if (open) fetchNotif(); }, [open, fetchNotif]);
+  // Re-fetch when panel opens + compute panel position
+  useEffect(() => {
+    if (!open) return;
+    fetchNotif();
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect();
+      const panelWidth = 320;
+      const left = Math.min(r.left, window.innerWidth - panelWidth - 8);
+      setPanelPos({ top: r.bottom + 8, left: Math.max(8, left) });
+    }
+  }, [open, fetchNotif]);
 
   // ── Click outside to close ─────────────────────────────────────────────────
 
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (panelRef.current && !panelRef.current.contains(e.target as Node)) {
+      const t = e.target as Node;
+      if (
+        panelRef.current && !panelRef.current.contains(t) &&
+        btnRef.current && !btnRef.current.contains(t)
+      ) {
         setOpen(false);
       }
     };
@@ -156,9 +171,10 @@ export default function NotificationBell({ clientId }: Props) {
   const groups = groupByDate(notifications);
 
   return (
-    <div className="relative" ref={panelRef}>
+    <div className="relative">
       {/* Bell button */}
       <button
+        ref={btnRef}
         onClick={() => setOpen(prev => !prev)}
         className="relative p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
         aria-label="Powiadomienia"
@@ -176,14 +192,18 @@ export default function NotificationBell({ clientId }: Props) {
         )}
       </button>
 
-      {/* Panel */}
+      {/* Panel — fixed so it escapes sidebar/overflow clipping */}
       {open && (
-        <div className="
-          absolute right-0 top-10 w-80 z-50
-          bg-card border border-border rounded-xl shadow-2xl
-          flex flex-col overflow-hidden
-          animate-in fade-in slide-in-from-top-2 duration-150
-        ">
+        <div
+          ref={panelRef}
+          style={{ top: panelPos.top, left: panelPos.left, width: 320 }}
+          className="
+            fixed z-[200]
+            bg-card border border-border rounded-xl shadow-2xl
+            flex flex-col overflow-hidden
+            animate-in fade-in slide-in-from-top-2 duration-150
+          "
+        >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-border">
             <div className="flex items-center gap-2">
