@@ -258,7 +258,7 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
   useEffect(() => {
     if (!clientId) return;
     getChatbotSettings(clientId)
-      .then(d => setConfig(d.chatbot_hours))
+      .then(d => setConfig(d.chatbot_hours ?? DEFAULT_HOURS))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [clientId]);
