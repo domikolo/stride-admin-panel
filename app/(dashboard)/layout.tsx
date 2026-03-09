@@ -50,6 +50,8 @@ export default function DashboardLayout({
 
   if (loading || !user) return null;
 
+  const notifClientId = user.clientId || 'stride-services';
+
   return (
     <div className="flex h-screen">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
@@ -71,7 +73,7 @@ export default function DashboardLayout({
             >
               <Search size={20} />
             </button>
-            {user.clientId && <NotificationBell clientId={user.clientId} />}
+            <NotificationBell clientId={notifClientId} />
           </div>
         </div>
 

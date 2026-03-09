@@ -196,7 +196,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className="hidden md:block">
-                {user?.clientId && <NotificationBell clientId={user.clientId} />}
+                <NotificationBell clientId={user?.clientId || 'stride-services'} />
               </div>
             </TooltipTrigger>
             <TooltipContent side="right" className="md:block lg:hidden hidden">
