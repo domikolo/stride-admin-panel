@@ -31,13 +31,12 @@ export default async function RootLayout({
 }>) {
   // Reading x-nonce here causes Next.js to attach the nonce to its own
   // inline <script> tags during SSR, enabling nonce-based CSP without 'unsafe-inline'.
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _nonce = (await headers()).get("x-nonce");
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
 
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ThemeProvider>
+        <ThemeProvider nonce={nonce}>
           <SWRConfig value={{ revalidateOnFocus: false, dedupingInterval: 30_000 }}>
             <AuthProvider>
               <TooltipProvider>
