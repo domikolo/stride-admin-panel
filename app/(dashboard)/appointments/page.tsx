@@ -6,13 +6,13 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { updateAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
 import toast from 'react-hot-toast';
-import { useSearchHighlight, flashElement } from '@/hooks/useSearchHighlight';
+import { flashElement } from '@/hooks/useSearchHighlight';
 import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -175,7 +175,7 @@ export default function AppointmentsPage() {
   const [editSaving, setEditSaving] = useState(false);
 
   const clientId = useClientId();
-  const highlightRef = useSearchHighlight();
+  const searchParams = useSearchParams();
 
   const { data: apptData, isLoading, error: apptError, mutate } = useSWR<{ appointments: Appointment[]; count: number }>(
     clientId ? `/clients/${clientId}/appointments` : null, fetcher
@@ -198,19 +198,20 @@ export default function AppointmentsPage() {
     return appointments.filter(a => a.status === statusFilter);
   }, [appointments, statusFilter]);
 
-  // Scroll to + flash row when navigated from search
+  // Scroll to + flash row when navigated from search (?hl=appointmentId)
+  // useSearchParams is reactive — fires even when already on /appointments
   useEffect(() => {
-    const hl = highlightRef.current;
-    if (!hl || hl.type !== 'appointment' || !filteredAppointments.length) return;
-    const found = filteredAppointments.find(a => a.appointmentId === hl.targetId);
+    const hlApptId = searchParams.get('hl');
+    if (!hlApptId || !appointments.length) return;
+    const found = appointments.find(a => a.appointmentId === hlApptId);
     if (!found) return;
-    highlightRef.current = null;
+    router.replace('/appointments');
     setView('table');
     setTimeout(() => {
-      const el = document.querySelector(`[data-appt-id="${hl.targetId}"]`);
+      const el = document.querySelector(`[data-appt-id="${hlApptId}"]`);
       if (el) flashElement(el);
-    }, 120);
-  }, [filteredAppointments]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, 150);
+  }, [searchParams, appointments.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get appointments for a specific day (calendar view)
   const getAppointmentsForDay = (day: Date) => {

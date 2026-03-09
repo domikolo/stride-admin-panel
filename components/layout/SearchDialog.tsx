@@ -44,6 +44,7 @@ interface DataResult {
   label: string;
   sublabel?: string;
   targetId: string;
+  convNum?: number; // for conversations: specific conversation number
 }
 
 type AnyItem = (NavItem | DataResult) & { globalIndex: number };
@@ -152,20 +153,21 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
 
     const results: DataResult[] = [];
 
-    // Conversations
+    // Conversations — one result per Conversation (session + convNum unique)
     for (const conv of allConversations) {
       const fields = [
         conv.preview, conv.keywords,
-        conv.adminNotes, conv.adminTags?.join(' '), conv.sessionId,
+        conv.adminNotes, conv.adminTags?.join(' '),
       ];
       const snippet = matchSnippet(fields, q);
       if (!snippet) continue;
       results.push({
         kind: 'conversation',
-        id: conv.sessionId,
+        id: `${conv.sessionId}#${conv.conversationNumber ?? 1}`,
         label: (conv.preview || conv.sessionId).slice(0, 70),
         sublabel: snippet,
         targetId: conv.sessionId,
+        convNum: conv.conversationNumber ?? 1,
       });
     }
 
@@ -250,17 +252,17 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
       router.push((item as NavItem).href);
       return;
     }
-    const q = query.trim();
-    if (q.length >= 2) {
-      sessionStorage.setItem('searchHighlight', JSON.stringify({
-        query: q,
-        targetId: (item as DataResult).targetId,
-        type: item.kind,
-      }));
+    const q = encodeURIComponent(query.trim());
+    const d = item as DataResult;
+    if (item.kind === 'conversation') {
+      // Open conversation detail — detail page already handles ?highlight= natively
+      router.push(`/conversations/${d.targetId}?conversation_number=${d.convNum ?? 1}&highlight=${q}`);
+    } else if (item.kind === 'contact') {
+      // URL param triggers useSearchParams effect even when already on the page
+      router.push(`/contacts?hl=${encodeURIComponent(d.targetId)}&q=${q}`);
+    } else if (item.kind === 'appointment') {
+      router.push(`/appointments?hl=${encodeURIComponent(d.targetId)}&q=${q}`);
     }
-    if (item.kind === 'conversation') router.push('/conversations');
-    else if (item.kind === 'contact')  router.push('/contacts');
-    else if (item.kind === 'appointment') router.push('/appointments');
   }, [onClose, router, query]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

@@ -7,8 +7,9 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import toast from 'react-hot-toast';
-import { useRouter } from 'next/navigation';
-import { useSearchHighlight, flashElement } from '@/hooks/useSearchHighlight';
+import { useRouter, useSearchParams } from 'next/navigation';
+
+import { flashElement } from '@/hooks/useSearchHighlight';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import {
@@ -531,6 +532,7 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
 
 export default function ContactsPage() {
   const { user } = useAuth();
+  const router = useRouter();
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
@@ -545,7 +547,7 @@ export default function ContactsPage() {
   const [bulkStatus, setBulkStatus] = useState('');
 
   const clientId = useClientId();
-  const highlightRef = useSearchHighlight();
+  const searchParams = useSearchParams();
 
   const { data: contactsData, isLoading: contactsLoading, error: contactsError, mutate: mutateContacts } = useSWR<{ contacts: ContactProfile[]; count: number }>(
     clientId ? `/clients/${clientId}/contacts?limit=200` : null, fetcher, { refreshInterval: 30_000 }
@@ -558,24 +560,6 @@ export default function ContactsPage() {
   const customStages: CustomStage[] = stagesData?.stages ?? [];
   const loading = contactsLoading;
   const error = contactsError ? 'Nie udało się załadować kontaktów.' : null;
-
-  // Open panel + scroll to + flash row when navigated from search
-  useEffect(() => {
-    const hl = highlightRef.current;
-    if (!hl || hl.type !== 'contact' || !contacts.length) return;
-    const found = contacts.find(c => c.profileId === hl.targetId);
-    if (!found) return;
-    highlightRef.current = null;
-    setView('table');
-    setSelectedId(hl.targetId);
-    const idx = contacts.findIndex(c => c.profileId === hl.targetId);
-    const targetPage = Math.floor(idx / PAGE_SIZE) + 1;
-    setPage(targetPage);
-    setTimeout(() => {
-      const el = document.querySelector(`[data-profile-id="${hl.targetId}"]`);
-      if (el) flashElement(el);
-    }, 120);
-  }, [contacts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const allStages: StageConfig[] = useMemo(() => [
     ...DEFAULT_STAGES,
@@ -619,6 +603,24 @@ export default function ContactsPage() {
 
   const paginated  = useMemo(() => sorted.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [sorted, page]);
   const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+
+  // Open panel + scroll to + flash row when navigated from search (?hl=profileId)
+  // useSearchParams is reactive — fires even when already on /contacts
+  useEffect(() => {
+    const hlProfileId = searchParams.get('hl');
+    if (!hlProfileId || !contacts.length) return;
+    const found = contacts.find(c => c.profileId === hlProfileId);
+    if (!found) return;
+    router.replace('/contacts');
+    setView('table');
+    setSelectedId(hlProfileId);
+    const idx = sorted.findIndex(c => c.profileId === hlProfileId);
+    if (idx >= 0) setPage(Math.floor(idx / PAGE_SIZE) + 1);
+    setTimeout(() => {
+      const el = document.querySelector(`[data-profile-id="${hlProfileId}"]`);
+      if (el) flashElement(el);
+    }, 150);
+  }, [searchParams, contacts.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const kanbanGroups = useMemo(() => {
     const groups: Record<string, ContactProfile[]> = {};
