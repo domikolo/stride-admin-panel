@@ -277,20 +277,24 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
   };
 
   const save = async (data = config) => {
-    if (!clientId) return;
+    if (!clientId) {
+      toast.error('Brak clientId');
+      return;
+    }
     setSaving(true);
     try {
       const updated = await updateChatbotSettings(clientId, data);
-      setConfig(updated.chatbot_hours);
+      setConfig(updated?.chatbot_hours ?? data);
       toast.success('Zapisano');
     } catch {
-      toast.error('Nie udało się zapisać');
+      setConfig(data); // rollback to known good state
+      toast.error('Nie udało się zapisać — sprawdź czy Lambda jest wgrana');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return null;
+  if (loading || !config) return null;
 
   return (
     <Card className="glass-card p-6 space-y-4">
