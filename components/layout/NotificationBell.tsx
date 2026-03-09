@@ -83,7 +83,7 @@ export default function NotificationBell({ clientId }: Props) {
   const [unreadCount, setUnread]      = useState(0);
   const [loading, setLoading]         = useState(false);
   const [hasHighPriority, setHighPri] = useState(false);
-  const [panelPos, setPanelPos]       = useState({ top: 0, left: 0 });
+  const [panelPos, setPanelPos]       = useState({ top: 0, left: 0, origin: 'top left' });
   const btnRef  = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -116,14 +116,38 @@ export default function NotificationBell({ clientId }: Props) {
     fetchNotif();
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
-      const panelWidth = 320;
-      const panelHeight = 480; // approx max (header + list + footer)
-      const left = Math.min(r.left, window.innerWidth - panelWidth - 8);
-      const spaceBelow = window.innerHeight - r.bottom - 8;
-      const top = spaceBelow >= 200
-        ? r.bottom + 8
-        : Math.max(8, r.top - panelHeight - 8);
-      setPanelPos({ top, left: Math.max(8, left) });
+      const panelWidth = 360;
+      const panelHeight = 480;
+
+      const spaceRight  = window.innerWidth  - r.right  - 8;
+      const spaceLeft   = r.left - 8;
+      const spaceBelow  = window.innerHeight - r.bottom - 8;
+
+      let left: number, top: number, origin: string;
+
+      if (spaceRight >= panelWidth) {
+        // sidebar case — open to the right
+        left   = r.right + 8;
+        top    = Math.max(8, Math.min(r.top, window.innerHeight - panelHeight - 8));
+        origin = 'top left';
+      } else if (spaceLeft >= panelWidth) {
+        // open to the left
+        left   = r.left - panelWidth - 8;
+        top    = Math.max(8, Math.min(r.top, window.innerHeight - panelHeight - 8));
+        origin = 'top right';
+      } else {
+        // mobile / fallback — open below or above, horizontally clamped
+        left   = Math.max(8, Math.min(r.left, window.innerWidth - panelWidth - 8));
+        if (spaceBelow >= 200) {
+          top    = r.bottom + 8;
+          origin = 'top center';
+        } else {
+          top    = Math.max(8, r.top - panelHeight - 8);
+          origin = 'bottom center';
+        }
+      }
+
+      setPanelPos({ top, left, origin });
     }
   }, [open, fetchNotif]);
 
@@ -201,12 +225,12 @@ export default function NotificationBell({ clientId }: Props) {
       {open && (
         <div
           ref={panelRef}
-          style={{ top: panelPos.top, left: panelPos.left, width: 320 }}
+          style={{ top: panelPos.top, left: panelPos.left, width: 360, transformOrigin: panelPos.origin }}
           className="
             fixed z-[200]
             bg-card border border-border rounded-xl shadow-2xl
             flex flex-col overflow-hidden
-            animate-in fade-in slide-in-from-top-2 duration-150
+            animate-in fade-in zoom-in-95 duration-150 ease-out
           "
         >
           {/* Header */}
