@@ -5,11 +5,13 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
+import { updateAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
+import toast from 'react-hot-toast';
 import { Appointment, ClientStats } from '@/lib/types';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
@@ -22,10 +24,123 @@ import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
 import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
 import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw, Pencil, X } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
+
+function AvailabilitySection({ clientId, data, onSaved }: {
+  clientId: string;
+  data: AppointmentAvailability | undefined;
+  onSaved: () => void;
+}) {
+  const DAY_LABELS = ['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'];
+  const SLOT_OPTIONS = [15, 30, 45, 60, 90];
+
+  const [days, setDays] = useState<number[]>(data?.days ?? [1, 2, 3, 4, 5]);
+  const [hourFrom, setHourFrom] = useState(data?.hourFrom ?? '09:00');
+  const [hourTo, setHourTo] = useState(data?.hourTo ?? '17:00');
+  const [slotDuration, setSlotDuration] = useState(data?.slotDuration ?? 60);
+  const [saving, setSaving] = useState(false);
+
+  // Sync with loaded data
+  useEffect(() => {
+    if (data) {
+      setDays(data.days);
+      setHourFrom(data.hourFrom);
+      setHourTo(data.hourTo);
+      setSlotDuration(data.slotDuration);
+    }
+  }, [data]);
+
+  const toggleDay = (d: number) => {
+    setDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d].sort((a, b) => a - b));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateAppointmentAvailability(clientId, { days, hourFrom, hourTo, slotDuration });
+      toast.success('Dostępność zapisana');
+      onSaved();
+    } catch {
+      toast.error('Nie udało się zapisać');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Days */}
+      <div>
+        <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-2">Dostępne dni</label>
+        <div className="flex gap-2">
+          {DAY_LABELS.map((label, i) => (
+            <button
+              key={i}
+              onClick={() => toggleDay(i)}
+              className={`w-9 h-9 rounded-lg text-xs font-medium transition-colors ${
+                days.includes(i)
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                  : 'bg-white/[0.03] text-zinc-600 border border-white/[0.06] hover:text-zinc-400'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hours */}
+      <div className="flex gap-4">
+        <div>
+          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Od</label>
+          <input
+            type="time"
+            value={hourFrom}
+            onChange={e => setHourFrom(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
+          />
+        </div>
+        <div>
+          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Do</label>
+          <input
+            type="time"
+            value={hourTo}
+            onChange={e => setHourTo(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
+          />
+        </div>
+      </div>
+
+      {/* Slot duration */}
+      <div>
+        <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Czas trwania slotu</label>
+        <div className="flex gap-2">
+          {SLOT_OPTIONS.map(opt => (
+            <button
+              key={opt}
+              onClick={() => setSlotDuration(opt)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                slotDuration === opt
+                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
+                  : 'bg-white/[0.03] text-zinc-600 border border-white/[0.06] hover:text-zinc-400'
+              }`}
+            >
+              {opt} min
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
+        {saving ? 'Zapisywanie...' : 'Zapisz dostępność'}
+      </Button>
+    </div>
+  );
+}
+
 type StatusFilter = 'all' | 'verified' | 'pending' | 'cancelled';
 
 export default function AppointmentsPage() {
@@ -35,7 +150,12 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
+  const [showAvailability, setShowAvailability] = useState(false);
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
+  const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
+  const [editDatetime, setEditDatetime] = useState('');
+  const [editNotes, setEditNotes] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
 
   const clientId = useClientId();
 
@@ -44,6 +164,9 @@ export default function AppointmentsPage() {
   );
   const { data: statsData } = useSWR<ClientStats>(
     clientId ? `/clients/${clientId}/stats?period=MONTHLY` : null, fetcher
+  );
+  const { data: availabilityData, mutate: mutateAvailability } = useSWR<AppointmentAvailability>(
+    clientId ? `/clients/${clientId}/appointments/availability` : null, fetcher
   );
 
   const appointments: Appointment[] = apptData?.appointments ?? [];
@@ -111,6 +234,37 @@ export default function AppointmentsPage() {
     }
   };
 
+  const openEditModal = (appt: Appointment, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingAppointment(appt);
+    // Convert datetime string to datetime-local format (YYYY-MM-DDTHH:mm)
+    try {
+      const d = new Date(appt.datetime);
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setEditDatetime(`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    } catch {
+      setEditDatetime('');
+    }
+    setEditNotes(appt.notes || '');
+  };
+
+  const handleEditSave = async () => {
+    if (!editingAppointment || !clientId) return;
+    setEditSaving(true);
+    try {
+      const data: { datetime?: string; notes?: string } = {};
+      if (editDatetime) data.datetime = new Date(editDatetime).toISOString();
+      if (editNotes !== undefined) data.notes = editNotes;
+      await updateAppointment(clientId, editingAppointment.appointmentId, data);
+      setEditingAppointment(null);
+      mutate();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -171,6 +325,34 @@ export default function AppointmentsPage() {
         </div>
       )}
 
+      {/* Availability Config */}
+      <Card className="glass-card">
+        <button
+          className="w-full flex items-center justify-between p-4 text-left"
+          onClick={() => setShowAvailability(v => !v)}
+        >
+          <div className="flex items-center gap-2">
+            <Clock size={15} className="text-zinc-400" />
+            <span className="text-sm font-medium text-white">Konfiguracja dostępności</span>
+            {availabilityData && (
+              <span className="text-xs text-zinc-500">
+                {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].filter((_, i) => availabilityData.days.includes(i)).join(', ')} · {availabilityData.hourFrom}–{availabilityData.hourTo} · {availabilityData.slotDuration} min
+              </span>
+            )}
+          </div>
+          <ChevronDown size={14} className={`text-zinc-500 transition-transform ${showAvailability ? 'rotate-180' : ''}`} />
+        </button>
+        {showAvailability && clientId && (
+          <div className="px-4 pb-4 border-t border-white/[0.06] pt-4">
+            <AvailabilitySection
+              clientId={clientId}
+              data={availabilityData}
+              onSaved={mutateAvailability}
+            />
+          </div>
+        )}
+      </Card>
+
       {/* Status Filters */}
       <div className="flex gap-2">
         {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
@@ -211,6 +393,7 @@ export default function AppointmentsPage() {
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Sesja</TableHead>
+                  <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -271,6 +454,15 @@ export default function AppointmentsPage() {
                         Zobacz czat
                         <ExternalLink size={14} />
                       </Button>
+                    </TableCell>
+                    <TableCell>
+                      <button
+                        onClick={(e) => openEditModal(appt, e)}
+                        className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"
+                        title="Edytuj wizytę"
+                      >
+                        <Pencil size={14} />
+                      </button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -442,6 +634,49 @@ export default function AppointmentsPage() {
       )}
 
       {/* Analytics Section - Now below appointments table/calendar */}
+      {/* Edit Appointment Modal */}
+      {editingAppointment && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setEditingAppointment(null)}>
+          <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 border-b border-border">
+              <h2 className="font-semibold text-white text-[15px]">Edytuj wizytę</h2>
+              <button onClick={() => setEditingAppointment(null)} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina</label>
+                <input
+                  type="datetime-local"
+                  value={editDatetime}
+                  onChange={e => setEditDatetime(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Notatki</label>
+                <textarea
+                  rows={3}
+                  value={editNotes}
+                  onChange={e => setEditNotes(e.target.value)}
+                  placeholder="Dodaj notatkę..."
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                />
+              </div>
+              <div className="flex gap-3 justify-end pt-2">
+                <Button variant="ghost" size="sm" onClick={() => setEditingAppointment(null)} className="text-zinc-400">
+                  Anuluj
+                </Button>
+                <Button size="sm" onClick={handleEditSave} disabled={editSaving}>
+                  {editSaving ? 'Zapisywanie...' : 'Zapisz'}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {stats && (
         <>
           {/* Stats Cards */}

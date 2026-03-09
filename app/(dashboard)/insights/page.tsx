@@ -56,6 +56,8 @@ export default function InsightsPage() {
   const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
+  const [compareMode, setCompareMode] = useState(false);
+  const [comparePeriod, setComparePeriod] = useState<Period>('weekly');
 
   const clientId = useClientId();
 
@@ -71,6 +73,14 @@ export default function InsightsPage() {
   );
   const { data: resolvedData } = useSWR<{ resolvedGapIds: string[] }>(
     clientId ? `/clients/${clientId}/gaps/resolved` : null, fetcher
+  );
+
+  // Compare period data — load only when compare mode is active
+  const compareTimeframe = PERIOD_TO_TIMEFRAME[comparePeriod];
+  const { data: compareRaw } = useSWR<{ topics: Topic[] }>(
+    clientId && compareMode && comparePeriod !== activePeriod
+      ? `/clients/${clientId}/trending-topics?timeframe=${compareTimeframe}&include_gaps=true`
+      : null, fetcher
   );
 
   useEffect(() => {
@@ -338,17 +348,100 @@ export default function InsightsPage() {
             )}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoading}
-          className="text-zinc-400 hover:text-white gap-2 mt-1"
-        >
-          <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setCompareMode(m => !m)}
+            className={`gap-2 mt-1 ${compareMode ? 'text-blue-400 bg-blue-500/10' : 'text-zinc-400 hover:text-white'}`}
+          >
+            Porównaj z...
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isLoading}
+            className="text-zinc-400 hover:text-white gap-2 mt-1"
+          >
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            Odśwież
+          </Button>
+        </div>
       </div>
+
+      {/* Compare mode panel */}
+      {compareMode && (
+        <div className="p-4 bg-muted/50 border border-border rounded-xl space-y-3">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-zinc-300 font-medium">Porównaj z:</span>
+            <div className="flex gap-1">
+              {(['daily', 'weekly', 'monthly'] as Period[]).map(p => (
+                <Button
+                  key={p}
+                  variant={comparePeriod === p ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setComparePeriod(p)}
+                  disabled={p === activePeriod}
+                  className={comparePeriod === p ? '' : 'text-zinc-400 hover:text-white'}
+                >
+                  {p === 'daily' ? 'Wczoraj' : p === 'weekly' ? '7 dni' : '30 dni'}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {compareRaw && current && (() => {
+            const compareTopics = compareRaw.topics || [];
+            const currentTopics = current.topics || [];
+            // Build map of topic name -> count for both periods
+            const currentMap = new Map(currentTopics.map(t => [t.topicName, t.count]));
+            const compareMap = new Map(compareTopics.map(t => [t.topicName, t.count]));
+            const allNames = Array.from(new Set([...currentMap.keys(), ...compareMap.keys()]));
+            const rows = allNames.map(name => ({
+              name,
+              current: currentMap.get(name) || 0,
+              compare: compareMap.get(name) || 0,
+            })).sort((a, b) => (b.current + b.compare) - (a.current + a.compare)).slice(0, 15);
+            const periodLabel = (p: Period) => p === 'daily' ? 'Wczoraj' : p === 'weekly' ? '7 dni' : '30 dni';
+
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.06]">
+                      <th className="text-left py-2 pr-4 text-zinc-500 font-medium">Temat</th>
+                      <th className="text-right py-2 px-4 text-zinc-500 font-medium">{periodLabel(activePeriod)}</th>
+                      <th className="text-right py-2 px-4 text-zinc-500 font-medium">{periodLabel(comparePeriod)}</th>
+                      <th className="text-right py-2 pl-4 text-zinc-500 font-medium">Zmiana</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map(row => {
+                      const change = row.compare > 0
+                        ? ((row.current - row.compare) / row.compare * 100)
+                        : row.current > 0 ? 100 : 0;
+                      return (
+                        <tr key={row.name} className="border-b border-white/[0.04]">
+                          <td className="py-2 pr-4 text-zinc-300 truncate max-w-[200px]">{row.name}</td>
+                          <td className="text-right py-2 px-4 text-white font-medium">{row.current}</td>
+                          <td className="text-right py-2 px-4 text-zinc-400">{row.compare}</td>
+                          <td className={`text-right py-2 pl-4 font-medium ${change > 0 ? 'text-emerald-400' : change < 0 ? 'text-red-400' : 'text-zinc-500'}`}>
+                            {change > 0 ? '+' : ''}{change.toFixed(0)}%
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+          {compareMode && comparePeriod === activePeriod && (
+            <p className="text-xs text-zinc-500">Wybierz inny okres do porównania niż aktualnie wybrany.</p>
+          )}
+        </div>
+      )}
 
       {/* Period Tabs */}
       <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">

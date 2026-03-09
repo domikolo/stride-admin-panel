@@ -151,6 +151,17 @@ interface DetailPanelProps {
   onDeleteStage: (id: string) => Promise<void>;
 }
 
+function TagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-violet-500/15 text-violet-400 rounded-full text-xs">
+      {tag}
+      <button onClick={onRemove} className="hover:text-violet-200 transition-colors">
+        <X size={10} />
+      </button>
+    </span>
+  );
+}
+
 function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage }: DetailPanelProps) {
   const router = useRouter();
   const [contact, setContact] = useState<ContactProfile | null>(null);
@@ -161,6 +172,8 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   const [editNotes, setEditNotes] = useState('');
   const [editStatus, setEditStatus] = useState('new');
   const [showAddStage, setShowAddStage] = useState(false);
+  const [editTags, setEditTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState('');
 
   useEffect(() => {
     setConfirmDelete(false);
@@ -172,6 +185,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       setEditName(fromList.displayName || '');
       setEditNotes(fromList.notes || '');
       setEditStatus(fromList.status);
+      setEditTags(fromList.tags || []);
       setLoading(false);
     } else {
       setLoading(true);
@@ -182,6 +196,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       setEditName(c.displayName || '');
       setEditNotes(c.notes || '');
       setEditStatus(c.status);
+      setEditTags(c.tags || []);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [profileId, clientId]);
@@ -196,6 +211,29 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       onUpdated({ profileId, ...patch });
     } catch (e) { console.error(e); }
     finally { setSaving(false); }
+  };
+
+  const addTag = async () => {
+    const t = tagInput.trim();
+    if (!t || editTags.includes(t) || editTags.length >= 20) return;
+    const newTags = [...editTags, t];
+    setEditTags(newTags);
+    setTagInput('');
+    try {
+      await updateContact(clientId, profileId, { tags: newTags });
+      setContact(prev => prev ? { ...prev, tags: newTags } : prev);
+      onUpdated({ profileId, tags: newTags });
+    } catch (e) { console.error(e); }
+  };
+
+  const removeTag = async (tag: string) => {
+    const newTags = editTags.filter(t => t !== tag);
+    setEditTags(newTags);
+    try {
+      await updateContact(clientId, profileId, { tags: newTags });
+      setContact(prev => prev ? { ...prev, tags: newTags } : prev);
+      onUpdated({ profileId, tags: newTags });
+    } catch (e) { console.error(e); }
   };
 
   const handleDelete = async () => {
@@ -324,6 +362,28 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
             </Button>
           </div>
 
+          {/* Tags */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Tagi</label>
+            <div className="flex flex-wrap gap-1.5 mb-2 min-h-[24px]">
+              {editTags.map(tag => (
+                <TagPill key={tag} tag={tag} onRemove={() => removeTag(tag)} />
+              ))}
+            </div>
+            <div className="flex gap-2">
+              <input
+                className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors"
+                placeholder="Dodaj tag..."
+                value={tagInput}
+                onChange={e => setTagInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+              />
+              <Button size="sm" variant="ghost" onClick={addTag} className="text-zinc-400 hover:text-white px-3">
+                Dodaj
+              </Button>
+            </div>
+          </div>
+
           {/* Meta */}
           <div className="text-xs text-zinc-600 space-y-1 pt-1 border-t border-white/[0.04]">
             <div>Pierwszy kontakt: <span className="text-zinc-400">{formatTs(contact.firstSeen)}</span></div>
@@ -387,12 +447,20 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
 
 // ─── Kanban ───────────────────────────────────────────────────────────────────
 
-function KanbanColumn({ stage, contacts, onSelect, selectedId }: {
+function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
   stage: StageConfig; contacts: ContactProfile[];
   onSelect: (c: ContactProfile) => void; selectedId: string | null;
+  onDrop: (e: React.DragEvent, toStage: string) => void;
 }) {
+  const [dragOver, setDragOver] = useState(false);
+
   return (
-    <div className="flex-1 min-w-[170px]">
+    <div
+      className={`flex-1 min-w-[170px] rounded-lg transition-colors ${dragOver ? 'bg-white/[0.04]' : ''}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => { setDragOver(false); onDrop(e, stage.value); }}
+    >
       <div className="flex items-center gap-2 mb-3 px-1">
         <span className={`w-2 h-2 rounded-full flex-shrink-0 ${!stage.isCustom ? stage.dotClass : ''}`}
           style={stage.isCustom ? { backgroundColor: stage.hex } : {}} />
@@ -404,7 +472,14 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId }: {
       </div>
       <div className="space-y-2">
         {contacts.map(c => (
-          <div key={c.profileId} onClick={() => onSelect(c)}
+          <div
+            key={c.profileId}
+            draggable={true}
+            onDragStart={(e) => {
+              e.dataTransfer.setData('contactId', c.profileId);
+              e.dataTransfer.setData('fromStage', stage.value);
+            }}
+            onClick={() => onSelect(c)}
             className={`p-3 rounded-lg border cursor-pointer transition-all ${
               selectedId === c.profileId ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]'
             }`}>
@@ -417,10 +492,18 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId }: {
               <span className="text-[10px] text-zinc-600">{formatTs(c.lastSeen)}</span>
               <span className="text-[10px] text-zinc-700 ml-auto">{c.sourceCount} źr.</span>
             </div>
+            {c.tags && c.tags.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1.5 pl-[18px]">
+                {c.tags.slice(0, 2).map(tag => (
+                  <span key={tag} className="text-[9px] px-1.5 py-0.5 bg-violet-500/15 text-violet-400 rounded-full">{tag}</span>
+                ))}
+                {c.tags.length > 2 && <span className="text-[9px] text-zinc-600">+{c.tags.length - 2}</span>}
+              </div>
+            )}
           </div>
         ))}
         {contacts.length === 0 && (
-          <div className="h-16 border border-dashed border-white/[0.05] rounded-lg flex items-center justify-center">
+          <div className={`h-16 border border-dashed rounded-lg flex items-center justify-center transition-colors ${dragOver ? 'border-white/20' : 'border-white/[0.05]'}`}>
             <span className="text-[11px] text-zinc-700">Brak</span>
           </div>
         )}
@@ -443,6 +526,8 @@ export default function ContactsPage() {
   const [sortDir, setSortDir] = useState<SortDir>('desc');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkStatus, setBulkStatus] = useState('');
 
   const clientId = useClientId();
 
@@ -546,6 +631,52 @@ export default function ContactsPage() {
     const updated = customStages.filter(s => s.id !== id);
     await updateContactStages(clientId, updated).catch(console.error);
     mutateStages();
+  };
+
+  const handleDrop = async (e: React.DragEvent, toStage: string) => {
+    e.preventDefault();
+    const contactId = e.dataTransfer.getData('contactId');
+    const fromStage = e.dataTransfer.getData('fromStage');
+    if (!contactId || !clientId || fromStage === toStage) return;
+    // Optimistic update
+    mutateContacts(prev => prev ? {
+      ...prev,
+      contacts: prev.contacts.map(c => c.profileId === contactId ? { ...c, status: toStage } : c)
+    } : prev, false);
+    await updateContact(clientId, contactId, { status: toStage }).catch(console.error);
+  };
+
+  const toggleBulkSelect = (profileId: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(profileId)) next.delete(profileId);
+      else next.add(profileId);
+      return next;
+    });
+  };
+
+  const handleBulkStatusChange = async (status: string) => {
+    if (!clientId || !status) return;
+    const ids = Array.from(selectedIds);
+    // Optimistic update
+    mutateContacts(prev => prev ? {
+      ...prev,
+      contacts: prev.contacts.map(c => ids.includes(c.profileId) ? { ...c, status } : c)
+    } : prev, false);
+    await Promise.all(ids.map(id => updateContact(clientId, id, { status }).catch(console.error)));
+    setSelectedIds(new Set());
+    setBulkStatus('');
+  };
+
+  const handleBulkDelete = async () => {
+    if (!clientId || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    mutateContacts(prev => prev ? {
+      ...prev,
+      contacts: prev.contacts.filter(c => !ids.includes(c.profileId))
+    } : prev, false);
+    await Promise.all(ids.map(id => deleteContact(clientId, id).catch(console.error)));
+    setSelectedIds(new Set());
   };
 
   const handleUpdated = (patch: Partial<ContactProfile> & { profileId: string }) => {
@@ -661,9 +792,21 @@ export default function ContactsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-8">
+                      <input
+                        type="checkbox"
+                        className="accent-blue-500"
+                        checked={paginated.length > 0 && paginated.every(c => selectedIds.has(c.profileId))}
+                        onChange={e => {
+                          if (e.target.checked) setSelectedIds(new Set(paginated.map(c => c.profileId)));
+                          else setSelectedIds(new Set());
+                        }}
+                      />
+                    </TableHead>
                     <SortTh field="contactInfo" label="Kontakt" />
                     <SortTh field="status" label="Status" />
                     <TableHead>Typ</TableHead>
+                    <TableHead>Tagi</TableHead>
                     <TableHead>Źr.</TableHead>
                     <SortTh field="firstSeen" label="Pierwszy kontakt" />
                     <SortTh field="lastSeen" label="Ostatni kontakt" />
@@ -673,8 +816,16 @@ export default function ContactsPage() {
                 <TableBody>
                   {paginated.map(c => (
                     <TableRow key={c.profileId}
-                      className={`hover:bg-white/[0.04] cursor-pointer transition-colors ${selectedId === c.profileId ? 'bg-white/[0.06]' : ''}`}
+                      className={`hover:bg-white/[0.04] cursor-pointer transition-colors ${selectedId === c.profileId ? 'bg-white/[0.06]' : ''} ${selectedIds.has(c.profileId) ? 'bg-blue-500/[0.04]' : ''}`}
                       onClick={() => setSelectedId(c.profileId === selectedId ? null : c.profileId)}>
+                      <TableCell onClick={e => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="accent-blue-500"
+                          checked={selectedIds.has(c.profileId)}
+                          onChange={() => toggleBulkSelect(c.profileId)}
+                        />
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
@@ -688,6 +839,14 @@ export default function ContactsPage() {
                       </TableCell>
                       <TableCell><StatusBadge status={c.status} allStages={allStages} /></TableCell>
                       <TableCell><span className="text-xs text-zinc-400 capitalize">{c.contactType}</span></TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {(c.tags || []).slice(0, 3).map(tag => (
+                            <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-violet-500/15 text-violet-400 rounded-full">{tag}</span>
+                          ))}
+                          {(c.tags?.length || 0) > 3 && <span className="text-[10px] text-zinc-600">+{(c.tags?.length || 0) - 3}</span>}
+                        </div>
+                      </TableCell>
                       <TableCell><span className="text-sm text-zinc-400">{c.sourceCount}</span></TableCell>
                       <TableCell><span className="text-sm text-zinc-400">{formatTs(c.firstSeen)}</span></TableCell>
                       <TableCell><span className="text-sm text-zinc-400">{formatTs(c.lastSeen)}</span></TableCell>
@@ -720,9 +879,40 @@ export default function ContactsPage() {
             {allStages.map(stage => (
               <KanbanColumn key={stage.value} stage={stage} contacts={kanbanGroups[stage.value] || []}
                 onSelect={c => setSelectedId(c.profileId === selectedId ? null : c.profileId)}
-                selectedId={selectedId} />
+                selectedId={selectedId}
+                onDrop={handleDrop} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl">
+          <span className="text-sm text-zinc-300 font-medium">{selectedIds.size} zaznaczonych</span>
+          <div className="w-px h-5 bg-white/[0.1]" />
+          <select
+            value={bulkStatus}
+            onChange={e => setBulkStatus(e.target.value)}
+            className="bg-muted border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none cursor-pointer"
+          >
+            <option value="">Zmień status...</option>
+            {allStages.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+          </select>
+          {bulkStatus && (
+            <Button size="sm" onClick={() => handleBulkStatusChange(bulkStatus)}
+              className="h-7 px-3 text-xs">
+              Zastosuj
+            </Button>
+          )}
+          <div className="w-px h-5 bg-white/[0.1]" />
+          <Button size="sm" variant="ghost" onClick={handleBulkDelete}
+            className="h-7 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10">
+            Usuń zaznaczone
+          </Button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-zinc-500 hover:text-zinc-300 p-1">
+            <X size={14} />
+          </button>
         </div>
       )}
 

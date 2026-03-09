@@ -10,6 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { Conversation } from '@/lib/types';
+import { updateConversationAnnotations } from '@/lib/api';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,12 +19,14 @@ import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
 import { isToday, isThisWeek, isThisMonth, differenceInMinutes, formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw } from 'lucide-react';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw, StickyNote, Flag, X, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
 type SortKey = 'date' | 'messages' | 'sessionId' | 'status';
 type SortDirection = 'asc' | 'desc';
+type RatingFilter = 'all' | 'positive' | 'negative' | 'unrated';
 
 // Keyword tags display
 function KeywordTags({ keywords }: { keywords?: string }) {
@@ -97,15 +100,145 @@ function SortableHeader({
   );
 }
 
+// ─── Annotation Panel ─────────────────────────────────────────────────────────
+
+interface AnnotationPanelProps {
+  sessionId: string;
+  clientId: string;
+  initialTags: string[];
+  initialNotes: string;
+  initialFlagged: boolean;
+  onClose: () => void;
+  onSaved: (sessionId: string, tags: string[], notes: string, flagged: boolean) => void;
+}
+
+function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initialFlagged, onClose, onSaved }: AnnotationPanelProps) {
+  const [tags, setTags] = useState<string[]>(initialTags);
+  const [notes, setNotes] = useState(initialNotes);
+  const [flagged, setFlagged] = useState(initialFlagged);
+  const [tagInput, setTagInput] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const addTag = () => {
+    const t = tagInput.trim();
+    if (t && !tags.includes(t) && tags.length < 10) {
+      setTags(prev => [...prev, t]);
+      setTagInput('');
+    }
+  };
+
+  const removeTag = (tag: string) => setTags(prev => prev.filter(t => t !== tag));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateConversationAnnotations(clientId, sessionId, { tags, notes, flagged });
+      onSaved(sessionId, tags, notes, flagged);
+      toast.success('Adnotacje zapisane');
+      onClose();
+    } catch (e) {
+      console.error(e);
+      toast.error('Nie udało się zapisać adnotacji');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-y-0 right-0 w-[360px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
+        <h2 className="font-semibold text-white text-[15px]">Adnotacje sesji</h2>
+        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div className="flex-1 p-5 space-y-5">
+        {/* Session ID */}
+        <div className="text-xs text-zinc-500 font-mono truncate">{sessionId}</div>
+
+        {/* Flagged toggle */}
+        <div>
+          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-2">Flaga</label>
+          <button
+            onClick={() => setFlagged(f => !f)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors text-sm ${
+              flagged
+                ? 'border-red-500/40 bg-red-500/10 text-red-400'
+                : 'border-white/[0.08] bg-white/[0.02] text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <Flag size={14} />
+            {flagged ? 'Oflagowana' : 'Oznacz flagą'}
+          </button>
+        </div>
+
+        {/* Notes */}
+        <div>
+          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Notatki</label>
+          <textarea
+            className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+            placeholder="Dodaj notatkę..."
+            rows={4}
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+          />
+        </div>
+
+        {/* Tags */}
+        <div>
+          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Tagi</label>
+          <div className="flex flex-wrap gap-1.5 mb-2">
+            {tags.map(tag => (
+              <span key={tag} className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/15 text-blue-400 rounded-full text-xs">
+                {tag}
+                <button onClick={() => removeTag(tag)} className="hover:text-blue-200 transition-colors">
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors"
+              placeholder="Dodaj tag..."
+              value={tagInput}
+              onChange={e => setTagInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addTag(); } }}
+            />
+            <Button size="sm" variant="ghost" onClick={addTag} className="text-zinc-400 hover:text-white px-3">
+              Dodaj
+            </Button>
+          </div>
+        </div>
+
+        {/* Save */}
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full"
+        >
+          {saving ? 'Zapisywanie...' : 'Zapisz adnotacje'}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function ConversationsPage() {
   const { user } = useAuth();
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set());
+  const [selectedAnnotationSession, setSelectedAnnotationSession] = useState<string | null>(null);
+  // Local annotation overrides (after saving)
+  const [annotationOverrides, setAnnotationOverrides] = useState<Record<string, { tags: string[]; notes: string; flagged: boolean }>>({});
 
   const clientId = useClientId();
   const itemsPerPage = 15;
@@ -213,6 +346,13 @@ export default function ConversationsPage() {
       // Sort conversations INSIDE group (always by conversation number ascending)
       const sortedConvs = [...convs].sort((a, b) => (a.conversationNumber || 1) - (b.conversationNumber || 1));
 
+      // Annotation data (prefer local override)
+      const override = annotationOverrides[sessionId];
+      const firstConv = convs[0];
+      const adminTags = override?.tags ?? firstConv?.adminTags ?? [];
+      const adminNotes = override?.notes ?? firstConv?.adminNotes ?? '';
+      const adminFlagged = override?.flagged ?? firstConv?.adminFlagged ?? false;
+
       return {
         sessionId,
         conversations: sortedConvs,
@@ -221,12 +361,23 @@ export default function ConversationsPage() {
           totalMessages,
           groupStatus,
           rating: groupRating,
-        }
+        },
+        adminTags,
+        adminNotes,
+        adminFlagged,
       };
     });
 
-    // 5. Sort the GROUPS based on selected criteria
-    groups.sort((a, b) => {
+    // 5. Apply rating filter
+    const ratingFiltered = ratingFilter === 'all' ? groups : groups.filter(g => {
+      if (ratingFilter === 'positive') return g.metrics.rating === 'positive';
+      if (ratingFilter === 'negative') return g.metrics.rating === 'negative';
+      if (ratingFilter === 'unrated') return !g.metrics.rating;
+      return true;
+    });
+
+    // 6. Sort the GROUPS based on selected criteria
+    ratingFiltered.sort((a, b) => {
       let comparison = 0;
       switch (sortKey) {
         case 'date':
@@ -247,8 +398,27 @@ export default function ConversationsPage() {
       return sortDirection === 'asc' ? comparison : -comparison;
     });
 
-    return groups;
-  }, [conversations, filter, searchQuery, sortKey, sortDirection]);
+    return ratingFiltered;
+  }, [conversations, filter, searchQuery, sortKey, sortDirection, ratingFilter, annotationOverrides]);
+
+  // CSV Export
+  const exportCsv = () => {
+    const rows = groupData.map(g => [
+      g.sessionId,
+      g.metrics.groupStatus,
+      g.metrics.totalMessages,
+      g.metrics.latestMessage.toISOString(),
+      g.metrics.rating || '',
+      g.conversations[0]?.preview || '',
+      g.conversations[0]?.keywords || '',
+    ]);
+    const csv = [['ID Sesji', 'Status', 'Wiadomości', 'Data', 'Ocena', 'Podgląd', 'Słowa kluczowe'], ...rows]
+      .map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `rozmowy-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  };
 
   // Pagination for GROUPS (not conversations)
   const totalPages = Math.ceil(groupData.length / itemsPerPage);
@@ -260,7 +430,12 @@ export default function ConversationsPage() {
   // Reset page when filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, searchQuery]);
+  }, [filter, searchQuery, ratingFilter]);
+
+  // Find conversation data for annotation panel
+  const annotationSession = selectedAnnotationSession
+    ? groupData.find(g => g.sessionId === selectedAnnotationSession)
+    : null;
 
   if (loading) {
     return (
@@ -284,7 +459,7 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className={`space-y-6 animate-fadeIn transition-all duration-300 ${selectedAnnotationSession ? 'pr-[368px]' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
@@ -300,15 +475,27 @@ export default function ConversationsPage() {
             )}
           </p>
         </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => mutate()}
-          className="text-zinc-400 hover:text-white gap-2 mt-1"
-        >
-          <RefreshCw size={14} />
-          Odśwież
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={exportCsv}
+            disabled={groupData.length === 0}
+            className="text-zinc-400 hover:text-white gap-2 mt-1"
+          >
+            <Download size={14} />
+            Eksport CSV
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => mutate()}
+            className="text-zinc-400 hover:text-white gap-2 mt-1"
+          >
+            <RefreshCw size={14} />
+            Odśwież
+          </Button>
+        </div>
       </div>
 
       {error && (
@@ -318,7 +505,7 @@ export default function ConversationsPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
         {/* Search */}
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
@@ -331,7 +518,7 @@ export default function ConversationsPage() {
           />
         </div>
 
-        {/* Filter Buttons */}
+        {/* Date Filter Buttons */}
         <div className="flex gap-2">
           {(['all', 'today', 'week', 'month'] as FilterType[]).map((f) => (
             <Button
@@ -345,6 +532,21 @@ export default function ConversationsPage() {
             </Button>
           ))}
         </div>
+
+        {/* Rating Filter */}
+        <div className="flex gap-2">
+          {(['all', 'positive', 'negative', 'unrated'] as RatingFilter[]).map((r) => (
+            <Button
+              key={r}
+              variant={ratingFilter === r ? 'default' : 'ghost'}
+              size="sm"
+              onClick={() => setRatingFilter(r)}
+              className={ratingFilter === r ? '' : 'text-zinc-400 hover:text-white'}
+            >
+              {r === 'all' ? 'Wszystkie oceny' : r === 'positive' ? '👍 Pozytywne' : r === 'negative' ? '👎 Negatywne' : 'Bez oceny'}
+            </Button>
+          ))}
+        </div>
       </div>
 
       {/* Table */}
@@ -353,7 +555,7 @@ export default function ConversationsPage() {
           <EmptyState
             icon={MessageSquare}
             title="Brak rozmów"
-            description={searchQuery || filter !== 'all'
+            description={searchQuery || filter !== 'all' || ratingFilter !== 'all'
               ? "Spróbuj zmienić filtry lub frazę wyszukiwania"
               : "Rozmowy pojawią się tutaj gdy użytkownicy zaczną rozmawiać z chatbotem"}
           />
@@ -403,6 +605,7 @@ export default function ConversationsPage() {
                     </HeaderTooltip>
                   </TableHead>
                   <TableHead>Podglad</TableHead>
+                  <TableHead className="w-20 text-center">Akcje</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -411,6 +614,7 @@ export default function ConversationsPage() {
                   const isExpanded = isSingleSession ? false : expandedSessions.has(group.sessionId);
                   const statusDisplay = getStatusDisplay(group.metrics.groupStatus);
                   const latestDate = group.metrics.latestMessage;
+                  const isAnnotationOpen = selectedAnnotationSession === group.sessionId;
 
                   return (
                     // Use a fragment to group the main row and expanded rows
@@ -419,6 +623,7 @@ export default function ConversationsPage() {
                       <TableRow
                         className={`
                           transition-colors duration-150 border-b border-white/[0.06] relative cursor-pointer hover:bg-white/[0.06]
+                          ${isAnnotationOpen ? 'bg-white/[0.06]' : ''}
                         `}
                         onClick={() => {
                           if (isSingleSession) {
@@ -444,6 +649,9 @@ export default function ConversationsPage() {
                               <Badge variant="outline" className="text-xs px-2 py-0.5 border-blue-500/30 text-blue-400 bg-blue-500/10">
                                 {group.conversations.length} rozmów
                               </Badge>
+                            )}
+                            {group.adminFlagged && (
+                              <Flag size={12} className="text-red-400 flex-shrink-0" />
                             )}
                           </div>
                         </TableCell>
@@ -490,6 +698,21 @@ export default function ConversationsPage() {
                               : <span>{group.conversations[0]?.preview || 'Kliknij, aby zobaczyć...'}</span>
                           )}
                         </TableCell>
+                        <TableCell className="text-center" onClick={e => e.stopPropagation()}>
+                          <button
+                            onClick={() => setSelectedAnnotationSession(
+                              selectedAnnotationSession === group.sessionId ? null : group.sessionId
+                            )}
+                            className={`p-1.5 rounded-md transition-colors ${
+                              isAnnotationOpen
+                                ? 'bg-blue-500/20 text-blue-400'
+                                : 'text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06]'
+                            } ${group.adminNotes || group.adminTags.length > 0 ? 'text-amber-400' : ''}`}
+                            title="Adnotacje"
+                          >
+                            <StickyNote size={14} />
+                          </button>
+                        </TableCell>
                       </TableRow>
 
                       {/* Expanded Child Rows */}
@@ -533,6 +756,7 @@ export default function ConversationsPage() {
                                 : <span className="truncate block">{conv.preview}</span>
                               }
                             </TableCell>
+                            <TableCell />
                           </TableRow>
                         );
                       })}
@@ -575,6 +799,21 @@ export default function ConversationsPage() {
           </>
         )}
       </Card>
+
+      {/* Annotation Panel */}
+      {selectedAnnotationSession && annotationSession && clientId && (
+        <AnnotationPanel
+          sessionId={selectedAnnotationSession}
+          clientId={clientId}
+          initialTags={annotationSession.adminTags}
+          initialNotes={annotationSession.adminNotes}
+          initialFlagged={annotationSession.adminFlagged}
+          onClose={() => setSelectedAnnotationSession(null)}
+          onSaved={(sid, tags, notes, flagged) => {
+            setAnnotationOverrides(prev => ({ ...prev, [sid]: { tags, notes, flagged } }));
+          }}
+        />
+      )}
     </div>
   );
 }

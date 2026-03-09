@@ -55,6 +55,9 @@ export interface Conversation {
   preview: string;
   keywords?: string;
   rating?: 'positive' | 'negative' | null;
+  adminTags?: string[];
+  adminNotes?: string;
+  adminFlagged?: boolean;
 }
 
 export interface ConversationMessage {
@@ -74,6 +77,7 @@ export interface Appointment {
     email?: string;
     phone?: string;
   };
+  notes?: string;
   createdAt: number;
   verifiedAt?: number;
   googleEventId?: string;
@@ -254,6 +258,7 @@ export interface ContactProfile {
   displayName?: string;
   status: string;            // PipelineStage or custom string
   notes?: string;
+  tags?: string[];
   firstSeen: number;         // Unix timestamp
   lastSeen: number;          // Unix timestamp
   sourceCount: number;

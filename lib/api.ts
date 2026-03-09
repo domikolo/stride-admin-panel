@@ -90,6 +90,19 @@ class ApiClient {
     return camelCaseKeys(responseData) as T;
   }
 
+  async patch<T>(endpoint: string, data: unknown): Promise<T> {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+
+    if (!response.ok) return this._handleError(response);
+
+    const responseData = await response.json();
+    return camelCaseKeys(responseData) as T;
+  }
+
   async delete<T>(endpoint: string): Promise<T> {
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'DELETE',
@@ -444,7 +457,7 @@ export const getContact = (clientId: string, profileId: string) =>
 export const updateContact = (
   clientId: string,
   profileId: string,
-  data: { status?: string; notes?: string; display_name?: string }
+  data: { status?: string; notes?: string; display_name?: string; tags?: string[] }
 ) =>
   api.put<{ status: string; profileId: string }>(
     `/clients/${clientId}/contacts/${profileId}`,
@@ -454,6 +467,44 @@ export const updateContact = (
 export const deleteContact = (clientId: string, profileId: string) =>
   api.delete<{ status: string; profileId: string }>(
     `/clients/${clientId}/contacts/${profileId}`
+  );
+
+export const updateConversationAnnotations = (
+  clientId: string,
+  sessionId: string,
+  data: { tags?: string[]; notes?: string; flagged?: boolean }
+) =>
+  api.patch<{ status: string; sessionId: string }>(
+    `/clients/${clientId}/conversations/${sessionId}/annotations`,
+    data
+  );
+
+export const updateAppointment = (
+  clientId: string,
+  appointmentId: string,
+  data: { datetime?: string; notes?: string }
+) =>
+  api.patch<{ status: string; appointmentId: string }>(
+    `/clients/${clientId}/appointments/${appointmentId}`,
+    data
+  );
+
+// ─── Appointment Availability ───────────────────────────────────
+
+export interface AppointmentAvailability {
+  days: number[];       // 0=Sun, 1=Mon, ..., 6=Sat
+  hourFrom: string;     // "09:00"
+  hourTo: string;       // "17:00"
+  slotDuration: number; // 15 | 30 | 45 | 60 | 90
+}
+
+export const getAppointmentAvailability = (clientId: string) =>
+  api.get<AppointmentAvailability>(`/clients/${clientId}/appointments/availability`);
+
+export const updateAppointmentAvailability = (clientId: string, data: AppointmentAvailability) =>
+  api.put<{ status: string } & AppointmentAvailability>(
+    `/clients/${clientId}/appointments/availability`,
+    { days: data.days, hour_from: data.hourFrom, hour_to: data.hourTo, slot_duration: data.slotDuration }
   );
 
 // ─── API Keys ───────────────────────────────────────────────────
