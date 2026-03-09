@@ -12,6 +12,7 @@ import { useTheme } from 'next-themes';
 import Sidebar from '@/components/layout/Sidebar';
 import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 import SearchDialog from '@/components/layout/SearchDialog';
+import NotificationBell from '@/components/layout/NotificationBell';
 import PageTransition from '@/components/layout/PageTransition';
 import { Menu, Search } from 'lucide-react';
 
@@ -63,12 +64,15 @@ export default function DashboardLayout({
             <Menu size={22} />
           </button>
           <img src="/logo.png" alt="Stride" className="h-6 w-auto" style={logoFilter ? { filter: logoFilter } : undefined} />
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="ml-auto p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
-          >
-            <Search size={20} />
-          </button>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
+            >
+              <Search size={20} />
+            </button>
+            {user.clientId && <NotificationBell clientId={user.clientId} />}
+          </div>
         </div>
 
         <main className="flex-1 overflow-y-auto bg-background">

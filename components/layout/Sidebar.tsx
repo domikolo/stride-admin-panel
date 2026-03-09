@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import NotificationBell from '@/components/layout/NotificationBell';
 
 interface SidebarProps {
   open?: boolean;
@@ -192,6 +193,16 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <span className="text-[10px] text-zinc-600 capitalize">{user?.role}</span>
             </div>
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="hidden md:block">
+                {user?.clientId && <NotificationBell clientId={user.clientId} />}
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="md:block lg:hidden hidden">
+              Powiadomienia
+            </TooltipContent>
+          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <div>

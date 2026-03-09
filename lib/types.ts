@@ -2,6 +2,26 @@
  * TypeScript interfaces for Admin Panel
  */
 
+export type NotificationType =
+  | 'new_contact'
+  | 'new_appointment'
+  | 'appointment_verified'
+  | 'appointment_cancelled'
+  | 'knowledge_gap';
+
+export interface AppNotification {
+  notificationId: string;
+  type: NotificationType;
+  icon: string;
+  priority: 'high' | 'normal' | 'low';
+  title: string;
+  body?: string;
+  resourceType: string;
+  resourceId: string;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface Client {
   clientId: string;
   companyName: string;

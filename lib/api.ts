@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './token';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData, AppNotification } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 if (!API_BASE_URL && typeof window !== 'undefined') {
@@ -577,3 +577,19 @@ export const getChatbotSettings = (clientId: string) =>
 
 export const updateChatbotSettings = (clientId: string, chatbot_hours: ChatbotHours) =>
   api.put<{ chatbot_hours: ChatbotHours }>(`/clients/${clientId}/settings`, { chatbot_hours });
+
+// ─── Notifications ───────────────────────────────────────────────
+
+export const getNotifications = (clientId: string, unreadOnly = false) =>
+  api.get<{ notifications: AppNotification[]; unreadCount: number }>(
+    `/clients/${clientId}/notifications${unreadOnly ? '?unread_only=true' : ''}`
+  );
+
+export const getUnreadCount = (clientId: string) =>
+  api.get<{ unreadCount: number }>(`/clients/${clientId}/notifications/unread-count`);
+
+export const markNotificationRead = (clientId: string, notificationId: string) =>
+  api.patch<{ status: string }>(`/clients/${clientId}/notifications/${notificationId}/read`, {});
+
+export const markAllNotificationsRead = (clientId: string) =>
+  api.post<{ status: string; updated: number }>(`/clients/${clientId}/notifications/mark-all-read`, {});
