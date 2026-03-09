@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
-import { updateAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
+import { updateAppointment, cancelAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { flashElement } from '@/hooks/useSearchHighlight';
 import { Appointment, ClientStats } from '@/lib/types';
@@ -25,7 +25,7 @@ import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
 import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
 import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw, Pencil, X } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw, Pencil, X, Ban } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
@@ -174,6 +174,10 @@ export default function AppointmentsPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
+  const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
+  const [cancelMessage, setCancelMessage] = useState('');
+  const [cancelSaving, setCancelSaving] = useState(false);
+
   const clientId = useClientId();
   const searchParams = useSearchParams();
 
@@ -295,6 +299,23 @@ export default function AppointmentsPage() {
       console.error(e);
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!cancellingAppointment || !clientId) return;
+    setCancelSaving(true);
+    try {
+      const result = await cancelAppointment(clientId, cancellingAppointment.appointmentId, cancelMessage);
+      const channel = result.notification_sent === 'email' ? 'Email wysłany' : result.notification_sent === 'sms' ? 'SMS wysłany' : 'Odwołano (brak danych kontaktowych)';
+      toast.success(`Wizyta odwołana — ${channel}`);
+      setCancellingAppointment(null);
+      setCancelMessage('');
+      mutate();
+    } catch {
+      toast.error('Nie udało się odwołać wizyty');
+    } finally {
+      setCancelSaving(false);
     }
   };
 
@@ -493,13 +514,24 @@ export default function AppointmentsPage() {
                       </Button>
                     </TableCell>
                     <TableCell>
-                      <button
-                        onClick={(e) => openEditModal(appt, e)}
-                        className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"
-                        title="Edytuj wizytę"
-                      >
-                        <Pencil size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={(e) => openEditModal(appt, e)}
+                          className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"
+                          title="Edytuj wizytę"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        {appt.status !== 'cancelled' && (
+                          <button
+                            onClick={() => { setCancellingAppointment(appt); setCancelMessage(''); }}
+                            className="p-1.5 rounded-md text-zinc-600 hover:text-red-400 hover:bg-red-500/[0.08] transition-colors"
+                            title="Odwołaj wizytę"
+                          >
+                            <Ban size={14} />
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -713,6 +745,96 @@ export default function AppointmentsPage() {
           </div>
         </div>
       )}
+
+      {/* Cancel modal */}
+      {cancellingAppointment && (() => {
+        const ci = cancellingAppointment.contactInfo;
+        const hasEmail = !!ci?.email;
+        const hasPhone = !!ci?.phone;
+        const channel = hasEmail ? 'email' : hasPhone ? 'SMS' : null;
+        const recipient = hasEmail ? ci!.email : hasPhone ? ci!.phone : null;
+        const name = ci?.name || 'Klient';
+        const raw = cancellingAppointment.datetime || '';
+        let fmtDt = raw.slice(0, 16).replace('T', ' ');
+        try { fmtDt = new Date(raw).toLocaleString('pl-PL', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch {}
+
+        const preview = channel === 'email'
+          ? `Dzień dobry ${name},\n\nTwoja wizyta zaplanowana na ${fmtDt} została odwołana.${cancelMessage ? '\n\n' + cancelMessage : ''}\n\nW razie pytań prosimy o kontakt.\n\nPozdrawiamy,\nStride Services`
+          : channel === 'sms'
+          ? `Stride Services: Twoja wizyta na ${fmtDt} została odwołana.${cancelMessage ? ' ' + cancelMessage : ''}`
+          : null;
+
+        return (
+          <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setCancellingAppointment(null)}>
+            <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
+              <div className="flex items-center justify-between p-5 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <Ban size={16} className="text-red-400" />
+                  <h2 className="font-semibold text-white text-[15px]">Odwołaj wizytę</h2>
+                </div>
+                <button onClick={() => setCancellingAppointment(null)} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                {/* Channel info */}
+                <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
+                  channel === 'email' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                  : channel === 'sms' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                  : 'bg-zinc-500/10 text-zinc-400 border border-zinc-500/20'
+                }`}>
+                  {channel === 'email' && <Mail size={13} />}
+                  {channel === 'sms' && <Phone size={13} />}
+                  {channel
+                    ? <span>Powiadomienie przez <strong>{channel}</strong> na: <strong>{recipient}</strong></span>
+                    : <span>Brak danych kontaktowych — wizyta zostanie odwołana bez powiadomienia</span>
+                  }
+                </div>
+
+                {/* Custom message */}
+                <div>
+                  <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">
+                    Dodatkowa wiadomość <span className="normal-case text-zinc-600">(opcjonalnie)</span>
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={cancelMessage}
+                    onChange={e => setCancelMessage(e.target.value)}
+                    placeholder="Np. Przepraszamy za niedogodności. Skontaktujemy się aby umówić nowy termin."
+                    maxLength={500}
+                    className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+                  />
+                  <p className="text-right text-[11px] text-zinc-600 mt-1">{cancelMessage.length}/500</p>
+                </div>
+
+                {/* Preview */}
+                {preview && (
+                  <div>
+                    <p className="text-xs text-zinc-500 uppercase tracking-wide mb-1.5">Podgląd wiadomości</p>
+                    <pre className="text-xs text-zinc-400 bg-white/[0.03] border border-white/[0.06] rounded-lg px-3 py-2.5 whitespace-pre-wrap font-sans leading-relaxed">
+                      {preview}
+                    </pre>
+                  </div>
+                )}
+
+                <div className="flex gap-3 justify-end pt-1">
+                  <Button variant="ghost" size="sm" onClick={() => setCancellingAppointment(null)} className="text-zinc-400">
+                    Anuluj
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={handleCancelConfirm}
+                    disabled={cancelSaving}
+                    className="bg-red-600 hover:bg-red-700 text-white"
+                  >
+                    {cancelSaving ? 'Odwoływanie...' : 'Odwołaj wizytę'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {stats && (
         <>

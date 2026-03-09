@@ -489,6 +489,12 @@ export const updateAppointment = (
     data
   );
 
+export const cancelAppointment = (clientId: string, appointmentId: string, message: string) =>
+  api.post<{ status: string; appointment_id: string; notification_sent: string }>(
+    `/clients/${clientId}/appointments/${appointmentId}/cancel`,
+    { message }
+  );
+
 // ─── Appointment Availability ───────────────────────────────────
 
 export interface AppointmentAvailability {
