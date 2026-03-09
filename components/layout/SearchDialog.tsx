@@ -118,6 +118,14 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   const router = useRouter();
   const clientId = useClientId();
 
+  // Global Escape listener — closes dialog regardless of which element has focus
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [open, onClose]);
+
   // Reset & load static data on open
   useEffect(() => {
     if (!open) {
