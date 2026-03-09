@@ -117,8 +117,13 @@ export default function NotificationBell({ clientId }: Props) {
     if (btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
       const panelWidth = 320;
+      const panelHeight = 480; // approx max (header + list + footer)
       const left = Math.min(r.left, window.innerWidth - panelWidth - 8);
-      setPanelPos({ top: r.bottom + 8, left: Math.max(8, left) });
+      const spaceBelow = window.innerHeight - r.bottom - 8;
+      const top = spaceBelow >= 200
+        ? r.bottom + 8
+        : Math.max(8, r.top - panelHeight - 8);
+      setPanelPos({ top, left: Math.max(8, left) });
     }
   }, [open, fetchNotif]);
 
