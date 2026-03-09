@@ -505,48 +505,52 @@ export default function ConversationsPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 flex-wrap">
+      <div className="flex gap-3 flex-wrap items-center">
         {/* Search */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+        <div className="relative flex-1 min-w-[200px] max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
           <input
             type="text"
             placeholder="Szukaj po ID sesji lub treści..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150 text-sm"
+            className="w-full pl-9 pr-4 py-2 bg-muted border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150 text-sm"
           />
         </div>
 
         {/* Date Filter Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
           {(['all', 'today', 'week', 'month'] as FilterType[]).map((f) => (
-            <Button
+            <button
               key={f}
-              variant={filter === f ? 'default' : 'ghost'}
-              size="sm"
               onClick={() => setFilter(f)}
-              className={filter === f ? '' : 'text-zinc-400 hover:text-white'}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                filter === f
+                  ? 'bg-card text-white shadow-sm border border-white/[0.08]'
+                  : 'text-zinc-500 hover:text-zinc-300'
+              }`}
             >
               {f === 'all' ? 'Wszystkie' : f === 'today' ? 'Dziś' : f === 'week' ? 'Ten tydzień' : 'Ten miesiąc'}
-            </Button>
+            </button>
           ))}
         </div>
 
-        {/* Rating Filter */}
-        <div className="flex gap-2">
-          {(['all', 'positive', 'negative', 'unrated'] as RatingFilter[]).map((r) => (
-            <Button
-              key={r}
-              variant={ratingFilter === r ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setRatingFilter(r)}
-              className={ratingFilter === r ? '' : 'text-zinc-400 hover:text-white'}
-            >
-              {r === 'all' ? 'Wszystkie oceny' : r === 'positive' ? '👍 Pozytywne' : r === 'negative' ? '👎 Negatywne' : 'Bez oceny'}
-            </Button>
-          ))}
-        </div>
+        {/* Rating Filter — compact dropdown */}
+        <select
+          value={ratingFilter}
+          onChange={e => setRatingFilter(e.target.value as RatingFilter)}
+          className={`bg-muted border rounded-lg px-3 py-2 text-sm focus:outline-none cursor-pointer transition-colors appearance-none pr-8 ${
+            ratingFilter !== 'all'
+              ? 'border-blue-500/40 text-white'
+              : 'border-border text-zinc-400'
+          }`}
+          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
+        >
+          <option value="all">Ocena: wszystkie</option>
+          <option value="positive">👍 Pozytywne</option>
+          <option value="negative">👎 Negatywne</option>
+          <option value="unrated">Bez oceny</option>
+        </select>
       </div>
 
       {/* Table */}

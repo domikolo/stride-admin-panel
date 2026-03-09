@@ -71,61 +71,72 @@ function AvailabilitySection({ clientId, data, onSaved }: {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <p className="text-xs text-zinc-500">Chatbot proponuje spotkania tylko w tych godzinach i dniach.</p>
+
       {/* Days */}
       <div>
-        <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-2">Dostępne dni</label>
-        <div className="flex gap-2">
+        <label className="text-xs text-zinc-500 uppercase tracking-wide font-medium block mb-2.5">Dostępne dni</label>
+        <div className="flex gap-2 flex-wrap">
           {DAY_LABELS.map((label, i) => (
             <button
               key={i}
               onClick={() => toggleDay(i)}
-              className={`w-9 h-9 rounded-lg text-xs font-medium transition-colors ${
+              className={`w-11 h-11 rounded-xl text-xs font-semibold transition-all select-none ${
                 days.includes(i)
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                  : 'bg-white/[0.03] text-zinc-600 border border-white/[0.06] hover:text-zinc-400'
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.2)]'
+                  : 'bg-white/[0.04] text-zinc-500 border border-white/[0.08] hover:bg-white/[0.08] hover:text-zinc-300 hover:border-white/[0.14]'
               }`}
             >
               {label}
             </button>
           ))}
         </div>
+        <p className="text-[11px] text-zinc-600 mt-2">
+          {days.length === 0
+            ? 'Żaden dzień nie jest wybrany'
+            : `${days.length} ${days.length === 1 ? 'dzień' : 'dni'} aktywnych`}
+        </p>
       </div>
 
       {/* Hours */}
-      <div className="flex gap-4">
-        <div>
-          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Od</label>
-          <input
-            type="time"
-            value={hourFrom}
-            onChange={e => setHourFrom(e.target.value)}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Do</label>
-          <input
-            type="time"
-            value={hourTo}
-            onChange={e => setHourTo(e.target.value)}
-            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20"
-          />
+      <div>
+        <label className="text-xs text-zinc-500 uppercase tracking-wide font-medium block mb-2.5">Godziny pracy</label>
+        <div className="flex items-end gap-3">
+          <div className="flex-1">
+            <p className="text-[11px] text-zinc-600 mb-1">Od</p>
+            <input
+              type="time"
+              value={hourFrom}
+              onChange={e => setHourFrom(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors"
+            />
+          </div>
+          <div className="pb-2.5 text-zinc-600 text-base select-none">→</div>
+          <div className="flex-1">
+            <p className="text-[11px] text-zinc-600 mb-1">Do</p>
+            <input
+              type="time"
+              value={hourTo}
+              onChange={e => setHourTo(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500/40 transition-colors"
+            />
+          </div>
         </div>
       </div>
 
       {/* Slot duration */}
       <div>
-        <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Czas trwania slotu</label>
-        <div className="flex gap-2">
+        <label className="text-xs text-zinc-500 uppercase tracking-wide font-medium block mb-2.5">Długość slotu</label>
+        <div className="flex gap-2 flex-wrap">
           {SLOT_OPTIONS.map(opt => (
             <button
               key={opt}
               onClick={() => setSlotDuration(opt)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all select-none ${
                 slotDuration === opt
-                  ? 'bg-blue-500/20 text-blue-400 border border-blue-500/40'
-                  : 'bg-white/[0.03] text-zinc-600 border border-white/[0.06] hover:text-zinc-400'
+                  ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50'
+                  : 'bg-white/[0.04] text-zinc-500 border border-white/[0.08] hover:bg-white/[0.08] hover:text-zinc-300 hover:border-white/[0.14]'
               }`}
             >
               {opt} min
@@ -134,9 +145,14 @@ function AvailabilitySection({ clientId, data, onSaved }: {
         </div>
       </div>
 
-      <Button onClick={handleSave} disabled={saving} className="bg-blue-600 hover:bg-blue-700 text-white text-sm">
-        {saving ? 'Zapisywanie...' : 'Zapisz dostępność'}
-      </Button>
+      <div className="flex items-center gap-3 pt-1">
+        <Button onClick={handleSave} disabled={saving} size="sm" className="bg-blue-600 hover:bg-blue-700 text-white">
+          {saving ? 'Zapisywanie...' : 'Zapisz ustawienia'}
+        </Button>
+        {!saving && (
+          <span className="text-[11px] text-zinc-600">Chatbot uwzględni zmiany od razu</span>
+        )}
+      </div>
     </div>
   );
 }
@@ -326,24 +342,28 @@ export default function AppointmentsPage() {
       )}
 
       {/* Availability Config */}
-      <Card className="glass-card">
+      <Card className="glass-card overflow-hidden">
         <button
-          className="w-full flex items-center justify-between p-4 text-left"
+          className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${showAvailability ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
           onClick={() => setShowAvailability(v => !v)}
         >
-          <div className="flex items-center gap-2">
-            <Clock size={15} className="text-zinc-400" />
-            <span className="text-sm font-medium text-white">Konfiguracja dostępności</span>
-            {availabilityData && (
-              <span className="text-xs text-zinc-500">
-                {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].filter((_, i) => availabilityData.days.includes(i)).join(', ')} · {availabilityData.hourFrom}–{availabilityData.hourTo} · {availabilityData.slotDuration} min
-              </span>
-            )}
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${showAvailability ? 'bg-blue-500/15' : 'bg-white/[0.04]'}`}>
+              <Clock size={15} className={showAvailability ? 'text-blue-400' : 'text-zinc-400'} />
+            </div>
+            <div className="min-w-0">
+              <span className="text-sm font-medium text-white block">Dostępność chatbota</span>
+              {availabilityData && !showAvailability && (
+                <span className="text-xs text-zinc-500 truncate block">
+                  {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].filter((_, i) => availabilityData.days.includes(i)).join(', ')} · {availabilityData.hourFrom}–{availabilityData.hourTo} · {availabilityData.slotDuration} min/slot
+                </span>
+              )}
+            </div>
           </div>
-          <ChevronDown size={14} className={`text-zinc-500 transition-transform ${showAvailability ? 'rotate-180' : ''}`} />
+          <ChevronDown size={14} className={`text-zinc-500 transition-transform flex-shrink-0 ml-3 ${showAvailability ? 'rotate-180' : ''}`} />
         </button>
         {showAvailability && clientId && (
-          <div className="px-4 pb-4 border-t border-white/[0.06] pt-4">
+          <div className="px-5 pb-5 border-t border-white/[0.06] pt-5">
             <AvailabilitySection
               clientId={clientId}
               data={availabilityData}

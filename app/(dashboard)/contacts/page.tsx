@@ -456,9 +456,13 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
 
   return (
     <div
-      className={`flex-1 min-w-[170px] rounded-lg transition-colors ${dragOver ? 'bg-white/[0.04]' : ''}`}
+      className={`flex-1 min-w-[170px] rounded-xl p-2 transition-all duration-150 ${
+        dragOver
+          ? 'bg-blue-500/[0.06] ring-1 ring-blue-500/30'
+          : 'bg-transparent'
+      }`}
       onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-      onDragLeave={() => setDragOver(false)}
+      onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(false); }}
       onDrop={(e) => { setDragOver(false); onDrop(e, stage.value); }}
     >
       <div className="flex items-center gap-2 mb-3 px-1">
@@ -468,7 +472,7 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
           style={stage.isCustom ? { color: stage.hex } : {}}>
           {stage.label}
         </span>
-        <span className="text-xs text-zinc-600 ml-auto">{contacts.length}</span>
+        <span className={`text-xs ml-auto font-medium transition-colors ${dragOver ? 'text-blue-400' : 'text-zinc-600'}`}>{contacts.length}</span>
       </div>
       <div className="space-y-2">
         {contacts.map(c => (
@@ -478,10 +482,16 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
             onDragStart={(e) => {
               e.dataTransfer.setData('contactId', c.profileId);
               e.dataTransfer.setData('fromStage', stage.value);
+              (e.currentTarget as HTMLDivElement).style.opacity = '0.5';
+            }}
+            onDragEnd={(e) => {
+              (e.currentTarget as HTMLDivElement).style.opacity = '1';
             }}
             onClick={() => onSelect(c)}
-            className={`p-3 rounded-lg border cursor-pointer transition-all ${
-              selectedId === c.profileId ? 'border-white/20 bg-white/[0.08]' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05]'
+            className={`p-3 rounded-lg border cursor-grab active:cursor-grabbing transition-all ${
+              selectedId === c.profileId
+                ? 'border-white/20 bg-white/[0.08] shadow-sm'
+                : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/[0.1]'
             }`}>
             <div className="flex items-center gap-1.5 mb-0.5">
               <ContactIcon type={c.contactType} />
@@ -503,8 +513,12 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
           </div>
         ))}
         {contacts.length === 0 && (
-          <div className={`h-16 border border-dashed rounded-lg flex items-center justify-center transition-colors ${dragOver ? 'border-white/20' : 'border-white/[0.05]'}`}>
-            <span className="text-[11px] text-zinc-700">Brak</span>
+          <div className={`h-16 border border-dashed rounded-lg flex items-center justify-center transition-all ${
+            dragOver ? 'border-blue-500/40 bg-blue-500/[0.04]' : 'border-white/[0.05]'
+          }`}>
+            <span className={`text-[11px] transition-colors ${dragOver ? 'text-blue-400' : 'text-zinc-700'}`}>
+              {dragOver ? 'Upuść tutaj' : 'Brak'}
+            </span>
           </div>
         )}
       </div>
@@ -888,30 +902,38 @@ export default function ContactsPage() {
 
       {/* Bulk action bar */}
       {selectedIds.size > 0 && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3 px-4 py-3 bg-card border border-border rounded-xl shadow-2xl">
-          <span className="text-sm text-zinc-300 font-medium">{selectedIds.size} zaznaczonych</span>
-          <div className="w-px h-5 bg-white/[0.1]" />
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-2.5 bg-card/90 backdrop-blur-xl border border-white/[0.1] rounded-2xl shadow-2xl shadow-black/40 animate-in slide-in-from-bottom-2 duration-200">
+          <div className="flex items-center gap-1.5 px-2">
+            <div className="w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center">
+              <Check size={11} className="text-blue-400" />
+            </div>
+            <span className="text-sm text-white font-semibold tabular-nums">{selectedIds.size}</span>
+            <span className="text-sm text-zinc-400">zaznaczonych</span>
+          </div>
+          <div className="w-px h-5 bg-white/[0.08] mx-1" />
           <select
             value={bulkStatus}
             onChange={e => setBulkStatus(e.target.value)}
-            className="bg-muted border border-border rounded-lg px-2 py-1.5 text-xs text-foreground focus:outline-none cursor-pointer"
+            className="bg-white/[0.06] border border-white/[0.1] rounded-lg px-2.5 py-1.5 text-xs text-zinc-300 focus:outline-none cursor-pointer"
           >
             <option value="">Zmień status...</option>
             {allStages.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
           </select>
           {bulkStatus && (
             <Button size="sm" onClick={() => handleBulkStatusChange(bulkStatus)}
-              className="h-7 px-3 text-xs">
+              className="h-7 px-3 text-xs bg-blue-600 hover:bg-blue-700 text-white border-0">
               Zastosuj
             </Button>
           )}
-          <div className="w-px h-5 bg-white/[0.1]" />
-          <Button size="sm" variant="ghost" onClick={handleBulkDelete}
-            className="h-7 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10">
-            Usuń zaznaczone
-          </Button>
-          <button onClick={() => setSelectedIds(new Set())} className="text-zinc-500 hover:text-zinc-300 p-1">
-            <X size={14} />
+          <div className="w-px h-5 bg-white/[0.08] mx-1" />
+          <button
+            onClick={handleBulkDelete}
+            className="h-7 px-3 text-xs text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+          >
+            Usuń
+          </button>
+          <button onClick={() => setSelectedIds(new Set())} className="text-zinc-600 hover:text-zinc-300 p-1.5 rounded-lg hover:bg-white/[0.06] transition-colors ml-1">
+            <X size={13} />
           </button>
         </div>
       )}
