@@ -114,7 +114,7 @@ export default function ConversationDetailPage() {
     if (!highlightText || messages.length === 0) return;
     const target = highlightText.toLowerCase();
     const idx = messages.findIndex(
-      (m) => m.role === 'user' && m.text.toLowerCase().includes(target)
+      (m) => m.text.toLowerCase().includes(target)
     );
     if (idx !== -1) {
       setHighlightedIndex(idx);

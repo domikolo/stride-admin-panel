@@ -8,7 +8,7 @@ import { ContactProfile, Appointment } from '@/lib/types';
 import {
   LayoutDashboard, MessageSquare, Calendar, Flame, Clock,
   Search, Users, Radio, BookOpen, Settings, Rocket,
-  User, Phone, Mail, Loader2,
+  User, Bot, Loader2,
 } from 'lucide-react';
 
 // ─── Static nav items ─────────────────────────────────────────────────────────
@@ -45,6 +45,7 @@ interface DataResult {
   sublabel?: string;
   targetId: string;
   convNum?: number; // for conversations: specific conversation number
+  role?: 'user' | 'assistant'; // for conversations: who sent the message
 }
 
 type AnyItem = (NavItem | DataResult) & { globalIndex: number };
@@ -60,7 +61,7 @@ const SECTION_ORDER: Record<string, number> = {
 
 const KIND_ICON: Record<string, typeof User> = {
   contact: User,
-  conversation: MessageSquare,
+  conversation: MessageSquare, // fallback; overridden per-item by role
   appointment: Calendar,
 };
 
@@ -167,13 +168,14 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
         const data = await searchGlobal(clientId, q);
         const convs = (data.results || [])
           .filter((r: SearchResult) => r.type === 'conversation')
-          .map((r: SearchResult) => ({
+          .map((r: SearchResult & { conversationNumber?: number; role?: string }) => ({
             kind: 'conversation' as const,
             id: r.id,
             label: r.label,
             sublabel: r.sublabel ?? undefined,
             targetId: r.sessionId ?? r.id,
-            convNum: (r as SearchResult & { conversationNumber?: number }).conversationNumber ?? 1,
+            convNum: r.conversationNumber ?? 1,
+            role: (r.role === 'user' ? 'user' : 'assistant') as 'user' | 'assistant',
           }));
         setConvResults(convs);
       } catch {
@@ -360,7 +362,13 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
                   {section.items.map(item => {
                     const isSelected = item.globalIndex === selectedIndex;
                     const isNav = item.kind === 'nav';
-                    const Icon = isNav ? (item as NavItem).icon : KIND_ICON[item.kind] ?? Search;
+                    const isConv = item.kind === 'conversation';
+                    const convRole = isConv ? (item as DataResult).role : undefined;
+                    const Icon = isNav
+                      ? (item as NavItem).icon
+                      : isConv
+                        ? (convRole === 'user' ? User : Bot)
+                        : KIND_ICON[item.kind] ?? Search;
                     const colorClass = isNav ? '' : KIND_COLOR[item.kind] ?? '';
 
                     return (
