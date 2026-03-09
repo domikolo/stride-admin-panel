@@ -507,6 +507,23 @@ export const updateAppointmentAvailability = (clientId: string, data: Appointmen
     { days: data.days, hour_from: data.hourFrom, hour_to: data.hourTo, slot_duration: data.slotDuration }
   );
 
+// ─── Search ─────────────────────────────────────────────────────
+
+export interface SearchResult {
+  type: 'contact' | 'conversation' | 'appointment';
+  id: string;
+  label: string;
+  sublabel?: string | null;
+  profileId?: string;
+  sessionId?: string;
+  appointmentId?: string;
+}
+
+export const searchGlobal = (clientId: string, q: string) =>
+  api.get<{ results: SearchResult[]; query: string }>(
+    `/clients/${clientId}/search?q=${encodeURIComponent(q)}`
+  );
+
 // ─── API Keys ───────────────────────────────────────────────────
 
 export const getApiKeys = (clientId: string) =>
