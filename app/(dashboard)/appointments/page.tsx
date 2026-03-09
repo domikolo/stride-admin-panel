@@ -72,7 +72,7 @@ function AvailabilitySection({ clientId, data, onSaved }: {
 
   return (
     <div className="space-y-5">
-      <p className="text-xs text-zinc-500">Chatbot proponuje spotkania tylko w tych godzinach i dniach.</p>
+      <p className="text-xs text-zinc-500">Dni i godziny, w których klienci mogą umawiać spotkania przez chatbota.</p>
 
       {/* Days */}
       <div>
@@ -352,7 +352,7 @@ export default function AppointmentsPage() {
               <Clock size={15} className={showAvailability ? 'text-blue-400' : 'text-zinc-400'} />
             </div>
             <div className="min-w-0">
-              <span className="text-sm font-medium text-white block">Dostępność chatbota</span>
+              <span className="text-sm font-medium text-white block">Twoja dostępność</span>
               {availabilityData && !showAvailability && (
                 <span className="text-xs text-zinc-500 truncate block">
                   {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].filter((_, i) => availabilityData.days.includes(i)).join(', ')} · {availabilityData.hourFrom}–{availabilityData.hourTo} · {availabilityData.slotDuration} min/slot
