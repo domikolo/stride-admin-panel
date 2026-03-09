@@ -3,8 +3,8 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useClientId } from '@/hooks/useClientId';
-import { getClientConversations, getClientContacts, getClientAppointments } from '@/lib/api';
-import { Conversation, ContactProfile, Appointment } from '@/lib/types';
+import { getClientContacts, getClientAppointments, searchGlobal, SearchResult } from '@/lib/api';
+import { ContactProfile, Appointment } from '@/lib/types';
 import {
   LayoutDashboard, MessageSquare, Calendar, Flame, Clock,
   Search, Users, Radio, BookOpen, Settings, Rocket,
@@ -103,73 +103,89 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
-  // Cached datasets — loaded once per open, cleared on close
-  const [dataLoading, setDataLoading] = useState(false);
-  const [allConversations, setAllConversations] = useState<Conversation[]>([]);
-  const [allContacts, setAllContacts]           = useState<ContactProfile[]>([]);
-  const [allAppointments, setAllAppointments]   = useState<Appointment[]>([]);
-  const dataLoadedRef = useRef(false);
+  // Contacts + appointments — loaded once per open, filtered client-side
+  const [staticLoading, setStaticLoading] = useState(false);
+  const [allContacts, setAllContacts]         = useState<ContactProfile[]>([]);
+  const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
+  const staticLoadedRef = useRef(false);
+
+  // Conversations — backend full-text search, debounced per query
+  const [convResults, setConvResults]   = useState<DataResult[]>([]);
+  const [convLoading, setConvLoading]   = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const clientId = useClientId();
 
-  // Reset & load data on open
+  // Reset & load static data on open
   useEffect(() => {
     if (!open) {
-      dataLoadedRef.current = false;
+      staticLoadedRef.current = false;
+      setConvResults([]);
       return;
     }
     setQuery('');
     setSelectedIndex(0);
+    setConvResults([]);
     setTimeout(() => inputRef.current?.focus(), 50);
 
-    if (dataLoadedRef.current || !clientId) return;
-    setDataLoading(true);
+    if (staticLoadedRef.current || !clientId) return;
+    setStaticLoading(true);
     Promise.all([
-      getClientConversations(clientId, 500),
       getClientContacts(clientId, { limit: 500 }),
       getClientAppointments(clientId),
-    ]).then(([convResp, contactResp, apptResp]) => {
-      setAllConversations(convResp.conversations || []);
+    ]).then(([contactResp, apptResp]) => {
       setAllContacts(contactResp.contacts || []);
       setAllAppointments(apptResp.appointments || []);
-      dataLoadedRef.current = true;
+      staticLoadedRef.current = true;
     }).catch(() => {
-      dataLoadedRef.current = true; // don't retry
-    }).finally(() => {
-      setDataLoading(false);
-    });
+      staticLoadedRef.current = true;
+    }).finally(() => setStaticLoading(false));
   }, [open, clientId]);
+
+  // Debounced backend search for conversations (full message text)
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const q = query.trim();
+    if (q.length < 2 || !clientId) {
+      setConvResults([]);
+      setConvLoading(false);
+      return;
+    }
+    setConvLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const data = await searchGlobal(clientId, q);
+        const convs = (data.results || [])
+          .filter((r: SearchResult) => r.type === 'conversation')
+          .map((r: SearchResult) => ({
+            kind: 'conversation' as const,
+            id: r.id,
+            label: r.label,
+            sublabel: r.sublabel ?? undefined,
+            targetId: r.sessionId ?? r.id,
+            convNum: (r as SearchResult & { conversationNumber?: number }).conversationNumber ?? 1,
+          }));
+        setConvResults(convs);
+      } catch {
+        setConvResults([]);
+      } finally {
+        setConvLoading(false);
+      }
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [query, clientId]);
 
   // Reset selection on query change
   useEffect(() => { setSelectedIndex(0); }, [query]);
 
-  // ── Build results ────────────────────────────────────────────────────────────
+  // ── Build client-side results (contacts + appointments only) ─────────────────
 
-  const dataResults = useMemo<DataResult[]>(() => {
+  const staticResults = useMemo<DataResult[]>(() => {
     const q = query.trim();
     if (q.length < 2) return [];
-
     const results: DataResult[] = [];
-
-    // Conversations — one result per Conversation (session + convNum unique)
-    for (const conv of allConversations) {
-      const fields = [
-        conv.preview, conv.keywords,
-        conv.adminNotes, conv.adminTags?.join(' '),
-      ];
-      const snippet = matchSnippet(fields, q);
-      if (!snippet) continue;
-      results.push({
-        kind: 'conversation',
-        id: `${conv.sessionId}#${conv.conversationNumber ?? 1}`,
-        label: (conv.preview || conv.sessionId).slice(0, 70),
-        sublabel: snippet,
-        targetId: conv.sessionId,
-        convNum: conv.conversationNumber ?? 1,
-      });
-    }
 
     // Contacts
     for (const c of allContacts) {
@@ -203,7 +219,12 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
     }
 
     return results;
-  }, [query, allConversations, allContacts, allAppointments]);
+  }, [query, allContacts, allAppointments]);
+
+  const dataResults = useMemo(
+    () => [...convResults, ...staticResults],
+    [convResults, staticResults]
+  );
 
   // ── Build combined list ───────────────────────────────────────────────────────
 
@@ -282,7 +303,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
 
   if (!open) return null;
 
-  const loading = dataLoading;
+  const loading = staticLoading || convLoading;
   const hasQuery = query.trim().length >= 2;
 
   return (
@@ -366,7 +387,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
             <span><kbd className="bg-muted px-1 py-0.5 rounded border border-border mr-1">↵</kbd>otwórz</span>
             {hasQuery && (
               <span className="ml-auto">
-                {loading ? 'ładuję…' : dataResults.length > 0
+                {convLoading ? 'szukam w rozmowach…' : dataResults.length > 0
                   ? `${dataResults.length} wynik${dataResults.length === 1 ? '' : dataResults.length < 5 ? 'i' : 'ów'}`
                   : 'brak wyników'}
               </span>
