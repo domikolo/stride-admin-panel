@@ -320,7 +320,7 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
       <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]" onClick={onClose} />
 
       {/* Dialog */}
-      <div className="fixed inset-0 z-[101] flex items-start justify-center pt-[18vh]">
+      <div className="fixed inset-0 z-[101] flex items-start justify-center pt-[18vh]" onClick={onClose}>
         <div
           className="w-full max-w-lg bg-popover border border-border rounded-xl shadow-2xl overflow-hidden"
           onClick={e => e.stopPropagation()}
