@@ -751,7 +751,7 @@ export default function AppointmentsPage() {
         const ci = cancellingAppointment.contactInfo;
         const hasEmail = !!ci?.email;
         const hasPhone = !!ci?.phone;
-        const channel = hasEmail ? 'email' : hasPhone ? 'SMS' : null;
+        const channel = hasEmail ? 'email' : hasPhone ? 'sms' : null;
         const recipient = hasEmail ? ci!.email : hasPhone ? ci!.phone : null;
         const name = ci?.name || 'Klient';
         const raw = cancellingAppointment.datetime || '';
@@ -786,7 +786,7 @@ export default function AppointmentsPage() {
                   {channel === 'email' && <Mail size={13} />}
                   {channel === 'sms' && <Phone size={13} />}
                   {channel
-                    ? <span>Powiadomienie przez <strong>{channel}</strong> na: <strong>{recipient}</strong></span>
+                    ? <span>Powiadomienie przez <strong>{channel === 'sms' ? 'SMS' : 'email'}</strong> na: <strong>{recipient}</strong></span>
                     : <span>Brak danych kontaktowych — wizyta zostanie odwołana bez powiadomienia</span>
                   }
                 </div>
