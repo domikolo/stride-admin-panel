@@ -22,6 +22,7 @@ import {
   BookOpen,
   Radio,
   Settings,
+  Rocket,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -50,6 +51,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     { href: '/knowledge-base', icon: BookOpen, label: 'Baza Wiedzy' },
     { href: '/contacts', icon: Users, label: 'Kontakty' },
     { href: '/settings', icon: Settings, label: 'Ustawienia' },
+    { href: '/getting-started', icon: Rocket, label: 'Pierwsze kroki' },
   ];
 
   const ownerLinks = [
