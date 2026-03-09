@@ -554,3 +554,20 @@ export const getAuditLog = (
     `/clients/${clientId}/audit-log${query}`
   );
 };
+
+// ─── Client Settings ─────────────────────────────────────────────
+
+export interface ChatbotHours {
+  enabled: boolean;
+  days: string[];
+  hours_from: string;
+  hours_to: string;
+  timezone: string;
+  offline_message: string;
+}
+
+export const getChatbotSettings = (clientId: string) =>
+  api.get<{ chatbot_hours: ChatbotHours }>(`/clients/${clientId}/settings`);
+
+export const updateChatbotSettings = (clientId: string, chatbot_hours: ChatbotHours) =>
+  api.put<{ chatbot_hours: ChatbotHours }>(`/clients/${clientId}/settings`, { chatbot_hours });

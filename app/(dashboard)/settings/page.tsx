@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
-import { getAuditLog, getApiKeys, createApiKey, revokeApiKey } from '@/lib/api';
+import { getAuditLog, getApiKeys, createApiKey, revokeApiKey, getChatbotSettings, updateChatbotSettings, ChatbotHours } from '@/lib/api';
 import { AuditEvent, ApiKey } from '@/lib/types';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check } from 'lucide-react';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -218,6 +218,177 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Chatbot Hours Section ────────────────────────────────────────────────────
+
+const DAYS = [
+  { id: 'mon', label: 'Pn' },
+  { id: 'tue', label: 'Wt' },
+  { id: 'wed', label: 'Śr' },
+  { id: 'thu', label: 'Cz' },
+  { id: 'fri', label: 'Pt' },
+  { id: 'sat', label: 'Sb' },
+  { id: 'sun', label: 'Nd' },
+];
+
+const HOURS = Array.from({ length: 24 }, (_, i) => {
+  const h = String(i).padStart(2, '0');
+  return `${h}:00`;
+});
+
+const DEFAULT_HOURS: ChatbotHours = {
+  enabled: false,
+  days: ['mon', 'tue', 'wed', 'thu', 'fri'],
+  hours_from: '09:00',
+  hours_to: '17:00',
+  timezone: 'Europe/Warsaw',
+  offline_message: '',
+};
+
+function ChatbotHoursSection({ clientId }: { clientId: string }) {
+  const [config, setConfig] = useState<ChatbotHours>(DEFAULT_HOURS);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!clientId) return;
+    getChatbotSettings(clientId)
+      .then(d => setConfig(d.chatbot_hours))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [clientId]);
+
+  const toggleEnabled = () => {
+    const next = { ...config, enabled: !config.enabled };
+    setConfig(next);
+    save(next);
+  };
+
+  const toggleDay = (day: string) => {
+    const days = config.days.includes(day)
+      ? config.days.filter(d => d !== day)
+      : [...config.days, day];
+    setConfig(c => ({ ...c, days }));
+  };
+
+  const save = async (data = config) => {
+    if (!clientId) return;
+    setSaving(true);
+    try {
+      const updated = await updateChatbotSettings(clientId, data);
+      setConfig(updated.chatbot_hours);
+      toast.success('Zapisano');
+    } catch {
+      toast.error('Nie udało się zapisać');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <Card className="glass-card p-6 space-y-4">
+      {/* Header row with toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <Clock size={16} className="text-zinc-400" />
+          <div>
+            <h2 className="text-sm font-semibold text-white">Godziny pracy chatbota</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Chatbot odpowiada tylko w wybranych godzinach
+            </p>
+          </div>
+        </div>
+        {/* Toggle switch */}
+        <button
+          onClick={toggleEnabled}
+          disabled={saving}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+            config.enabled ? 'bg-blue-600' : 'bg-white/10'
+          }`}
+        >
+          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+            config.enabled ? 'translate-x-4' : 'translate-x-0.5'
+          }`} />
+        </button>
+      </div>
+
+      {/* Collapsible config */}
+      {config.enabled && (
+        <div className="space-y-5 pt-1 border-t border-white/[0.06]">
+          {/* Days */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">Aktywne dni</label>
+            <div className="flex gap-1.5 flex-wrap">
+              {DAYS.map(d => (
+                <button
+                  key={d.id}
+                  onClick={() => toggleDay(d.id)}
+                  className={`w-9 h-9 rounded-lg text-xs font-medium transition-colors ${
+                    config.days.includes(d.id)
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-white/[0.04] text-zinc-500 hover:text-zinc-300 border border-white/[0.06]'
+                  }`}
+                >
+                  {d.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Hours */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">Godziny</label>
+            <div className="flex items-center gap-3">
+              <select
+                value={config.hours_from}
+                onChange={e => setConfig(c => ({ ...c, hours_from: e.target.value }))}
+                className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+              >
+                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <span className="text-zinc-500 text-sm">→</span>
+              <select
+                value={config.hours_to}
+                onChange={e => setConfig(c => ({ ...c, hours_to: e.target.value }))}
+                className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
+              >
+                {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+              </select>
+              <span className="text-xs text-zinc-600">Europe/Warsaw</span>
+            </div>
+          </div>
+
+          {/* Offline message */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">
+              Wiadomość poza godzinami
+            </label>
+            <textarea
+              value={config.offline_message}
+              onChange={e => setConfig(c => ({ ...c, offline_message: e.target.value }))}
+              placeholder="Np. Jestem dostępny pn–pt w godz. 9:00–17:00. Zostaw wiadomość, odezwę się wkrótce."
+              rows={3}
+              maxLength={500}
+              className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none"
+            />
+            <p className="text-right text-[11px] text-zinc-600 mt-1">{config.offline_message.length}/500</p>
+          </div>
+
+          <Button
+            onClick={() => save()}
+            disabled={saving}
+            className="bg-blue-600 hover:bg-blue-700 text-white text-sm"
+          >
+            {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
+            Zapisz
+          </Button>
         </div>
       )}
     </Card>
@@ -717,6 +888,9 @@ export default function SettingsPage() {
                 ))}
               </div>
             </Card>
+
+            {/* Chatbot hours */}
+            <ChatbotHoursSection clientId={clientId ?? ''} />
 
             {/* MFA — owner only */}
             {user?.role === 'owner' && <MfaSection email={user.email} />}
