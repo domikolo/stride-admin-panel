@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
 import { isToday, isThisWeek, isThisMonth, differenceInMinutes, formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw, StickyNote, Flag, X, Download } from 'lucide-react';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw, PenLine, Flag, X, Download } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import toast from 'react-hot-toast';
 
@@ -148,7 +148,10 @@ function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initi
     <div className="fixed inset-y-0 right-0 w-[360px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
-        <h2 className="font-semibold text-white text-[15px]">Adnotacje sesji</h2>
+        <div>
+          <h2 className="font-semibold text-white text-[15px]">Notatki</h2>
+          <p className="text-xs text-zinc-500 mt-0.5">Prywatne — widoczne tylko w panelu</p>
+        </div>
         <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
           <X size={18} />
         </button>
@@ -707,14 +710,17 @@ export default function ConversationsPage() {
                             onClick={() => setSelectedAnnotationSession(
                               selectedAnnotationSession === group.sessionId ? null : group.sessionId
                             )}
-                            className={`p-1.5 rounded-md transition-colors ${
+                            className={`relative p-1.5 rounded-md transition-colors ${
                               isAnnotationOpen
                                 ? 'bg-blue-500/20 text-blue-400'
-                                : 'text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06]'
-                            } ${group.adminNotes || group.adminTags.length > 0 ? 'text-amber-400' : ''}`}
-                            title="Adnotacje"
+                                : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.06]'
+                            }`}
+                            title="Notatki i adnotacje"
                           >
-                            <StickyNote size={14} />
+                            <PenLine size={14} />
+                            {(group.adminNotes || group.adminTags.length > 0) && (
+                              <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-amber-400" />
+                            )}
                           </button>
                         </TableCell>
                       </TableRow>
