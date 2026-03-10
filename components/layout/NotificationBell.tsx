@@ -30,8 +30,8 @@ const ICON_COLOR: Record<string, string> = {
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 function getLink(n: AppNotification): string | null {
-  if (n.resourceType === 'appointment') return '/appointments';
-  if (n.resourceType === 'contact')     return '/contacts';
+  if (n.resourceType === 'appointment') return n.resourceId ? `/appointments?hl=${n.resourceId}` : '/appointments';
+  if (n.resourceType === 'contact')     return n.resourceId ? `/contacts?hl=${n.resourceId}` : '/contacts';
   return null;
 }
 
