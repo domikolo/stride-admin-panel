@@ -1587,7 +1587,7 @@ export default function ContactsPage() {
               onClick={() => { setFilterAppt(v); setPage(1); }}
               className={`px-2.5 py-1 text-xs rounded-md transition-colors ${filterAppt === v ? 'bg-violet-500/20 text-violet-300' : 'text-zinc-400 hover:text-white'}`}>
               {v === ''      ? 'Wszyscy'
-               : v === 'true' ? '📅 Ze spotkaniem'
+               : v === 'true' ? <span className="flex items-center gap-1"><Calendar size={11} />Ze spotkaniem</span>
                : 'Bez spotkania'}
             </button>
           ))}

@@ -81,7 +81,7 @@ const SECTIONS: TabSection[] = [
     bgColor: 'bg-sky-500/10',
     description: 'Wszystkie sesje użytkowników z chatbotem — pogrupowane, filtrowane, z możliwością adnotacji.',
     features: [
-      { icon: Filter, text: 'Filtrowanie po dacie (dziś / tydzień / miesiąc) i ocenie użytkownika (👍/👎)' },
+      { icon: Filter, text: 'Filtrowanie po dacie (dziś / tydzień / miesiąc) i ocenie użytkownika (pozytywna / negatywna)' },
       { icon: PenLine, text: 'Notatki i tagi per sesja — kliknij ikonę długopisu przy rozmowie' },
       { icon: Flag, text: 'Flagowanie rozmów wymagających uwagi' },
       { icon: Download, text: 'Eksport do CSV — wszystkie sesje z datami, ocenami i podglądem' },

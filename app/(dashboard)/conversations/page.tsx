@@ -19,7 +19,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
 import { isToday, isThisWeek, isThisMonth, differenceInMinutes, formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
-import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw, PenLine, Flag, X, Download } from 'lucide-react';
+import { Search, MessageSquare, ChevronLeft, ChevronRight, Info, FlaskConical, Clock, CheckCircle2, ArrowUpDown, ArrowUp, ArrowDown, ChevronDown, ChevronRight as ChevronRightIcon, RefreshCw, PenLine, Flag, X, Download, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import toast from 'react-hot-toast';
 
@@ -551,8 +551,8 @@ export default function ConversationsPage() {
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center' }}
         >
           <option value="all">Ocena: wszystkie</option>
-          <option value="positive">👍 Pozytywne</option>
-          <option value="negative">👎 Negatywne</option>
+          <option value="positive">+ Pozytywne</option>
+          <option value="negative">– Negatywne</option>
           <option value="unrated">Bez oceny</option>
         </select>
       </div>
@@ -608,7 +608,7 @@ export default function ConversationsPage() {
                     onSort={handleSort}
                   />
                   <TableHead className="w-16 text-center">
-                    <HeaderTooltip tooltip="Ocena rozmowy wystawiona przez użytkownika w widgecie czatu (👍 pozytywna / 👎 negatywna).">
+                    <HeaderTooltip tooltip="Ocena rozmowy wystawiona przez użytkownika w widgecie czatu.">
                       Ocena
                     </HeaderTooltip>
                   </TableHead>
@@ -690,8 +690,8 @@ export default function ConversationsPage() {
                         <TableCell className="text-center">
                           {isSingleSession ? (
                             <>
-                              {group.metrics.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
-                              {group.metrics.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
+                              {group.metrics.rating === 'positive' && <span title="Pozytywna ocena"><ThumbsUp size={13} className="text-emerald-400 inline-block" /></span>}
+                              {group.metrics.rating === 'negative' && <span title="Negatywna ocena"><ThumbsDown size={13} className="text-red-400 inline-block" /></span>}
                               {!group.metrics.rating && <span className="text-zinc-700 text-xs">—</span>}
                             </>
                           ) : (
@@ -758,8 +758,8 @@ export default function ConversationsPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-center">
-                              {conv.rating === 'positive' && <span title="Pozytywna ocena">👍</span>}
-                              {conv.rating === 'negative' && <span title="Negatywna ocena">👎</span>}
+                              {conv.rating === 'positive' && <span title="Pozytywna ocena"><ThumbsUp size={13} className="text-emerald-400 inline-block" /></span>}
+                              {conv.rating === 'negative' && <span title="Negatywna ocena"><ThumbsDown size={13} className="text-red-400 inline-block" /></span>}
                               {!conv.rating && <span className="text-zinc-700 text-xs">—</span>}
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400 max-w-xs">

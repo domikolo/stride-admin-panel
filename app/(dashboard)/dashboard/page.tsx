@@ -230,7 +230,7 @@ export default function DashboardPage() {
                   : stats.satisfactionRate >= 50 ? 'text-yellow-400'
                     : 'text-red-400'
             }
-            description={stats?.feedbackTotal ? `${stats.feedbackTotal} ocen (${stats.feedbackPositive} 👍 / ${stats.feedbackNegative} 👎)` : 'Brak ocen w tym okresie'}
+            description={stats?.feedbackTotal ? `${stats.feedbackTotal} ocen (${stats.feedbackPositive}↑ / ${stats.feedbackNegative}↓)` : 'Brak ocen w tym okresie'}
           />
         </motion.div>
       </motion.div>
