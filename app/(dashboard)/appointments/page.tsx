@@ -214,7 +214,7 @@ export default function AppointmentsPage() {
     setTimeout(() => {
       const el = document.querySelector(`[data-appt-id="${hlApptId}"]`);
       if (el) flashElement(el);
-    }, 150);
+    }, 300);
   }, [searchParams, appointments.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Get appointments for a specific day (calendar view)

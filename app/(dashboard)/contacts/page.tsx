@@ -619,7 +619,7 @@ export default function ContactsPage() {
     setTimeout(() => {
       const el = document.querySelector(`[data-profile-id="${hlProfileId}"]`);
       if (el) flashElement(el);
-    }, 150);
+    }, 300);
   }, [searchParams, contacts.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const kanbanGroups = useMemo(() => {
