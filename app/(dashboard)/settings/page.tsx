@@ -264,9 +264,10 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
   }, [clientId]);
 
   const toggleEnabled = () => {
+    const prev = config;
     const next = { ...config, enabled: !config.enabled };
     setConfig(next);
-    save(next);
+    save(next).catch(() => setConfig(prev));
   };
 
   const toggleDay = (day: string) => {

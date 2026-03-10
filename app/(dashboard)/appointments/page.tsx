@@ -293,10 +293,11 @@ export default function AppointmentsPage() {
       if (editDatetime) data.datetime = new Date(editDatetime).toISOString();
       if (editNotes !== undefined) data.notes = editNotes;
       await updateAppointment(clientId, editingAppointment.appointmentId, data);
+      toast.success('Wizyta zaktualizowana');
       setEditingAppointment(null);
       mutate();
-    } catch (e) {
-      console.error(e);
+    } catch {
+      toast.error('Nie udało się zapisać zmian');
     } finally {
       setEditSaving(false);
     }
