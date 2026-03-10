@@ -101,16 +101,19 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
           'md:translate-x-0 md:static'
         )}
       >
-        {/* Logo */}
-        <div className="p-6 md:p-3 lg:p-6 border-b border-white/[0.06]">
-          <Link href="/dashboard" className="flex items-center gap-3 md:justify-center lg:justify-start" onClick={handleLinkClick}>
+        {/* Logo + Bell */}
+        <div className="px-4 py-4 md:px-2 lg:px-4 border-b border-white/[0.06] flex items-center md:justify-center lg:justify-between gap-2">
+          <Link href="/dashboard" className="md:hidden lg:flex items-center min-w-0" onClick={handleLinkClick}>
             <img
               src="/logo.png"
               alt="Stride"
-              className="h-7 w-auto md:h-6 lg:h-7"
+              className="h-7 w-auto flex-shrink-0"
               style={logoFilter ? { filter: logoFilter } : undefined}
             />
           </Link>
+          <div className="flex-shrink-0">
+            <NotificationBell clientId={user?.clientId || 'stride-services'} />
+          </div>
         </div>
 
         {/* Search trigger */}
@@ -193,16 +196,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <span className="text-[10px] text-zinc-600 capitalize">{user?.role}</span>
             </div>
           </div>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="hidden md:block">
-                <NotificationBell clientId={user?.clientId || 'stride-services'} />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent side="right" className="md:block lg:hidden hidden">
-              Powiadomienia
-            </TooltipContent>
-          </Tooltip>
           <Tooltip>
             <TooltipTrigger asChild>
               <div>
