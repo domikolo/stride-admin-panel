@@ -17,9 +17,10 @@ import {
   getContact, updateContact, deleteContact,
   updateContactStages, createAppointment,
   getReminders, createReminder, deleteReminder,
+  getReminderRules, updateReminderRules,
 } from '@/lib/api';
 import { useSWR, fetcher } from '@/lib/swr';
-import { ContactProfile, Reminder } from '@/lib/types';
+import { ContactProfile, Reminder, ReminderRule } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -31,7 +32,7 @@ import {
   Users, Mail, Phone, Calendar, MessageSquare,
   Copy, Check, X, Trash2, ExternalLink, Download,
   RefreshCw, List, Columns, ChevronUp, ChevronDown, Plus,
-  Bell, BellPlus, CalendarPlus, Clock, Repeat,
+  Bell, CalendarPlus, Clock, Repeat,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -250,9 +251,9 @@ function CreateAppointmentModal({
   );
 }
 
-// ─── Add Reminder Modal ───────────────────────────────────────────────────────
+// ─── Reminder helpers ─────────────────────────────────────────────────────────
 
-const REPEAT_OPTIONS: { value: string; label: string }[] = [
+const REPEAT_OPTIONS = [
   { value: 'none',    label: 'Jednorazowo' },
   { value: 'daily',   label: 'Codziennie' },
   { value: 'weekly',  label: 'Co tydzień' },
@@ -261,23 +262,60 @@ const REPEAT_OPTIONS: { value: string; label: string }[] = [
   { value: 'custom',  label: 'Co X dni' },
 ];
 
-const CHANNEL_OPTIONS: { value: string; label: string }[] = [
-  { value: 'inapp', label: 'In-app' },
+const CHANNEL_OPTIONS = [
+  { value: 'inapp', label: 'In-app (dzwoneczek)' },
   { value: 'email', label: 'Email' },
-  { value: 'both',  label: 'Oba' },
+  { value: 'both',  label: 'In-app + Email' },
 ];
 
-function AddReminderModal({
-  profileId,
-  clientId,
-  onClose,
-  onCreated,
+const TRIGGER_LABELS: Record<string, string> = {
+  appointment_confirmed: 'Spotkanie potwierdzone',
+  appointment_cancelled: 'Spotkanie odwołane',
+  contact_added:         'Nowy kontakt',
+  no_activity_days:      'Brak aktywności',
+};
+
+const TRIGGER_COLORS: Record<string, string> = {
+  appointment_confirmed: 'bg-emerald-500/15 text-emerald-400',
+  appointment_cancelled: 'bg-red-500/15 text-red-400',
+  contact_added:         'bg-blue-500/15 text-blue-400',
+  no_activity_days:      'bg-amber-500/15 text-amber-400',
+};
+
+function formatFireAt(ts: number) {
+  try { return format(new Date(ts * 1000), 'd MMM yyyy, HH:mm'); } catch { return '—'; }
+}
+
+function formatRepeat(r: Reminder['repeat']) {
+  switch (r.type) {
+    case 'daily':   return 'Codziennie';
+    case 'weekly':  return 'Co tydzień';
+    case 'monthly': return 'Co miesiąc';
+    case 'yearly':  return 'Co rok';
+    case 'custom':  return `Co ${r.intervalDays ?? 7} dni`;
+    default:        return 'Jednorazowo';
+  }
+}
+
+function formatChannel(ch: string) {
+  if (ch === 'email') return 'Email';
+  if (ch === 'both')  return 'In-app + Email';
+  return 'In-app';
+}
+
+// ─── Add Reminder Modal (with contact picker) ─────────────────────────────────
+
+function AddReminderWithPickerModal({
+  clientId, contacts, preselectedProfileId, onClose, onCreated,
 }: {
-  profileId: string;
   clientId: string;
+  contacts: ContactProfile[];
+  preselectedProfileId?: string;
   onClose: () => void;
   onCreated: () => void;
 }) {
+  const [profileId, setProfileId] = useState(preselectedProfileId || '');
+  const [contactSearch, setContactSearch] = useState('');
   const [dt, setDt] = useState('');
   const [message, setMessage] = useState('');
   const [channel, setChannel] = useState('inapp');
@@ -285,71 +323,91 @@ function AddReminderModal({
   const [intervalDays, setIntervalDays] = useState(7);
   const [saving, setSaving] = useState(false);
 
-  // Default to tomorrow at 9:00
   useEffect(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     d.setHours(9, 0, 0, 0);
-    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-    setDt(iso);
+    setDt(new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16));
   }, []);
 
+  const filteredContacts = useMemo(() => {
+    if (!contactSearch.trim()) return contacts.slice(0, 8);
+    const q = contactSearch.toLowerCase();
+    return contacts.filter(c =>
+      c.contactInfo.toLowerCase().includes(q) || (c.displayName || '').toLowerCase().includes(q)
+    ).slice(0, 8);
+  }, [contacts, contactSearch]);
+
+  const selectedContact = contacts.find(c => c.profileId === profileId);
+
   const handleSubmit = async () => {
-    if (!dt || !message.trim()) return;
+    if (!profileId || !dt || !message.trim()) return;
     setSaving(true);
     try {
-      const fire_at = Math.floor(new Date(dt).getTime() / 1000);
       await createReminder(clientId, {
         profile_id: profileId,
-        fire_at,
+        fire_at: Math.floor(new Date(dt).getTime() / 1000),
         message: message.trim(),
         channel,
-        repeat: repeatType === 'custom'
-          ? { type: 'custom', interval_days: intervalDays }
-          : { type: repeatType },
+        repeat: repeatType === 'custom' ? { type: 'custom', interval_days: intervalDays } : { type: repeatType },
       });
       toast.success('Przypomnienie dodane');
       onCreated();
       onClose();
-    } catch {
-      toast.error('Nie udało się dodać przypomnienia');
-    } finally {
-      setSaving(false);
-    }
+    } catch { toast.error('Nie udało się dodać przypomnienia'); }
+    finally { setSaving(false); }
   };
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
-          <h3 className="font-semibold text-white text-[15px]">Dodaj przypomnienie</h3>
-          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
-            <X size={16} />
-          </button>
+          <h3 className="font-semibold text-white text-[15px]">Nowe przypomnienie</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md hover:bg-white/[0.06] transition-colors"><X size={16} /></button>
         </div>
-
         <div className="space-y-4">
+          {/* Contact picker */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Kontakt *</label>
+            {selectedContact ? (
+              <div className="flex items-center justify-between p-3 bg-blue-500/[0.07] border border-blue-500/20 rounded-lg">
+                <div>
+                  <p className="text-sm text-white">{selectedContact.displayName || selectedContact.contactInfo}</p>
+                  {selectedContact.displayName && <p className="text-xs text-zinc-400">{selectedContact.contactInfo}</p>}
+                </div>
+                {!preselectedProfileId && (
+                  <button onClick={() => { setProfileId(''); setContactSearch(''); }} className="text-zinc-500 hover:text-zinc-300 p-1"><X size={13} /></button>
+                )}
+              </div>
+            ) : (
+              <div className="relative">
+                <input placeholder="Szukaj kontaktu..." value={contactSearch} onChange={e => setContactSearch(e.target.value)}
+                  className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors" />
+                {filteredContacts.length > 0 && (
+                  <div className="absolute top-full mt-1 w-full bg-card border border-border rounded-lg shadow-xl z-10 overflow-hidden max-h-48 overflow-y-auto">
+                    {filteredContacts.map(c => (
+                      <button key={c.profileId} onClick={() => { setProfileId(c.profileId); setContactSearch(''); }}
+                        className="w-full text-left px-3 py-2.5 hover:bg-white/[0.05] transition-colors border-b border-white/[0.04] last:border-0">
+                        <p className="text-sm text-white">{c.displayName || c.contactInfo}</p>
+                        {c.displayName && <p className="text-xs text-zinc-500">{c.contactInfo}</p>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina *</label>
-            <input
-              type="datetime-local"
-              value={dt}
-              onChange={e => setDt(e.target.value)}
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]"
-            />
+            <input type="datetime-local" value={dt} onChange={e => setDt(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]" />
           </div>
-
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Treść przypomnienia *</label>
-            <textarea
-              value={message}
-              onChange={e => setMessage(e.target.value)}
-              rows={3}
+            <textarea value={message} onChange={e => setMessage(e.target.value)} rows={3}
               placeholder="np. Oddzwoń z ofertą, sprawdź czy dotarła propozycja..."
-              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
-            />
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none" />
           </div>
-
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Powtarzanie</label>
@@ -366,24 +424,17 @@ function AddReminderModal({
               </select>
             </div>
           </div>
-
           {repeatType === 'custom' && (
             <div>
               <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Co ile dni</label>
-              <input
-                type="number" min={1} max={365}
-                value={intervalDays}
+              <input type="number" min={1} max={365} value={intervalDays}
                 onChange={e => setIntervalDays(Math.max(1, parseInt(e.target.value) || 7))}
-                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors"
-              />
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors" />
             </div>
           )}
-
           <div className="flex gap-2 pt-1">
-            <Button variant="ghost" onClick={onClose} className="flex-1 text-zinc-400 hover:text-white">
-              Anuluj
-            </Button>
-            <Button onClick={handleSubmit} disabled={!dt || !message.trim() || saving}
+            <Button variant="ghost" onClick={onClose} className="flex-1 text-zinc-400 hover:text-white">Anuluj</Button>
+            <Button onClick={handleSubmit} disabled={!profileId || !dt || !message.trim() || saving}
               className="flex-1 bg-blue-600 hover:bg-blue-700 text-white border-0">
               {saving ? 'Zapisywanie...' : 'Dodaj'}
             </Button>
@@ -394,125 +445,393 @@ function AddReminderModal({
   );
 }
 
-// ─── Reminders Section (inside DetailPanel) ───────────────────────────────────
+// ─── Add Rule Modal ───────────────────────────────────────────────────────────
 
-function RemindersSection({ profileId, clientId }: { profileId: string; clientId: string }) {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showAdd, setShowAdd] = useState(false);
-  const [deleting, setDeleting] = useState<string | null>(null);
+function AddRuleModal({ clientId, existingRules, onClose, onCreated }: {
+  clientId: string;
+  existingRules: ReminderRule[];
+  onClose: () => void;
+  onCreated: (rules: ReminderRule[]) => void;
+}) {
+  const TRIGGERS = Object.entries(TRIGGER_LABELS).map(([value, label]) => ({ value, label }));
+  const [trigger, setTrigger] = useState('appointment_confirmed');
+  const [delayAmount, setDelayAmount] = useState(2);
+  const [delayUnit, setDelayUnit] = useState<'hours' | 'days'>('days');
+  const [messageTemplate, setMessageTemplate] = useState('');
+  const [channel, setChannel] = useState('inapp');
+  const [label, setLabel] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  const delayHours = delayUnit === 'days' ? delayAmount * 24 : delayAmount;
+
+  const handleSubmit = async () => {
+    if (!trigger || !messageTemplate.trim()) return;
+    setSaving(true);
     try {
-      const res = await getReminders(clientId, profileId);
+      const newRule: ReminderRule = {
+        id: 'rule_' + Date.now(),
+        trigger: trigger as ReminderRule['trigger'],
+        delayHours,
+        messageTemplate: messageTemplate.trim(),
+        channel: channel as ReminderRule['channel'],
+        enabled: true,
+        label: label.trim(),
+      };
+      const updated = [...existingRules, newRule];
+      await updateReminderRules(clientId, updated);
+      toast.success('Reguła dodana');
+      onCreated(updated);
+    } catch { toast.error('Błąd zapisu'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-white text-[15px]">Nowa reguła automatyczna</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md hover:bg-white/[0.06] transition-colors"><X size={16} /></button>
+        </div>
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Gdy zajdzie zdarzenie</label>
+            <select value={trigger} onChange={e => setTrigger(e.target.value)}
+              className="w-full bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
+              {TRIGGERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Przypomnij po</label>
+            <div className="flex gap-2">
+              <input type="number" min={0} value={delayAmount} onChange={e => setDelayAmount(Math.max(0, parseInt(e.target.value) || 0))}
+                className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors" />
+              <select value={delayUnit} onChange={e => setDelayUnit(e.target.value as 'hours' | 'days')}
+                className="bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
+                <option value="hours">godzinach</option>
+                <option value="days">dniach</option>
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Treść przypomnienia *</label>
+            <textarea value={messageTemplate} onChange={e => setMessageTemplate(e.target.value)} rows={3}
+              placeholder="np. Follow-up po spotkaniu z {name} — sprawdź zainteresowanie"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none" />
+            <p className="text-[10px] text-zinc-600 mt-1">Dostępne tokeny: <span className="text-zinc-400">{'{name}'}</span> <span className="text-zinc-400">{'{contact_info}'}</span> <span className="text-zinc-400">{'{datetime}'}</span></p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Kanał</label>
+              <select value={channel} onChange={e => setChannel(e.target.value)}
+                className="w-full bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
+                {CHANNEL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Etykieta (opcjonalna)</label>
+              <input value={label} onChange={e => setLabel(e.target.value)} placeholder="np. Post-meeting"
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors" />
+            </div>
+          </div>
+          {/* Preview */}
+          {(messageTemplate || delayAmount > 0) && (
+            <div className="p-3 bg-white/[0.03] rounded-lg border border-white/[0.06] space-y-1">
+              <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Podgląd reguły</p>
+              <p className="text-xs text-zinc-300">
+                Gdy <span className={`inline px-1.5 py-0.5 rounded-full text-[10px] font-medium ${TRIGGER_COLORS[trigger] || 'bg-zinc-500/15 text-zinc-400'}`}>{TRIGGER_LABELS[trigger]}</span>
+                {' '}→ za <strong className="text-white">{delayAmount} {delayUnit === 'hours' ? 'godz.' : 'dni'}</strong> przypomnij przez <strong className="text-white">{formatChannel(channel)}</strong>:
+              </p>
+              {messageTemplate && <p className="text-xs text-zinc-400 italic">&ldquo;{messageTemplate}&rdquo;</p>}
+            </div>
+          )}
+          <div className="flex gap-2 pt-1">
+            <Button variant="ghost" onClick={onClose} className="flex-1 text-zinc-400 hover:text-white">Anuluj</Button>
+            <Button onClick={handleSubmit} disabled={!trigger || !messageTemplate.trim() || saving}
+              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white border-0">
+              {saving ? 'Zapisywanie...' : 'Dodaj regułę'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reminders Tab ────────────────────────────────────────────────────────────
+
+function RemindersTab({ clientId, contacts }: { clientId: string; contacts: ContactProfile[] }) {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [rules, setRules] = useState<ReminderRule[]>([]);
+  const [loadingR, setLoadingR] = useState(true);
+  const [loadingRules, setLoadingRules] = useState(true);
+  const [showAddReminder, setShowAddReminder] = useState(false);
+  const [showAddRule, setShowAddRule] = useState(false);
+  const [reminderFilter, setReminderFilter] = useState<'pending' | 'fired' | ''>('pending');
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [savingRules, setSavingRules] = useState(false);
+
+  const contactsMap = useMemo(() => {
+    const m: Record<string, ContactProfile> = {};
+    contacts.forEach(c => { m[c.profileId] = c; });
+    return m;
+  }, [contacts]);
+
+  const loadReminders = useCallback(async () => {
+    setLoadingR(true);
+    try {
+      const res = await getReminders(clientId);
       setReminders(res.reminders);
-    } catch {
-      // ignore
-    } finally {
-      setLoading(false);
-    }
-  }, [clientId, profileId]);
+    } catch { /* ignore */ }
+    finally { setLoadingR(false); }
+  }, [clientId]);
 
-  useEffect(() => { load(); }, [load]);
+  const loadRules = useCallback(async () => {
+    setLoadingRules(true);
+    try {
+      const res = await getReminderRules(clientId);
+      setRules(res.rules);
+    } catch { /* ignore */ }
+    finally { setLoadingRules(false); }
+  }, [clientId]);
 
-  const handleDelete = async (reminderId: string) => {
+  useEffect(() => { loadReminders(); loadRules(); }, [loadReminders, loadRules]);
+
+  const handleDeleteReminder = async (reminderId: string) => {
     setDeleting(reminderId);
     try {
       await deleteReminder(clientId, reminderId);
       setReminders(prev => prev.filter(r => r.reminderId !== reminderId));
-      toast.success('Przypomnienie usunięte');
-    } catch {
-      toast.error('Nie udało się usunąć');
-    } finally {
-      setDeleting(null);
-    }
+      toast.success('Usunięto');
+    } catch { toast.error('Błąd'); }
+    finally { setDeleting(null); }
   };
 
-  const formatFireAt = (ts: number) => {
-    try { return format(new Date(ts * 1000), 'd MMM yyyy HH:mm'); } catch { return '—'; }
+  const handleDeleteRule = async (ruleId: string) => {
+    const updated = rules.filter(r => r.id !== ruleId);
+    setSavingRules(true);
+    try {
+      await updateReminderRules(clientId, updated);
+      setRules(updated);
+      toast.success('Reguła usunięta');
+    } catch { toast.error('Błąd'); }
+    finally { setSavingRules(false); }
   };
 
-  const repeatLabel = (repeat: Reminder['repeat']) => {
-    switch (repeat.type) {
-      case 'daily':   return 'codziennie';
-      case 'weekly':  return 'co tydzień';
-      case 'monthly': return 'co miesiąc';
-      case 'yearly':  return 'co rok';
-      case 'custom':  return `co ${repeat.intervalDays ?? 7} dni`;
-      default:        return null;
-    }
+  const handleToggleRule = async (ruleId: string) => {
+    const updated = rules.map(r => r.id === ruleId ? { ...r, enabled: !r.enabled } : r);
+    setSavingRules(true);
+    try {
+      await updateReminderRules(clientId, updated);
+      setRules(updated);
+    } catch { toast.error('Błąd'); }
+    finally { setSavingRules(false); }
   };
 
   const pending = reminders.filter(r => r.status === 'pending').sort((a, b) => a.fireAt - b.fireAt);
-  const fired   = reminders.filter(r => r.status === 'fired').sort((a, b) => b.fireAt - a.fireAt).slice(0, 3);
+  const fired   = reminders.filter(r => r.status === 'fired').sort((a, b) => b.fireAt - a.fireAt);
+  const displayed = reminderFilter === 'pending' ? pending
+    : reminderFilter === 'fired' ? fired
+    : [...pending, ...fired].sort((a, b) => a.fireAt - b.fireAt);
+
+  const activeRulesCount = rules.filter(r => r.enabled).length;
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <label className="text-xs text-zinc-500 uppercase tracking-wide">Przypomnienia</label>
-        <button onClick={() => setShowAdd(true)}
-          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors">
-          <BellPlus size={12} />Dodaj
-        </button>
+    <div className="space-y-6">
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { value: pending.length, label: 'Nadchodzących' },
+          { value: fired.length,   label: 'Wykonanych' },
+          { value: activeRulesCount, label: 'Aktywnych reguł' },
+        ].map(s => (
+          <Card key={s.label} className="glass-card p-4">
+            <div className="text-2xl font-semibold text-white">{s.value}</div>
+            <div className="text-sm text-zinc-500 mt-0.5">{s.label}</div>
+          </Card>
+        ))}
       </div>
 
-      {loading ? (
-        <div className="space-y-1.5">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-        </div>
-      ) : pending.length === 0 && fired.length === 0 ? (
-        <div className="text-xs text-zinc-600 py-2 pl-1">Brak przypomnień</div>
-      ) : (
-        <div className="space-y-1.5">
-          {pending.map(r => (
-            <div key={r.reminderId}
-              className="flex items-start justify-between gap-2 bg-blue-500/[0.05] border border-blue-500/[0.12] rounded-lg px-3 py-2">
-              <div className="min-w-0">
-                <p className="text-xs text-white truncate">{r.message}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Clock size={10} className="text-blue-400 flex-shrink-0" />
-                  <span className="text-[10px] text-blue-400">{formatFireAt(r.fireAt)}</span>
-                  {repeatLabel(r.repeat) && (
-                    <>
-                      <span className="text-[10px] text-zinc-600">·</span>
-                      <Repeat size={9} className="text-zinc-600 flex-shrink-0" />
-                      <span className="text-[10px] text-zinc-600">{repeatLabel(r.repeat)}</span>
-                    </>
+      {/* Reminders list */}
+      <Card className="glass-card">
+        <div className="flex items-center justify-between p-5 border-b border-border flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <h2 className="font-semibold text-white text-[15px]">Przypomnienia</h2>
+            <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
+              {([['pending', 'Nadchodzące'], ['fired', 'Wykonane'], ['', 'Wszystkie']] as const).map(([v, lbl]) => (
+                <button key={v} onClick={() => setReminderFilter(v)}
+                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${reminderFilter === v ? 'bg-blue-500/20 text-blue-300' : 'text-zinc-400 hover:text-white'}`}>
+                  {lbl}
+                  {v === 'pending' && pending.length > 0 && (
+                    <span className="ml-1.5 bg-blue-500 text-white rounded-full px-1.5 text-[9px] font-bold">{pending.length}</span>
                   )}
-                </div>
-              </div>
-              <button
-                onClick={() => handleDelete(r.reminderId)}
-                disabled={deleting === r.reminderId}
-                className="text-zinc-600 hover:text-red-400 transition-colors p-0.5 flex-shrink-0">
-                <X size={12} />
-              </button>
-            </div>
-          ))}
-          {fired.length > 0 && (
-            <div className="pt-1">
-              <p className="text-[10px] text-zinc-600 mb-1">Minione</p>
-              {fired.map(r => (
-                <div key={r.reminderId}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg opacity-50">
-                  <Check size={10} className="text-zinc-500 flex-shrink-0" />
-                  <p className="text-[11px] text-zinc-500 truncate">{r.message}</p>
-                  <span className="text-[10px] text-zinc-600 ml-auto flex-shrink-0">{formatFireAt(r.fireAt)}</span>
-                </div>
+                </button>
               ))}
             </div>
-          )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={loadReminders} className="text-zinc-400 hover:text-white gap-1.5">
+              <RefreshCw size={13} />Odśwież
+            </Button>
+            <Button size="sm" onClick={() => setShowAddReminder(true)} className="bg-blue-600 hover:bg-blue-700 text-white border-0 gap-1.5">
+              <Plus size={14} />Dodaj przypomnienie
+            </Button>
+          </div>
         </div>
-      )}
 
-      {showAdd && (
-        <AddReminderModal
-          profileId={profileId}
-          clientId={clientId}
-          onClose={() => setShowAdd(false)}
-          onCreated={load}
+        {loadingR ? (
+          <div className="p-5 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
+        ) : displayed.length === 0 ? (
+          <EmptyState icon={Bell}
+            title={reminderFilter === 'fired' ? 'Brak wykonanych przypomnień' : 'Brak nadchodzących przypomnień'}
+            description={reminderFilter !== 'fired' ? 'Dodaj ręczne przypomnienie lub skonfiguruj reguły automatyczne poniżej.' : ''} />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Kontakt</TableHead>
+                <TableHead>Treść</TableHead>
+                <TableHead>Kiedy</TableHead>
+                <TableHead>Powtarzanie</TableHead>
+                <TableHead>Kanał</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="w-8" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {displayed.map(r => {
+                const c = contactsMap[r.profileId];
+                const overdue = r.status === 'pending' && r.fireAt < Date.now() / 1000;
+                return (
+                  <TableRow key={r.reminderId} className="hover:bg-white/[0.02]">
+                    <TableCell>
+                      {c ? (
+                        <div>
+                          <p className="text-sm text-white">{c.displayName || c.contactInfo}</p>
+                          {c.displayName && <p className="text-xs text-zinc-500">{c.contactInfo}</p>}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-zinc-600 font-mono">{r.profileId.slice(0, 8)}…</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="max-w-xs">
+                      <p className="text-sm text-zinc-200 truncate">{r.message}</p>
+                      {r.source.startsWith('rule:') && (
+                        <span className="text-[10px] text-zinc-600">automatyczne</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <span className={`text-sm ${overdue ? 'text-red-400 font-medium' : 'text-zinc-300'}`}>
+                        {formatFireAt(r.fireAt)}
+                      </span>
+                      {overdue && <p className="text-[10px] text-red-500">Zaległe</p>}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        {r.repeat.type !== 'none' && <Repeat size={11} className="text-zinc-500" />}
+                        <span className="text-sm text-zinc-400">{formatRepeat(r.repeat)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell><span className="text-sm text-zinc-400">{formatChannel(r.channel)}</span></TableCell>
+                    <TableCell>
+                      {r.status === 'pending' ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-500/15 text-blue-400 rounded-full text-xs">
+                          <Clock size={10} />Oczekuje
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-zinc-500/15 text-zinc-500 rounded-full text-xs">
+                          <Check size={10} />Wykonane
+                        </span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <button onClick={() => handleDeleteReminder(r.reminderId)} disabled={deleting === r.reminderId}
+                        className="text-zinc-600 hover:text-red-400 transition-colors p-1 rounded">
+                        <X size={13} />
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      {/* Automation Rules */}
+      <Card className="glass-card">
+        <div className="flex items-center justify-between p-5 border-b border-border">
+          <div>
+            <h2 className="font-semibold text-white text-[15px]">Reguły automatyczne</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">Automatycznie tworzą przypomnienia gdy zajdzie określone zdarzenie</p>
+          </div>
+          <Button size="sm" onClick={() => setShowAddRule(true)} className="bg-violet-600 hover:bg-violet-700 text-white border-0 gap-1.5">
+            <Plus size={14} />Dodaj regułę
+          </Button>
+        </div>
+
+        {loadingRules ? (
+          <div className="p-5 space-y-3">{[1,2].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+        ) : rules.length === 0 ? (
+          <div className="p-8 text-center">
+            <div className="w-12 h-12 bg-white/[0.04] rounded-full flex items-center justify-center mx-auto mb-3">
+              <Repeat size={20} className="text-zinc-600" />
+            </div>
+            <p className="text-sm text-zinc-400">Brak reguł automatycznych</p>
+            <p className="text-xs text-zinc-600 mt-1 max-w-xs mx-auto">
+              Przykład: gdy spotkanie zostanie potwierdzone → za 2 dni automatycznie utwórz przypomnienie o follow-upie
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-white/[0.04]">
+            {rules.map(rule => (
+              <div key={rule.id} className={`flex items-start gap-4 px-5 py-4 transition-opacity ${!rule.enabled ? 'opacity-40' : ''}`}>
+                {/* Toggle */}
+                <button onClick={() => handleToggleRule(rule.id)} disabled={savingRules}
+                  className={`mt-1 w-9 h-5 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${rule.enabled ? 'bg-blue-600' : 'bg-white/[0.1]'}`}>
+                  <span className={`w-4 h-4 rounded-full bg-white shadow transition-transform ${rule.enabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                </button>
+                {/* Rule description */}
+                <div className="flex-1 min-w-0">
+                  {rule.label && <p className="text-xs text-zinc-500 mb-1">{rule.label}</p>}
+                  <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                    <span className="text-sm text-zinc-400">Gdy</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${TRIGGER_COLORS[rule.trigger] || 'bg-zinc-500/15 text-zinc-400'}`}>
+                      {TRIGGER_LABELS[rule.trigger] || rule.trigger}
+                    </span>
+                    <span className="text-sm text-zinc-400">→ za</span>
+                    <span className="text-sm text-white font-medium">
+                      {rule.delayHours < 24
+                        ? `${rule.delayHours} godz.`
+                        : `${Math.round(rule.delayHours / 24)} ${Math.round(rule.delayHours / 24) === 1 ? 'dzień' : 'dni'}`}
+                    </span>
+                    <span className="text-sm text-zinc-400">przez</span>
+                    <span className="text-sm text-zinc-300">{formatChannel(rule.channel)}</span>
+                  </div>
+                  <p className="text-sm text-zinc-300 truncate">&ldquo;{rule.messageTemplate}&rdquo;</p>
+                  <p className="text-[10px] text-zinc-700 mt-1">Tokeny: {'{name}'} {'{contact_info}'} {'{datetime}'}</p>
+                </div>
+                <button onClick={() => handleDeleteRule(rule.id)} disabled={savingRules}
+                  className="text-zinc-600 hover:text-red-400 transition-colors p-1 rounded flex-shrink-0 mt-0.5">
+                  <Trash2 size={13} />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      {showAddReminder && (
+        <AddReminderWithPickerModal
+          clientId={clientId} contacts={contacts}
+          onClose={() => setShowAddReminder(false)}
+          onCreated={loadReminders}
+        />
+      )}
+      {showAddRule && (
+        <AddRuleModal
+          clientId={clientId} existingRules={rules}
+          onClose={() => setShowAddRule(false)}
+          onCreated={updated => { setRules(updated); setShowAddRule(false); }}
         />
       )}
     </div>
@@ -787,11 +1106,6 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
             </button>
           </div>
 
-          {/* Reminders */}
-          <div className="pt-1 border-t border-white/[0.04]">
-            <RemindersSection profileId={profileId} clientId={clientId} />
-          </div>
-
           {/* Meta */}
           <div className="text-xs text-zinc-600 space-y-1 pt-1 border-t border-white/[0.04]">
             <div>Pierwszy kontakt: <span className="text-zinc-400">{formatTs(contact.firstSeen)}</span></div>
@@ -944,6 +1258,7 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
 export default function ContactsPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const [mainTab, setMainTab] = useState<'contacts' | 'reminders'>('contacts');
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState('');
@@ -996,7 +1311,7 @@ export default function ContactsPage() {
       );
     }
     return arr;
-  }, [contacts, filterStatus, filterSource, filterType, search]);
+  }, [contacts, filterStatus, filterSource, filterType, filterAppt, search]);
 
   // Client-side sort
   const sorted = useMemo(() => {
@@ -1169,39 +1484,70 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className={`space-y-5 transition-all duration-300 ${selectedId ? 'pr-[388px]' : ''}`}>
+    <div className={`space-y-5 transition-all duration-300 ${selectedId && mainTab === 'contacts' ? 'pr-[388px]' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
-            Kontakty
-            {contacts.length > 0 && (
-              <span className="text-sm font-normal bg-white/[0.06] text-zinc-400 px-2.5 py-0.5 rounded-full">
-                {sorted.length}{sorted.length !== contacts.length ? ` / ${contacts.length}` : ''}
-              </span>
-            )}
-          </h1>
-          <p className="text-sm text-zinc-500 mt-1">Leady zebrane przez chatbota</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-white">Kontakty</h1>
+          <p className="text-sm text-zinc-500 mt-1">Leady zebrane przez chatbota i system przypomnień</p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={loadContacts} className="text-zinc-400 hover:text-white gap-1.5">
-            <RefreshCw size={14} />Odśwież
-          </Button>
-          <Button variant="ghost" size="sm" onClick={exportCsv} disabled={sorted.length === 0} className="text-zinc-400 hover:text-white gap-1.5">
-            <Download size={14} />Eksport CSV
-          </Button>
-          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
-            <Button variant="ghost" size="sm" onClick={() => setView('table')}
-              className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
-              <List size={15} className="mr-1.5" />Tabela
+        {mainTab === 'contacts' && (
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button variant="ghost" size="sm" onClick={loadContacts} className="text-zinc-400 hover:text-white gap-1.5">
+              <RefreshCw size={14} />Odśwież
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => setView('kanban')}
-              className={view === 'kanban' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
-              <Columns size={15} className="mr-1.5" />Kanban
+            <Button variant="ghost" size="sm" onClick={exportCsv} disabled={sorted.length === 0} className="text-zinc-400 hover:text-white gap-1.5">
+              <Download size={14} />Eksport CSV
             </Button>
+            <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
+              <Button variant="ghost" size="sm" onClick={() => setView('table')}
+                className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
+                <List size={15} className="mr-1.5" />Tabela
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setView('kanban')}
+                className={view === 'kanban' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
+                <Columns size={15} className="mr-1.5" />Kanban
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
+
+      {/* Main tab switcher */}
+      <div className="flex gap-1 border-b border-white/[0.06]">
+        <button
+          onClick={() => setMainTab('contacts')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            mainTab === 'contacts'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-zinc-500 hover:text-zinc-200'
+          }`}
+        >
+          <Users size={15} />
+          Kontakty
+          {contacts.length > 0 && (
+            <span className="text-xs bg-white/[0.06] text-zinc-400 px-1.5 py-0.5 rounded-full">
+              {contacts.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setMainTab('reminders')}
+          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            mainTab === 'reminders'
+              ? 'border-blue-500 text-blue-400'
+              : 'border-transparent text-zinc-500 hover:text-zinc-200'
+          }`}
+        >
+          <Bell size={15} />
+          Przypomnienia
+        </button>
+      </div>
+
+      {mainTab === 'reminders' && clientId ? (
+        <RemindersTab clientId={clientId} contacts={contacts} />
+      ) : (
+      <>
 
       {error && <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">{error}</div>}
 
@@ -1410,6 +1756,8 @@ export default function ContactsPage() {
           onDeleteStage={handleDeleteStage}
           onAppointmentCreated={handleAppointmentCreated}
         />
+      )}
+      </>
       )}
     </div>
   );
