@@ -566,17 +566,26 @@ export const getAuditLog = (
 export interface ChatbotHours {
   enabled: boolean;
   days: string[];
-  hours_from: string;
-  hours_to: string;
+  hoursFrom: string;
+  hoursTo: string;
   timezone: string;
-  offline_message: string;
+  offlineMessage: string;
 }
 
 export const getChatbotSettings = (clientId: string) =>
-  api.get<{ chatbot_hours: ChatbotHours }>(`/clients/${clientId}/settings`);
+  api.get<{ chatbotHours: ChatbotHours }>(`/clients/${clientId}/settings`);
 
 export const updateChatbotSettings = (clientId: string, chatbot_hours: ChatbotHours) =>
-  api.put<{ chatbot_hours: ChatbotHours }>(`/clients/${clientId}/settings`, { chatbot_hours });
+  api.put<{ chatbotHours: ChatbotHours }>(`/clients/${clientId}/settings`, {
+    chatbot_hours: {
+      enabled: chatbot_hours.enabled,
+      days: chatbot_hours.days,
+      hours_from: chatbot_hours.hoursFrom,
+      hours_to: chatbot_hours.hoursTo,
+      timezone: chatbot_hours.timezone,
+      offline_message: chatbot_hours.offlineMessage,
+    },
+  });
 
 // ─── Notifications ───────────────────────────────────────────────
 

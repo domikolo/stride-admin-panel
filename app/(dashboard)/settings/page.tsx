@@ -244,10 +244,10 @@ const HOURS = Array.from({ length: 24 }, (_, i) => {
 const DEFAULT_HOURS: ChatbotHours = {
   enabled: false,
   days: ['mon', 'tue', 'wed', 'thu', 'fri'],
-  hours_from: '09:00',
-  hours_to: '17:00',
+  hoursFrom: '09:00',
+  hoursTo: '17:00',
   timezone: 'Europe/Warsaw',
-  offline_message: '',
+  offlineMessage: '',
 };
 
 function ChatbotHoursSection({ clientId }: { clientId: string }) {
@@ -258,7 +258,7 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
   useEffect(() => {
     if (!clientId) return;
     getChatbotSettings(clientId)
-      .then(d => setConfig(d.chatbot_hours ?? DEFAULT_HOURS))
+      .then(d => setConfig(d.chatbotHours ?? DEFAULT_HOURS))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [clientId]);
@@ -285,7 +285,7 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
     setSaving(true);
     try {
       const updated = await updateChatbotSettings(clientId, data);
-      setConfig(updated?.chatbot_hours ?? data);
+      setConfig(updated?.chatbotHours ?? data);
       toast.success('Zapisano');
     } catch {
       setConfig(data); // rollback to known good state
@@ -352,16 +352,16 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
             <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">Godziny</label>
             <div className="flex items-center gap-3">
               <select
-                value={config.hours_from}
-                onChange={e => setConfig(c => ({ ...c, hours_from: e.target.value }))}
+                value={config.hoursFrom}
+                onChange={e => setConfig(c => ({ ...c, hoursFrom: e.target.value }))}
                 className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
               >
                 {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
               </select>
               <span className="text-zinc-500 text-sm">→</span>
               <select
-                value={config.hours_to}
-                onChange={e => setConfig(c => ({ ...c, hours_to: e.target.value }))}
+                value={config.hoursTo}
+                onChange={e => setConfig(c => ({ ...c, hoursTo: e.target.value }))}
                 className="px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/20"
               >
                 {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
@@ -376,14 +376,14 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
               Wiadomość poza godzinami
             </label>
             <textarea
-              value={config.offline_message}
-              onChange={e => setConfig(c => ({ ...c, offline_message: e.target.value }))}
+              value={config.offlineMessage}
+              onChange={e => setConfig(c => ({ ...c, offlineMessage: e.target.value }))}
               placeholder="Np. Jestem dostępny pn–pt w godz. 9:00–17:00. Zostaw wiadomość, odezwę się wkrótce."
               rows={3}
               maxLength={500}
               className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 resize-none"
             />
-            <p className="text-right text-[11px] text-zinc-600 mt-1">{config.offline_message.length}/500</p>
+            <p className="text-right text-[11px] text-zinc-600 mt-1">{config.offlineMessage.length}/500</p>
           </div>
 
           <Button
