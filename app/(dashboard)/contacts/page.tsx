@@ -350,6 +350,8 @@ function AddReminderWithPickerModal({
         message: message.trim(),
         channel,
         repeat: repeatType === 'custom' ? { type: 'custom', interval_days: intervalDays } : { type: repeatType },
+        contact_info: selectedContact?.contactInfo,
+        contact_type: selectedContact?.contactType,
       });
       toast.success('Przypomnienie dodane');
       onCreated();
@@ -501,9 +503,11 @@ function AddRuleModal({ clientId, existingRules, onClose, onCreated }: {
             </select>
           </div>
           <div>
-            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Przypomnij po</label>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">
+              {trigger === 'no_activity_days' ? 'Próg nieaktywności' : 'Przypomnij po'}
+            </label>
             <div className="flex gap-2">
-              <input type="number" min={0} value={delayAmount} onChange={e => setDelayAmount(Math.max(0, parseInt(e.target.value) || 0))}
+              <input type="number" min={trigger === 'no_activity_days' ? 1 : 0} value={delayAmount} onChange={e => setDelayAmount(Math.max(trigger === 'no_activity_days' ? 1 : 0, parseInt(e.target.value) || 0))}
                 className="flex-1 bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors" />
               <select value={delayUnit} onChange={e => setDelayUnit(e.target.value as 'hours' | 'days')}
                 className="bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
@@ -539,7 +543,10 @@ function AddRuleModal({ clientId, existingRules, onClose, onCreated }: {
               <p className="text-[10px] text-zinc-500 uppercase tracking-wide">Podgląd reguły</p>
               <p className="text-xs text-zinc-300">
                 Gdy <span className={`inline px-1.5 py-0.5 rounded-full text-[10px] font-medium ${TRIGGER_COLORS[trigger] || 'bg-zinc-500/15 text-zinc-400'}`}>{TRIGGER_LABELS[trigger]}</span>
-                {' '}→ za <strong className="text-white">{delayAmount} {delayUnit === 'hours' ? 'godz.' : 'dni'}</strong> przypomnij przez <strong className="text-white">{formatChannel(channel)}</strong>:
+                {trigger === 'no_activity_days'
+                  ? <>{' '}→ gdy nieaktywny przez <strong className="text-white">{delayAmount} {delayUnit === 'hours' ? 'godz.' : 'dni'}</strong> przypomnij przez <strong className="text-white">{formatChannel(channel)}</strong>:</>
+                  : <>{' '}→ za <strong className="text-white">{delayAmount} {delayUnit === 'hours' ? 'godz.' : 'dni'}</strong> przypomnij przez <strong className="text-white">{formatChannel(channel)}</strong>:</>
+                }
               </p>
               {messageTemplate && <p className="text-xs text-zinc-400 italic">&ldquo;{messageTemplate}&rdquo;</p>}
             </div>

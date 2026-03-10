@@ -633,6 +633,8 @@ export const createReminder = (
     message: string;
     channel?: string;
     repeat?: { type: string; interval_days?: number; days_of_week?: number[] };
+    contact_info?: string;
+    contact_type?: string;
   }
 ) => api.post<{ status: string; reminder_id: string; fire_at: number }>(
   `/clients/${clientId}/reminders`, data
