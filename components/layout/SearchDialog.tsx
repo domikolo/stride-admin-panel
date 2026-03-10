@@ -23,17 +23,17 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { kind: 'nav', label: 'Dashboard',           href: '/dashboard',              icon: LayoutDashboard, section: 'Nawigacja', keywords: ['panel', 'home', 'glowna'] },
-  { kind: 'nav', label: 'Rozmowy',             href: '/conversations',           icon: MessageSquare,   section: 'Nawigacja', keywords: ['conversations', 'chat', 'wiadomosci'] },
-  { kind: 'nav', label: 'Live',                href: '/live',                    icon: Radio,           section: 'Nawigacja', keywords: ['monitoring', 'real-time'] },
-  { kind: 'nav', label: 'Spotkania',           href: '/appointments',            icon: Calendar,        section: 'Nawigacja', keywords: ['appointments', 'kalendarz'] },
-  { kind: 'nav', label: 'Insights - Wczoraj', href: '/insights?period=daily',   icon: Clock,           section: 'Insights',  keywords: ['daily', 'trending', 'pytania'] },
-  { kind: 'nav', label: 'Insights - 7 dni',   href: '/insights?period=weekly',  icon: Flame,           section: 'Insights',  keywords: ['weekly', 'tygodniowe'] },
-  { kind: 'nav', label: 'Insights - 30 dni',  href: '/insights?period=monthly', icon: Flame,           section: 'Insights',  keywords: ['monthly', 'miesieczne'] },
-  { kind: 'nav', label: 'Baza Wiedzy',         href: '/knowledge-base',          icon: BookOpen,        section: 'Nawigacja', keywords: ['kb', 'artykuly', 'knowledge'] },
-  { kind: 'nav', label: 'Kontakty',            href: '/contacts',                icon: Users,           section: 'Nawigacja', keywords: ['crm', 'leady'] },
-  { kind: 'nav', label: 'Ustawienia',          href: '/settings',                icon: Settings,        section: 'Nawigacja', keywords: ['konfiguracja', 'profil'] },
-  { kind: 'nav', label: 'Pierwsze kroki',      href: '/getting-started',         icon: Rocket,          section: 'Nawigacja', keywords: ['help', 'guide', 'pomoc'] },
+  { kind: 'nav', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, section: 'Nawigacja', keywords: ['panel', 'home', 'glowna'] },
+  { kind: 'nav', label: 'Rozmowy', href: '/conversations', icon: MessageSquare, section: 'Nawigacja', keywords: ['conversations', 'chat', 'wiadomosci'] },
+  { kind: 'nav', label: 'Live', href: '/live', icon: Radio, section: 'Nawigacja', keywords: ['monitoring', 'real-time'] },
+  { kind: 'nav', label: 'Spotkania', href: '/appointments', icon: Calendar, section: 'Nawigacja', keywords: ['appointments', 'kalendarz'] },
+  { kind: 'nav', label: 'Insights - Wczoraj', href: '/insights?period=daily', icon: Clock, section: 'Insights', keywords: ['daily', 'trending', 'pytania'] },
+  { kind: 'nav', label: 'Insights - 7 dni', href: '/insights?period=weekly', icon: Flame, section: 'Insights', keywords: ['weekly', 'tygodniowe'] },
+  { kind: 'nav', label: 'Insights - 30 dni', href: '/insights?period=monthly', icon: Flame, section: 'Insights', keywords: ['monthly', 'miesieczne'] },
+  { kind: 'nav', label: 'Baza Wiedzy', href: '/knowledge-base', icon: BookOpen, section: 'Nawigacja', keywords: ['kb', 'artykuly', 'knowledge'] },
+  { kind: 'nav', label: 'Kontakty', href: '/contacts', icon: Users, section: 'Nawigacja', keywords: ['crm', 'leady'] },
+  { kind: 'nav', label: 'Ustawienia', href: '/settings', icon: Settings, section: 'Nawigacja', keywords: ['konfiguracja', 'profil'] },
+  { kind: 'nav', label: 'Pierwsze kroki', href: '/getting-started', icon: Rocket, section: 'Nawigacja', keywords: ['help', 'guide', 'pomoc'] },
 ];
 
 // ─── Data result types ────────────────────────────────────────────────────────
@@ -106,13 +106,13 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
 
   // Contacts + appointments — loaded once per open, filtered client-side
   const [staticLoading, setStaticLoading] = useState(false);
-  const [allContacts, setAllContacts]         = useState<ContactProfile[]>([]);
+  const [allContacts, setAllContacts] = useState<ContactProfile[]>([]);
   const [allAppointments, setAllAppointments] = useState<Appointment[]>([]);
   const staticLoadedRef = useRef(false);
 
   // Conversations — backend full-text search, debounced per query
-  const [convResults, setConvResults]   = useState<DataResult[]>([]);
-  const [convLoading, setConvLoading]   = useState(false);
+  const [convResults, setConvResults] = useState<DataResult[]>([]);
+  const [convLoading, setConvLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -244,10 +244,10 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
     const navFiltered: NavItem[] = trimmed.length < 2
       ? NAV_ITEMS
       : NAV_ITEMS.filter(item =>
-          item.label.toLowerCase().includes(trimmed) ||
-          item.section.toLowerCase().includes(trimmed) ||
-          item.keywords?.some(k => k.includes(trimmed))
-        );
+        item.label.toLowerCase().includes(trimmed) ||
+        item.section.toLowerCase().includes(trimmed) ||
+        item.keywords?.some(k => k.includes(trimmed))
+      );
 
     const combined: (NavItem | DataResult)[] = [...navFiltered, ...dataResults];
     const sectionMap = new Map<string, (NavItem | DataResult)[]>();
@@ -349,51 +349,68 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
           <div className="max-h-80 overflow-y-auto py-1.5">
             {loading && !hasQuery ? (
               <p className="text-sm text-muted-foreground text-center py-8">Ładowanie danych…</p>
-            ) : allItems.length === 0 ? (
+            ) : allItems.length === 0 && !loading ? (
               <p className="text-sm text-muted-foreground text-center py-8">
                 {hasQuery ? 'Brak wyników' : 'Wpisz frazę aby wyszukać'}
               </p>
             ) : (
-              sections.map(section => (
-                <div key={section.name}>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold px-4 py-1.5 mt-1">
-                    {section.name}
-                  </p>
-                  {section.items.map(item => {
-                    const isSelected = item.globalIndex === selectedIndex;
-                    const isNav = item.kind === 'nav';
-                    const isConv = item.kind === 'conversation';
-                    const convRole = isConv ? (item as DataResult).role : undefined;
-                    const Icon = isNav
-                      ? (item as NavItem).icon
-                      : isConv
-                        ? (convRole === 'user' ? User : Bot)
-                        : KIND_ICON[item.kind] ?? Search;
-                    const colorClass = isNav ? '' : KIND_COLOR[item.kind] ?? '';
+              <>
+                {sections.map(section => (
+                  <div key={section.name}>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold px-4 py-1.5 mt-1">
+                      {section.name}
+                    </p>
+                    {section.items.map(item => {
+                      const isSelected = item.globalIndex === selectedIndex;
+                      const isNav = item.kind === 'nav';
+                      const isConv = item.kind === 'conversation';
+                      const convRole = isConv ? (item as DataResult).role : undefined;
+                      const Icon = isNav
+                        ? (item as NavItem).icon
+                        : isConv
+                          ? (convRole === 'user' ? User : Bot)
+                          : KIND_ICON[item.kind] ?? Search;
+                      const colorClass = isNav ? '' : KIND_COLOR[item.kind] ?? '';
 
-                    return (
-                      <button
-                        key={`${item.kind}-${isNav ? (item as NavItem).href : (item as DataResult).id}`}
-                        onClick={() => navigate(item)}
-                        onMouseEnter={() => setSelectedIndex(item.globalIndex)}
-                        className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
-                          isSelected ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                        }`}
-                      >
-                        <Icon size={15} className={`flex-shrink-0 ${colorClass}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm truncate text-foreground">{item.label}</p>
-                          {!isNav && (item as DataResult).sublabel && (
-                            <p className="text-[11px] text-muted-foreground truncate">
-                              {(item as DataResult).sublabel}
-                            </p>
-                          )}
+                      return (
+                        <button
+                          key={`${item.kind}-${isNav ? (item as NavItem).href : (item as DataResult).id}`}
+                          onClick={() => navigate(item)}
+                          onMouseEnter={() => setSelectedIndex(item.globalIndex)}
+                          className={`w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${isSelected ? 'bg-accent text-foreground' : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                            }`}
+                        >
+                          <Icon size={15} className={`flex-shrink-0 ${colorClass}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm truncate text-foreground">{item.label}</p>
+                            {!isNav && (item as DataResult).sublabel && (
+                              <p className="text-[11px] text-muted-foreground truncate">
+                                {(item as DataResult).sublabel}
+                              </p>
+                            )}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+                {loading && hasQuery && (
+                  <div className="py-2 px-4 space-y-3 mt-3 mb-2">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold mb-3">
+                      Przeszukiwanie bazy...
+                    </p>
+                    {[1, 2].map(i => (
+                      <div key={i} className="flex items-center gap-3 px-2">
+                        <div className="w-[15px] h-[15px] rounded-full bg-white/[0.05] animate-pulse shrink-0" />
+                        <div className="flex-1 space-y-2.5">
+                          <div className="h-2.5 bg-white/[0.05] rounded w-1/3 animate-pulse" />
+                          <div className="h-2 bg-white/[0.03] rounded w-1/2 animate-pulse" />
                         </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              ))
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 

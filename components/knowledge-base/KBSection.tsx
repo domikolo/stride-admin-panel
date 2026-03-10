@@ -107,6 +107,7 @@ export default function KBSection({
 }: KBSectionProps) {
   const [topic, setTopic] = useState(entry.topic);
   const [content, setContent] = useState(entry.content);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
@@ -242,6 +243,21 @@ export default function KBSection({
     setContent(entry.content);
   }, [entry.topic, entry.content]);
 
+  useEffect(() => {
+    if (!isDraft || !isDirty || !topic.trim()) return;
+    const handler = setTimeout(async () => {
+      setAutoSaveStatus('saving');
+      try {
+        await onSave(entry.kbEntryId, topic, content);
+        setAutoSaveStatus('saved');
+        setTimeout(() => setAutoSaveStatus('idle'), 3000);
+      } catch (err) {
+        setAutoSaveStatus('error');
+      }
+    }, 1200);
+    return () => clearTimeout(handler);
+  }, [topic, content, isDirty, isDraft, entry.kbEntryId, onSave]);
+
   // When prompt panel opens, set context-aware default
   const openPromptPanel = () => {
     setAiPrompt(getDefaultPrompt(topic, content.trim().length > 0, !!attachedFile));
@@ -371,9 +387,9 @@ export default function KBSection({
       className={`rounded-lg border relative transition-shadow duration-200 ${pendingInline
         ? 'border-purple-500/40 bg-purple-500/[0.02] shadow-md shadow-purple-500/[0.08]'
         : isDraft
-        ? 'border-dashed border-blue-500/30 bg-blue-500/[0.02]'
-        : 'border-white/[0.06] bg-white/[0.02]'
-      }`}
+          ? 'border-dashed border-blue-500/30 bg-blue-500/[0.02]'
+          : 'border-white/[0.06] bg-white/[0.02]'
+        }`}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2 border-b border-white/[0.04]">
@@ -397,6 +413,15 @@ export default function KBSection({
           />
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          {autoSaveStatus === 'saving' && (
+            <span className="text-[10px] text-zinc-500 mr-2 flex items-center gap-1"><Loader2 size={10} className="animate-spin" /> Zapisywanie...</span>
+          )}
+          {autoSaveStatus === 'saved' && (
+            <span className="text-[10px] text-green-500/80 mr-2 flex items-center gap-1"><Check size={10} /> Zapisano</span>
+          )}
+          {autoSaveStatus === 'error' && (
+            <span className="text-[10px] text-red-400 mr-2 flex items-center gap-1"><AlertTriangle size={10} /> Błąd zapisu</span>
+          )}
           {!isDraft && isDirty && (
             <Button variant="ghost" size="sm" onClick={handleDiscard}
               className="text-zinc-500 hover:text-zinc-300 h-7 px-2 text-xs gap-1">
@@ -505,8 +530,8 @@ export default function KBSection({
                       line.type === 'added'
                         ? 'flex gap-2 px-3 bg-green-500/10 text-green-300'
                         : line.type === 'removed'
-                        ? 'flex gap-2 px-3 bg-red-500/10 text-red-300'
-                        : 'flex gap-2 px-3 text-zinc-600'
+                          ? 'flex gap-2 px-3 bg-red-500/10 text-red-300'
+                          : 'flex gap-2 px-3 text-zinc-600'
                     }
                   >
                     <span className="select-none shrink-0 w-3 opacity-60">
@@ -632,8 +657,8 @@ export default function KBSection({
               const markClass = showDoneHighlight
                 ? 'bg-green-500/20 text-transparent rounded-sm'
                 : showLoadingHighlight
-                ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
-                : 'bg-purple-500/15 text-transparent rounded-sm';
+                  ? 'bg-purple-500/25 text-transparent rounded-sm animate-pulse'
+                  : 'bg-purple-500/15 text-transparent rounded-sm';
               if (!highlightRange) return null;
               return (
                 <div
@@ -693,11 +718,10 @@ export default function KBSection({
 
       {/* Character counter */}
       <div className="px-4 -mt-1 mb-1 flex justify-end">
-        <span className={`text-[11px] ${
-          content.length > 5000 ? 'text-red-400' :
-          content.length >= 2000 ? 'text-yellow-400' :
-          'text-green-400'
-        }`}>
+        <span className={`text-[11px] ${content.length > 5000 ? 'text-red-400' :
+            content.length >= 2000 ? 'text-yellow-400' :
+              'text-green-400'
+          }`}>
           {content.length.toLocaleString('pl-PL')} znaków
         </span>
       </div>
@@ -782,7 +806,7 @@ export default function KBSection({
                 className={`h-7 text-xs gap-1 ${showPrompt
                   ? 'text-purple-300 bg-purple-500/10'
                   : 'text-purple-400 hover:text-purple-300 hover:bg-purple-500/10'
-                }`}
+                  }`}
               >
                 <Sparkles size={12} />
                 AI Assist
