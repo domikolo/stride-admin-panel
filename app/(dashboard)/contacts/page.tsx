@@ -1,11 +1,12 @@
 /**
  * Contacts Page — CRM-lite
  * Table + Kanban, sortable columns, custom pipeline stages (global/backend), right panel, export CSV
+ * + Appointment badge/filter, manual appointment creation, reminders system
  */
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -14,10 +15,11 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import {
   getContact, updateContact, deleteContact,
-  updateContactStages,
+  updateContactStages, createAppointment,
+  getReminders, createReminder, deleteReminder,
 } from '@/lib/api';
 import { useSWR, fetcher } from '@/lib/swr';
-import { ContactProfile } from '@/lib/types';
+import { ContactProfile, Reminder } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -29,6 +31,7 @@ import {
   Users, Mail, Phone, Calendar, MessageSquare,
   Copy, Check, X, Trash2, ExternalLink, Download,
   RefreshCw, List, Columns, ChevronUp, ChevronDown, Plus,
+  Bell, BellPlus, CalendarPlus, Clock, Repeat,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -139,6 +142,383 @@ function AddStageForm({ onAdd, onCancel }: { onAdd: (label: string, hex: string)
   );
 }
 
+// ─── Appointment Badge ────────────────────────────────────────────────────────
+
+function AppointmentBadge({ datetime, status }: { datetime?: string | null; status?: string | null }) {
+  const label = datetime
+    ? format(new Date(datetime), 'd MMM HH:mm')
+    : 'Spotkanie';
+  const isPending = status === 'pending';
+  return (
+    <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${
+      isPending ? 'bg-amber-500/15 text-amber-400' : 'bg-violet-500/15 text-violet-400'
+    }`}>
+      <Calendar size={9} />
+      {label}
+    </span>
+  );
+}
+
+// ─── Create Appointment Modal ─────────────────────────────────────────────────
+
+function CreateAppointmentModal({
+  contact,
+  clientId,
+  onClose,
+  onCreated,
+}: {
+  contact: ContactProfile;
+  clientId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [dt, setDt] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!dt) return;
+    setSaving(true);
+    try {
+      await createAppointment(clientId, {
+        contact_info: contact.contactInfo,
+        contact_type: contact.contactType,
+        datetime: dt,
+        notes,
+        contact_name: contact.displayName || '',
+      });
+      toast.success('Spotkanie zostało umówione');
+      onCreated();
+      onClose();
+    } catch {
+      toast.error('Nie udało się umówić spotkania');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-white text-[15px]">Umów spotkanie</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div className="p-3 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+            <p className="text-xs text-zinc-500 mb-0.5">Kontakt</p>
+            <p className="text-sm text-white">{contact.displayName || contact.contactInfo}</p>
+            {contact.displayName && <p className="text-xs text-zinc-400">{contact.contactInfo}</p>}
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina *</label>
+            <input
+              type="datetime-local"
+              value={dt}
+              onChange={e => setDt(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Notatka (opcjonalna)</label>
+            <textarea
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              rows={3}
+              placeholder="np. Klient zadzwonił osobiście, interesuje się pakietem M"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="flex gap-2 pt-1">
+            <Button variant="ghost" onClick={onClose} className="flex-1 text-zinc-400 hover:text-white">
+              Anuluj
+            </Button>
+            <Button onClick={handleSubmit} disabled={!dt || saving}
+              className="flex-1 bg-violet-600 hover:bg-violet-700 text-white border-0">
+              {saving ? 'Zapisywanie...' : 'Umów'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add Reminder Modal ───────────────────────────────────────────────────────
+
+const REPEAT_OPTIONS: { value: string; label: string }[] = [
+  { value: 'none',    label: 'Jednorazowo' },
+  { value: 'daily',   label: 'Codziennie' },
+  { value: 'weekly',  label: 'Co tydzień' },
+  { value: 'monthly', label: 'Co miesiąc' },
+  { value: 'yearly',  label: 'Co rok' },
+  { value: 'custom',  label: 'Co X dni' },
+];
+
+const CHANNEL_OPTIONS: { value: string; label: string }[] = [
+  { value: 'inapp', label: 'In-app' },
+  { value: 'email', label: 'Email' },
+  { value: 'both',  label: 'Oba' },
+];
+
+function AddReminderModal({
+  profileId,
+  clientId,
+  onClose,
+  onCreated,
+}: {
+  profileId: string;
+  clientId: string;
+  onClose: () => void;
+  onCreated: () => void;
+}) {
+  const [dt, setDt] = useState('');
+  const [message, setMessage] = useState('');
+  const [channel, setChannel] = useState('inapp');
+  const [repeatType, setRepeatType] = useState('none');
+  const [intervalDays, setIntervalDays] = useState(7);
+  const [saving, setSaving] = useState(false);
+
+  // Default to tomorrow at 9:00
+  useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    const iso = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+    setDt(iso);
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!dt || !message.trim()) return;
+    setSaving(true);
+    try {
+      const fire_at = Math.floor(new Date(dt).getTime() / 1000);
+      await createReminder(clientId, {
+        profile_id: profileId,
+        fire_at,
+        message: message.trim(),
+        channel,
+        repeat: repeatType === 'custom'
+          ? { type: 'custom', interval_days: intervalDays }
+          : { type: repeatType },
+      });
+      toast.success('Przypomnienie dodane');
+      onCreated();
+      onClose();
+    } catch {
+      toast.error('Nie udało się dodać przypomnienia');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="font-semibold text-white text-[15px]">Dodaj przypomnienie</h3>
+          <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina *</label>
+            <input
+              type="datetime-local"
+              value={dt}
+              onChange={e => setDt(e.target.value)}
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Treść przypomnienia *</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={3}
+              placeholder="np. Oddzwoń z ofertą, sprawdź czy dotarła propozycja..."
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors resize-none"
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Powtarzanie</label>
+              <select value={repeatType} onChange={e => setRepeatType(e.target.value)}
+                className="w-full bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
+                {REPEAT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Kanał</label>
+              <select value={channel} onChange={e => setChannel(e.target.value)}
+                className="w-full bg-muted border border-border rounded-lg px-2.5 py-2 text-sm text-foreground focus:outline-none cursor-pointer">
+                {CHANNEL_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {repeatType === 'custom' && (
+            <div>
+              <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Co ile dni</label>
+              <input
+                type="number" min={1} max={365}
+                value={intervalDays}
+                onChange={e => setIntervalDays(Math.max(1, parseInt(e.target.value) || 7))}
+                className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors"
+              />
+            </div>
+          )}
+
+          <div className="flex gap-2 pt-1">
+            <Button variant="ghost" onClick={onClose} className="flex-1 text-zinc-400 hover:text-white">
+              Anuluj
+            </Button>
+            <Button onClick={handleSubmit} disabled={!dt || !message.trim() || saving}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 text-white border-0">
+              {saving ? 'Zapisywanie...' : 'Dodaj'}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Reminders Section (inside DetailPanel) ───────────────────────────────────
+
+function RemindersSection({ profileId, clientId }: { profileId: string; clientId: string }) {
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showAdd, setShowAdd] = useState(false);
+  const [deleting, setDeleting] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await getReminders(clientId, profileId);
+      setReminders(res.reminders);
+    } catch {
+      // ignore
+    } finally {
+      setLoading(false);
+    }
+  }, [clientId, profileId]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async (reminderId: string) => {
+    setDeleting(reminderId);
+    try {
+      await deleteReminder(clientId, reminderId);
+      setReminders(prev => prev.filter(r => r.reminderId !== reminderId));
+      toast.success('Przypomnienie usunięte');
+    } catch {
+      toast.error('Nie udało się usunąć');
+    } finally {
+      setDeleting(null);
+    }
+  };
+
+  const formatFireAt = (ts: number) => {
+    try { return format(new Date(ts * 1000), 'd MMM yyyy HH:mm'); } catch { return '—'; }
+  };
+
+  const repeatLabel = (repeat: Reminder['repeat']) => {
+    switch (repeat.type) {
+      case 'daily':   return 'codziennie';
+      case 'weekly':  return 'co tydzień';
+      case 'monthly': return 'co miesiąc';
+      case 'yearly':  return 'co rok';
+      case 'custom':  return `co ${repeat.intervalDays ?? 7} dni`;
+      default:        return null;
+    }
+  };
+
+  const pending = reminders.filter(r => r.status === 'pending').sort((a, b) => a.fireAt - b.fireAt);
+  const fired   = reminders.filter(r => r.status === 'fired').sort((a, b) => b.fireAt - a.fireAt).slice(0, 3);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2">
+        <label className="text-xs text-zinc-500 uppercase tracking-wide">Przypomnienia</label>
+        <button onClick={() => setShowAdd(true)}
+          className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+          <BellPlus size={12} />Dodaj
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="space-y-1.5">
+          <Skeleton className="h-10 w-full" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      ) : pending.length === 0 && fired.length === 0 ? (
+        <div className="text-xs text-zinc-600 py-2 pl-1">Brak przypomnień</div>
+      ) : (
+        <div className="space-y-1.5">
+          {pending.map(r => (
+            <div key={r.reminderId}
+              className="flex items-start justify-between gap-2 bg-blue-500/[0.05] border border-blue-500/[0.12] rounded-lg px-3 py-2">
+              <div className="min-w-0">
+                <p className="text-xs text-white truncate">{r.message}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <Clock size={10} className="text-blue-400 flex-shrink-0" />
+                  <span className="text-[10px] text-blue-400">{formatFireAt(r.fireAt)}</span>
+                  {repeatLabel(r.repeat) && (
+                    <>
+                      <span className="text-[10px] text-zinc-600">·</span>
+                      <Repeat size={9} className="text-zinc-600 flex-shrink-0" />
+                      <span className="text-[10px] text-zinc-600">{repeatLabel(r.repeat)}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDelete(r.reminderId)}
+                disabled={deleting === r.reminderId}
+                className="text-zinc-600 hover:text-red-400 transition-colors p-0.5 flex-shrink-0">
+                <X size={12} />
+              </button>
+            </div>
+          ))}
+          {fired.length > 0 && (
+            <div className="pt-1">
+              <p className="text-[10px] text-zinc-600 mb-1">Minione</p>
+              {fired.map(r => (
+                <div key={r.reminderId}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg opacity-50">
+                  <Check size={10} className="text-zinc-500 flex-shrink-0" />
+                  <p className="text-[11px] text-zinc-500 truncate">{r.message}</p>
+                  <span className="text-[10px] text-zinc-600 ml-auto flex-shrink-0">{formatFireAt(r.fireAt)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {showAdd && (
+        <AddReminderModal
+          profileId={profileId}
+          clientId={clientId}
+          onClose={() => setShowAdd(false)}
+          onCreated={load}
+        />
+      )}
+    </div>
+  );
+}
+
 // ─── Detail Panel ─────────────────────────────────────────────────────────────
 
 interface DetailPanelProps {
@@ -151,6 +531,7 @@ interface DetailPanelProps {
   onDeleted: (profileId: string) => void;
   onAddStage: (label: string, hex: string) => Promise<void>;
   onDeleteStage: (id: string) => Promise<void>;
+  onAppointmentCreated: () => void;
 }
 
 function TagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
@@ -164,7 +545,7 @@ function TagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
   );
 }
 
-function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage }: DetailPanelProps) {
+function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage, onAppointmentCreated }: DetailPanelProps) {
   const router = useRouter();
   const [contact, setContact] = useState<ContactProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -176,6 +557,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   const [showAddStage, setShowAddStage] = useState(false);
   const [editTags, setEditTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
+  const [showCreateAppt, setShowCreateAppt] = useState(false);
 
   useEffect(() => {
     setConfirmDelete(false);
@@ -266,6 +648,15 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
           <X size={18} />
         </button>
       </div>
+
+      {showCreateAppt && contact && (
+        <CreateAppointmentModal
+          contact={contact}
+          clientId={clientId}
+          onClose={() => setShowCreateAppt(false)}
+          onCreated={onAppointmentCreated}
+        />
+      )}
 
       {loading ? (
         <div className="p-5 space-y-3">
@@ -386,6 +777,21 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
             </div>
           </div>
 
+          {/* Book appointment */}
+          <div className="pt-1 border-t border-white/[0.04]">
+            <button
+              onClick={() => setShowCreateAppt(true)}
+              className="flex items-center gap-2 text-sm text-violet-400 hover:text-violet-300 transition-colors py-1 w-full"
+            >
+              <CalendarPlus size={14} />Umów spotkanie
+            </button>
+          </div>
+
+          {/* Reminders */}
+          <div className="pt-1 border-t border-white/[0.04]">
+            <RemindersSection profileId={profileId} clientId={clientId} />
+          </div>
+
           {/* Meta */}
           <div className="text-xs text-zinc-600 space-y-1 pt-1 border-t border-white/[0.04]">
             <div>Pierwszy kontakt: <span className="text-zinc-400">{formatTs(contact.firstSeen)}</span></div>
@@ -504,6 +910,11 @@ function KanbanColumn({ stage, contacts, onSelect, selectedId, onDrop }: {
               <span className="text-[10px] text-zinc-600">{formatTs(c.lastSeen)}</span>
               <span className="text-[10px] text-zinc-700 ml-auto">{c.sourceCount} źr.</span>
             </div>
+            {c.hasAppointment && (
+              <div className="mt-1.5 pl-[18px]">
+                <AppointmentBadge datetime={c.appointmentDatetime} status={c.appointmentStatus} />
+              </div>
+            )}
             {c.tags && c.tags.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1.5 pl-[18px]">
                 {c.tags.slice(0, 2).map(tag => (
@@ -538,6 +949,7 @@ export default function ContactsPage() {
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSource, setFilterSource] = useState('');
   const [filterType, setFilterType] = useState('');
+  const [filterAppt, setFilterAppt] = useState<'' | 'true' | 'false'>('');
   const [search, setSearch] = useState('');
   const [sortField, setSortField] = useState<SortField>('lastSeen');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -572,9 +984,10 @@ export default function ContactsPage() {
   const filtered = useMemo(() => {
     let arr = contacts;
     if (filterStatus) arr = arr.filter(c => c.status === filterStatus);
-    // sourceTypes is the list returned by get_list — e.g. ['appointment', 'conversation']
     if (filterSource) arr = arr.filter(c => c.sourceTypes?.includes(filterSource) ?? true);
     if (filterType)   arr = arr.filter(c => c.contactType === filterType);
+    if (filterAppt === 'true')  arr = arr.filter(c => c.hasAppointment);
+    if (filterAppt === 'false') arr = arr.filter(c => !c.hasAppointment);
     if (search.trim()) {
       const q = search.toLowerCase();
       arr = arr.filter(c =>
@@ -728,6 +1141,11 @@ export default function ContactsPage() {
     setSelectedId(null);
   };
 
+  const handleAppointmentCreated = () => {
+    // Refresh contacts to get updated hasAppointment badge
+    mutateContacts();
+  };
+
   const SortTh = ({ field, label, className = '' }: { field: SortField; label: string; className?: string }) => (
     <TableHead className={`cursor-pointer select-none hover:text-zinc-200 transition-colors ${className}`}
       onClick={() => handleSort(field)}>
@@ -809,8 +1227,20 @@ export default function ContactsPage() {
           <option value="email">Email</option>
           <option value="phone">Telefon</option>
         </select>
-        {(filterStatus || filterSource || filterType || search) && (
-          <button onClick={() => { setFilterStatus(''); setFilterSource(''); setFilterType(''); setSearch(''); setPage(1); }}
+        {/* Appointment filter */}
+        <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
+          {(['', 'true', 'false'] as const).map(v => (
+            <button key={v}
+              onClick={() => { setFilterAppt(v); setPage(1); }}
+              className={`px-2.5 py-1 text-xs rounded-md transition-colors ${filterAppt === v ? 'bg-violet-500/20 text-violet-300' : 'text-zinc-400 hover:text-white'}`}>
+              {v === ''      ? 'Wszyscy'
+               : v === 'true' ? '📅 Ze spotkaniem'
+               : 'Bez spotkania'}
+            </button>
+          ))}
+        </div>
+        {(filterStatus || filterSource || filterType || filterAppt || search) && (
+          <button onClick={() => { setFilterStatus(''); setFilterSource(''); setFilterType(''); setFilterAppt(''); setSearch(''); setPage(1); }}
             className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1">
             <X size={12} />Wyczyść
           </button>
@@ -874,7 +1304,12 @@ export default function ContactsPage() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell><StatusBadge status={c.status} allStages={allStages} /></TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <StatusBadge status={c.status} allStages={allStages} />
+                          {c.hasAppointment && <AppointmentBadge datetime={c.appointmentDatetime} status={c.appointmentStatus} />}
+                        </div>
+                      </TableCell>
                       <TableCell><span className="text-xs text-zinc-400 capitalize">{c.contactType}</span></TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
@@ -973,6 +1408,7 @@ export default function ContactsPage() {
           onDeleted={handleDeleted}
           onAddStage={handleAddStage}
           onDeleteStage={handleDeleteStage}
+          onAppointmentCreated={handleAppointmentCreated}
         />
       )}
     </div>

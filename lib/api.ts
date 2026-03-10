@@ -602,3 +602,64 @@ export const markNotificationRead = (clientId: string, notificationId: string) =
 
 export const markAllNotificationsRead = (clientId: string) =>
   api.post<{ status: string; updated: number }>(`/clients/${clientId}/notifications/mark-all-read`, {});
+
+
+// ─── Appointments (manual creation) ─────────────────────────────
+
+export const createAppointment = (
+  clientId: string,
+  data: { contact_info: string; contact_type: 'email' | 'phone'; datetime: string; notes?: string; contact_name?: string }
+) => api.post<{ status: string; appointment_id: string; datetime: string }>(
+  `/clients/${clientId}/appointments`, data
+);
+
+// ─── Reminders ──────────────────────────────────────────────────
+
+export const getReminders = (clientId: string, contactId?: string, status?: string) => {
+  const params = new URLSearchParams();
+  if (contactId) params.set('contact_id', contactId);
+  if (status) params.set('status', status);
+  const qs = params.toString();
+  return api.get<{ reminders: import('./types').Reminder[]; count: number }>(
+    `/clients/${clientId}/reminders${qs ? '?' + qs : ''}`
+  );
+};
+
+export const createReminder = (
+  clientId: string,
+  data: {
+    profile_id: string;
+    fire_at: number;
+    message: string;
+    channel?: string;
+    repeat?: { type: string; interval_days?: number; days_of_week?: number[] };
+  }
+) => api.post<{ status: string; reminder_id: string; fire_at: number }>(
+  `/clients/${clientId}/reminders`, data
+);
+
+export const deleteReminder = (clientId: string, reminderId: string) =>
+  api.delete<{ status: string; reminder_id: string }>(
+    `/clients/${clientId}/reminders/${reminderId}`
+  );
+
+export const getReminderRules = (clientId: string) =>
+  api.get<{ rules: import('./types').ReminderRule[]; validTriggers: string[]; triggerLabels: Record<string, string> }>(
+    `/clients/${clientId}/reminder-rules`
+  );
+
+export const updateReminderRules = (clientId: string, rules: import('./types').ReminderRule[]) =>
+  api.put<{ status: string; rules: import('./types').ReminderRule[] }>(
+    `/clients/${clientId}/reminder-rules`,
+    {
+      rules: rules.map(r => ({
+        id: r.id,
+        trigger: r.trigger,
+        delay_hours: r.delayHours,
+        message_template: r.messageTemplate,
+        channel: r.channel,
+        enabled: r.enabled,
+        label: r.label,
+      })),
+    }
+  );

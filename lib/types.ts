@@ -7,7 +7,8 @@ export type NotificationType =
   | 'new_appointment'
   | 'appointment_verified'
   | 'appointment_cancelled'
-  | 'knowledge_gap';
+  | 'knowledge_gap'
+  | 'reminder';
 
 export interface AppNotification {
   notificationId: string;
@@ -284,6 +285,41 @@ export interface ContactProfile {
   sourceCount: number;
   sourceTypes?: string[];    // e.g. ['appointment', 'conversation'] — in list response
   sources?: ContactSource[]; // full list with session links — in get_detail only
+  // Appointment badge (enriched in get_list)
+  hasAppointment?: boolean;
+  appointmentDatetime?: string | null;
+  appointmentStatus?: string | null;
+}
+
+export type ReminderRepeatType = 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | 'custom';
+
+export interface ReminderRepeat {
+  type: ReminderRepeatType;
+  intervalDays?: number;    // for 'custom'
+  daysOfWeek?: number[];    // for 'weekly' (0=Mon … 6=Sun)
+}
+
+export interface Reminder {
+  reminderId: string;
+  profileId: string;
+  fireAt: number;           // Unix timestamp
+  message: string;
+  repeat: ReminderRepeat;
+  channel: 'inapp' | 'email' | 'both';
+  status: 'pending' | 'fired';
+  source: string;           // 'manual' | 'rule:{id}'
+  createdAt: number;
+  lastFiredAt?: number | null;
+}
+
+export interface ReminderRule {
+  id: string;
+  trigger: 'appointment_confirmed' | 'appointment_cancelled' | 'contact_added' | 'no_activity_days';
+  delayHours: number;
+  messageTemplate: string;
+  channel: 'inapp' | 'email' | 'both';
+  enabled: boolean;
+  label: string;
 }
 
 // Observability Dashboard
