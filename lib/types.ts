@@ -380,3 +380,30 @@ export interface ObservabilityData {
   periodDays: number;
   generatedAt: string;
 }
+
+export interface Report {
+  reportId: string;
+  reportType: 'weekly' | 'monthly' | 'custom';
+  periodLabel: string;
+  periodStart: string;
+  periodEnd: string;
+  title: string;
+  stats: {
+    conversationsTotal: number;
+    messagesTotal: number;
+    avgMessagesPerConv: number;
+    leadsEmail: number;
+    leadsPhone: number;
+    leadsTotal: number;
+    apptsTotal: number;
+    apptsPending: number;
+    apptsConfirmed: number;
+    apptsCancelled: number;
+    costTotalUsd: number;
+    costPerConvUsd: number;
+    ratingsPositive: number;
+    ratingsNegative: number;
+    satisfactionPct: number;
+  };
+  generatedAt: string;
+}

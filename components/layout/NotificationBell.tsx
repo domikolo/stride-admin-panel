@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import {
-  Bell, X, CalendarPlus, CalendarCheck, CalendarX,
+  Bell, BellRing, X, CalendarPlus, CalendarCheck, CalendarX,
   UserPlus, Lightbulb, CheckCheck,
 } from 'lucide-react';
 import { AppNotification } from '@/lib/types';
@@ -19,6 +19,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   CalendarX:     <CalendarX size={15} />,
   Lightbulb:     <Lightbulb size={15} />,
   Bell:          <Bell size={15} />,
+  BellRing:      <BellRing size={15} />,
 };
 
 const ICON_COLOR: Record<string, string> = {
@@ -138,7 +139,12 @@ export default function NotificationBell({ clientId }: Props) {
     const id = setInterval(() => {
       if (document.visibilityState === 'visible') fetchNotif(true);
     }, 30000);
-    return () => clearInterval(id);
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchNotif(true); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [fetchNotif]);
 
   // ── Position — synchronous, before paint ───────────────────────────────────

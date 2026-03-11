@@ -1,6 +1,6 @@
 /**
- * Insights Page - Trending Questions & Knowledge Gaps
- * With Daily / Weekly / Monthly period tabs, load-on-demand per tab.
+ * Insights Page - Trending Questions & Knowledge Gaps + Reports
+ * With top-level Trendy / Raporty switcher.
  */
 
 'use client';
@@ -8,12 +8,13 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useSearchParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
-import { resolveGap } from '@/lib/api';
+import { resolveGap, generateReport } from '@/lib/api';
 import { Timeframe } from '@/lib/api';
-import { Topic, Gap, ResolvedGap } from '@/lib/types';
+import { Topic, Gap, ResolvedGap, Report } from '@/lib/types';
 import toast from 'react-hot-toast';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
@@ -25,11 +26,31 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw, Info, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import {
+  AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw,
+  Info, CheckCircle, ChevronDown, ChevronUp, FileText,
+  Sparkles, Calendar, Users, Phone, Mail,
+} from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
+const ReportDownloadButton = dynamic(
+  () => import('@/components/reports/ReportDownloadButton'),
+  {
+    ssr: false,
+    loading: () => (
+      <button
+        className="flex items-center gap-1.5 px-3 py-1.5 text-xs rounded-lg bg-white/[0.06] text-zinc-500 border border-white/[0.08] cursor-not-allowed"
+        disabled
+      >
+        Pobierz PDF
+      </button>
+    ),
+  }
+);
+
+type MainTab = 'trendy' | 'raporty';
 type Period = 'daily' | 'weekly' | 'monthly';
 
 interface PeriodData {
@@ -44,6 +65,320 @@ const PERIOD_TO_TIMEFRAME: Record<Period, Timeframe> = {
   monthly: 'month',
 };
 
+// ─── Reports Tab ──────────────────────────────────────────────────────────────
+
+interface ReportsTabProps {
+  clientId: string | null;
+  isOwner: boolean;
+}
+
+function StatRow({ label, value }: { label: string; value: string | number }) {
+  return (
+    <div className="flex items-center justify-between py-1.5 border-b border-white/[0.04] last:border-0">
+      <span className="text-xs text-zinc-400">{label}</span>
+      <span className="text-xs font-medium text-white tabular-nums">{value}</span>
+    </div>
+  );
+}
+
+function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [generating, setGenerating] = useState(false);
+  const [customOpen, setCustomOpen] = useState(false);
+  const [customStart, setCustomStart] = useState('');
+  const [customEnd, setCustomEnd] = useState('');
+  const [customGenerating, setCustomGenerating] = useState(false);
+
+  const {
+    data,
+    isLoading,
+    mutate,
+  } = useSWR<{ reports: Report[]; count: number }>(
+    clientId ? `/clients/${clientId}/reports` : null,
+    fetcher
+  );
+
+  const toggleExpand = (id: string) => {
+    setExpandedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleGenerate = async (reportType: 'weekly' | 'monthly') => {
+    if (!clientId) return;
+    setGenerating(true);
+    try {
+      await generateReport(clientId, reportType);
+      await mutate();
+      toast.success(`Raport ${reportType === 'weekly' ? 'tygodniowy' : 'miesięczny'} wygenerowany`);
+    } catch {
+      toast.error('Nie udało się wygenerować raportu');
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleGenerateCustom = async () => {
+    if (!clientId || !customStart || !customEnd) return;
+    setCustomGenerating(true);
+    try {
+      await generateReport(clientId, 'custom', customStart, customEnd);
+      await mutate();
+      toast.success('Raport niestandardowy wygenerowany');
+      setCustomOpen(false);
+      setCustomStart('');
+      setCustomEnd('');
+    } catch {
+      toast.error('Nie udało się wygenerować raportu');
+    } finally {
+      setCustomGenerating(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        {[1, 2, 3].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
+      </div>
+    );
+  }
+
+  const reports = data?.reports ?? [];
+
+  return (
+    <div className="space-y-4">
+      {/* Header row */}
+      <div className="flex items-center justify-between gap-4">
+        <h2 className="text-sm font-medium text-zinc-300">Archiwum raportów</h2>
+        {isOwner && (
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={generating}
+              onClick={() => handleGenerate('weekly')}
+              className="gap-1.5 text-xs border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
+            >
+              <Calendar size={13} />
+              Tygodniowy
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={generating}
+              onClick={() => handleGenerate('monthly')}
+              className="gap-1.5 text-xs border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
+            >
+              <Sparkles size={13} />
+              Miesięczny
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCustomOpen(o => !o)}
+              className={`gap-1.5 text-xs border-white/[0.08] hover:bg-white/[0.06] text-zinc-300 ${customOpen ? 'bg-white/[0.08]' : 'bg-white/[0.03]'}`}
+            >
+              <Calendar size={13} />
+              Własny zakres
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Custom date picker row */}
+      {isOwner && customOpen && (
+        <div className="flex items-center gap-3 flex-wrap p-4 glass-card rounded-xl">
+          <span className="text-xs text-zinc-400">Od:</span>
+          <input
+            type="date"
+            value={customStart}
+            onChange={e => setCustomStart(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-white/20"
+          />
+          <span className="text-xs text-zinc-400">Do:</span>
+          <input
+            type="date"
+            value={customEnd}
+            onChange={e => setCustomEnd(e.target.value)}
+            className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white [color-scheme:dark] focus:outline-none focus:ring-1 focus:ring-white/20"
+          />
+          <Button
+            size="sm"
+            disabled={customGenerating || !customStart || !customEnd}
+            onClick={handleGenerateCustom}
+            className="gap-1.5 text-xs"
+          >
+            {customGenerating ? <RefreshCw size={12} className="animate-spin" /> : <Calendar size={12} />}
+            Generuj raport
+          </Button>
+        </div>
+      )}
+
+      {reports.length === 0 ? (
+        <Card className="glass-card p-10 text-center space-y-3">
+          <FileText size={32} className="mx-auto text-zinc-600" />
+          <p className="text-zinc-400 text-sm">
+            Brak raportów. Raporty tygodniowe i miesięczne generowane są automatycznie.
+            Możesz też wygenerować raport ręcznie.
+          </p>
+          {isOwner && (
+            <div className="flex items-center gap-2 justify-center flex-wrap">
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={generating}
+                onClick={() => handleGenerate('weekly')}
+                className="gap-2 border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
+              >
+                <Calendar size={14} />
+                Tygodniowy
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={generating}
+                onClick={() => handleGenerate('monthly')}
+                className="gap-2 border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
+              >
+                <Sparkles size={14} />
+                Miesięczny
+              </Button>
+            </div>
+          )}
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {reports.map(report => {
+            const isOpen = expandedIds.has(report.reportId);
+            const generatedDate = report.generatedAt ? new Date(report.generatedAt) : null;
+            const { stats } = report;
+
+            return (
+              <Card
+                key={report.reportId}
+                className="glass-card overflow-hidden"
+              >
+                {/* Card header — always visible */}
+                <div className="px-5 py-4 flex items-start gap-4">
+                  <button
+                    className="flex items-start gap-4 flex-1 text-left hover:opacity-80 transition-opacity"
+                    onClick={() => toggleExpand(report.reportId)}
+                  >
+                    <div className="w-9 h-9 rounded-lg bg-indigo-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                      <FileText size={17} className="text-indigo-400" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-white truncate">{report.title}</p>
+                      {generatedDate && (
+                        <p className="text-xs text-zinc-500 mt-0.5">
+                          Wygenerowano {formatDistanceToNow(generatedDate, { addSuffix: true, locale: pl })}
+                        </p>
+                      )}
+                      {/* Stat chips */}
+                      <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] text-xs text-zinc-400 border border-white/[0.06]">
+                          <MessageSquare size={10} />
+                          {stats.conversationsTotal} rozmów
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] text-xs text-zinc-400 border border-white/[0.06]">
+                          <Users size={10} />
+                          {stats.leadsTotal} leadów
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] text-xs text-zinc-400 border border-white/[0.06]">
+                          <Calendar size={10} />
+                          {stats.apptsConfirmed} spotkań
+                        </span>
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-white/[0.04] text-xs text-zinc-400 border border-white/[0.06]">
+                          <DollarSign size={10} />
+                          ${stats.costTotalUsd.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="shrink-0 mt-1 text-zinc-500">
+                      {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                    </div>
+                  </button>
+                  {/* PDF download — separate from expand click */}
+                  {clientId && (
+                    <div className="shrink-0 mt-1" onClick={e => e.stopPropagation()}>
+                      <ReportDownloadButton report={report} clientId={clientId} />
+                    </div>
+                  )}
+                </div>
+
+                {/* Expanded content */}
+                {isOpen && (
+                  <div className="px-5 pb-5 border-t border-white/[0.04] pt-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {/* Rozmowy */}
+                      <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                          Rozmowy
+                        </p>
+                        <StatRow label="Łącznie" value={stats.conversationsTotal} />
+                        <StatRow label="Wiadomości" value={stats.messagesTotal} />
+                        <StatRow label="Śred. / rozmowę" value={stats.avgMessagesPerConv} />
+                      </div>
+
+                      {/* Leady */}
+                      <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                          Leady
+                        </p>
+                        <StatRow label="Email" value={stats.leadsEmail} />
+                        <StatRow label="Telefon" value={stats.leadsPhone} />
+                        <StatRow label="Łącznie" value={stats.leadsTotal} />
+                      </div>
+
+                      {/* Spotkania */}
+                      <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                          Spotkania
+                        </p>
+                        <StatRow label="Łącznie" value={stats.apptsTotal} />
+                        <StatRow label="Potwierdzone" value={stats.apptsConfirmed} />
+                        <StatRow label="Oczekujące" value={stats.apptsPending} />
+                        <StatRow label="Odwołane" value={stats.apptsCancelled} />
+                      </div>
+
+                      {/* Koszty */}
+                      <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                          Koszty AI
+                        </p>
+                        <StatRow label="Całkowity" value={`$${stats.costTotalUsd.toFixed(4)}`} />
+                        <StatRow label="Na rozmowę" value={`$${stats.costPerConvUsd.toFixed(4)}`} />
+                      </div>
+
+                      {/* Oceny */}
+                      <div className="bg-white/[0.02] rounded-xl p-4 border border-white/[0.04]">
+                        <p className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider mb-2">
+                          Oceny rozmów
+                        </p>
+                        <StatRow label="Pozytywne" value={stats.ratingsPositive} />
+                        <StatRow label="Negatywne" value={stats.ratingsNegative} />
+                        <StatRow
+                          label="Satysfakcja"
+                          value={stats.satisfactionPct === -1 ? 'Brak ocen' : `${stats.satisfactionPct}%`}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
 export default function InsightsPage() {
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -53,6 +388,7 @@ export default function InsightsPage() {
     ? (periodParam as Period)
     : 'daily';
 
+  const [mainTab, setMainTab] = useState<MainTab>('trendy');
   const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvedGapHistory, setResolvedGapHistory] = useState<ResolvedGap[]>([]);
@@ -63,16 +399,17 @@ export default function InsightsPage() {
   });
 
   const clientId = useClientId();
+  const isOwner = user?.role === 'owner';
 
   // Lazy load per tab — null key when tab is inactive
   const { data: dailyRaw, isLoading: dailyLoading, mutate: mutateDaily } = useSWR<{ topics: Topic[] }>(
-    clientId && activePeriod === 'daily' ? `/clients/${clientId}/trending-topics?timeframe=yesterday&include_gaps=true` : null, fetcher
+    clientId && mainTab === 'trendy' && activePeriod === 'daily' ? `/clients/${clientId}/trending-topics?timeframe=yesterday&include_gaps=true` : null, fetcher
   );
   const { data: weeklyRaw, isLoading: weeklyLoading, mutate: mutateWeekly } = useSWR<{ topics: Topic[] }>(
-    clientId && activePeriod === 'weekly' ? `/clients/${clientId}/trending-topics?timeframe=week&include_gaps=true` : null, fetcher
+    clientId && mainTab === 'trendy' && activePeriod === 'weekly' ? `/clients/${clientId}/trending-topics?timeframe=week&include_gaps=true` : null, fetcher
   );
   const { data: monthlyRaw, isLoading: monthlyLoading, mutate: mutateMonthly } = useSWR<{ topics: Topic[] }>(
-    clientId && activePeriod === 'monthly' ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
+    clientId && mainTab === 'trendy' && activePeriod === 'monthly' ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
   );
   const { data: resolvedData } = useSWR<{ resolvedGapIds: string[]; resolvedGaps: ResolvedGap[] }>(
     clientId ? `/clients/${clientId}/gaps/resolved` : null, fetcher
@@ -330,7 +667,7 @@ export default function InsightsPage() {
 
   // Full skeleton only on very first load (no data loaded yet)
   const nothingLoaded = Object.values(periodData).every(d => d === null);
-  if (nothingLoaded && isLoading) {
+  if (mainTab === 'trendy' && nothingLoaded && isLoading) {
     return (
       <div className="space-y-8">
         <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
@@ -351,150 +688,183 @@ export default function InsightsPage() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
           <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1.5">
-            Analiza pytań i trendów użytkowników
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Info size={13} className="text-zinc-600 hover:text-zinc-400 transition-colors cursor-help flex-shrink-0" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-[300px]">
-                <p>Analizowane są wyłącznie pytania użytkowników. Odpowiedzi na pytania chatbota (np. &quot;implementuję systemy CRM&quot;) oraz wiadomości niebędące pytaniami są automatycznie pomijane.</p>
-              </TooltipContent>
-            </Tooltip>
-            {currentRefreshedAt && (
-              <span className="ml-2">
-                · Zaktualizowano {formatDistanceToNow(currentRefreshedAt, { addSuffix: true, locale: pl })}
-              </span>
+            Analiza pytań, trendów i raporty
+            {mainTab === 'trendy' && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info size={13} className="text-zinc-600 hover:text-zinc-400 transition-colors cursor-help flex-shrink-0" />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-[300px]">
+                    <p>Analizowane są wyłącznie pytania użytkowników. Odpowiedzi na pytania chatbota (np. &quot;implementuję systemy CRM&quot;) oraz wiadomości niebędące pytaniami są automatycznie pomijane.</p>
+                  </TooltipContent>
+                </Tooltip>
+                {currentRefreshedAt && (
+                  <span className="ml-2">
+                    · Zaktualizowano {formatDistanceToNow(currentRefreshedAt, { addSuffix: true, locale: pl })}
+                  </span>
+                )}
+              </>
             )}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isLoading}
-            className="text-zinc-400 hover:text-white gap-2 mt-1"
-          >
-            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-            Odśwież
-          </Button>
+          {mainTab === 'trendy' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading}
+              className="text-zinc-400 hover:text-white gap-2 mt-1"
+            >
+              <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+              Odśwież
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Period Tabs */}
-      <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">
-        <TabsList className="mb-4">
-          <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
-            Wczoraj
-          </TabsTrigger>
-          <TabsTrigger value="weekly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
-            7 dni
-          </TabsTrigger>
-          <TabsTrigger value="monthly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
-            30 dni
-          </TabsTrigger>
-        </TabsList>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <StatsCard
-            title="Unikalne tematy"
-            value={current?.summary.totalTopics || 0}
-            icon={MessageSquare}
-            iconColor="text-blue-400"
-          />
-          <StatsCard
-            title="Łączne pytania"
-            value={current?.summary.totalQuestions || 0}
-            icon={TrendingUp}
-            iconColor="text-emerald-400"
-          />
-          <StatsCard
-            title="Luki w bazie wiedzy"
-            value={activeGaps.length}
-            icon={AlertTriangle}
-            iconColor={activeGaps.length > 0 ? 'text-amber-400' : 'text-zinc-400'}
-          />
-        </div>
-
-        {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
-          <div className="flex items-center gap-3 p-4 glass-card border-emerald-500/20 mb-6">
-            <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-              <DollarSign size={18} className="text-emerald-400" />
-            </div>
-            <div>
-              <p className="text-sm text-white font-medium">
-                Hot Lead: &quot;{topBuyingTopic.topicName}&quot;
-              </p>
-              <p className="text-xs text-zinc-500">
-                {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
-              </p>
-            </div>
-          </div>
-        )}
-
-        <TabsContent value="daily" className="mt-0">
-          {periodLoading.daily && !periodData.daily ? (
-            <div className="flex items-center justify-center py-16">
-              <RefreshCw size={20} className="animate-spin text-zinc-500" />
-            </div>
-          ) : renderPeriodContent(periodData.daily, 'daily')}
-        </TabsContent>
-        <TabsContent value="weekly" className="mt-0">
-          {periodLoading.weekly && !periodData.weekly ? (
-            <div className="flex items-center justify-center py-16">
-              <RefreshCw size={20} className="animate-spin text-zinc-500" />
-            </div>
-          ) : renderPeriodContent(periodData.weekly, 'weekly')}
-        </TabsContent>
-        <TabsContent value="monthly" className="mt-0">
-          {periodLoading.monthly && !periodData.monthly ? (
-            <div className="flex items-center justify-center py-16">
-              <RefreshCw size={20} className="animate-spin text-zinc-500" />
-            </div>
-          ) : renderPeriodContent(periodData.monthly, 'monthly')}
-        </TabsContent>
-      </Tabs>
-
-      {/* Historia naprawionych luk */}
-      {resolvedGapHistory.length > 0 && (
-        <div>
+      {/* Main tab switcher */}
+      <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-xl border border-white/[0.06] w-fit">
+        {(['trendy', 'raporty'] as const).map(tab => (
           <button
-            onClick={() => setHistoryOpen(o => !o)}
-            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors w-full"
+            key={tab}
+            onClick={() => setMainTab(tab)}
+            className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+              mainTab === tab
+                ? 'bg-white/[0.08] text-white font-medium'
+                : 'text-zinc-400 hover:text-white'
+            }`}
           >
-            <CheckCircle size={14} className="text-emerald-500/70" />
-            <span>Historia naprawionych luk ({resolvedGapHistory.length})</span>
-            {historyOpen ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+            {tab === 'trendy' ? 'Trendy' : 'Raporty'}
           </button>
+        ))}
+      </div>
 
-          {historyOpen && (
-            <Card className="glass-card mt-3 divide-y divide-white/[0.04]">
-              {resolvedGapHistory.map((rg) => {
-                const date = rg.resolvedAt
-                  ? new Date(rg.resolvedAt)
-                  : null;
-                return (
-                  <div key={rg.topicId} className="flex items-center justify-between px-4 py-3 gap-4">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <CheckCircle size={14} className="text-emerald-400 shrink-0" />
-                      <span className="text-sm text-zinc-300 truncate">{rg.topicName}</span>
-                    </div>
-                    <div className="text-right shrink-0">
-                      {date && (
-                        <p className="text-xs text-zinc-500">
-                          {date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </p>
-                      )}
-                      {rg.resolvedBy && rg.resolvedBy !== 'unknown' && (
-                        <p className="text-[11px] text-zinc-600">{rg.resolvedBy}</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </Card>
+      {/* ── Trendy tab ── */}
+      {mainTab === 'trendy' && (
+        <>
+          {/* Period Tabs */}
+          <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">
+            <TabsList className="mb-4">
+              <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+                Wczoraj
+              </TabsTrigger>
+              <TabsTrigger value="weekly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+                7 dni
+              </TabsTrigger>
+              <TabsTrigger value="monthly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+                30 dni
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <StatsCard
+                title="Unikalne tematy"
+                value={current?.summary.totalTopics || 0}
+                icon={MessageSquare}
+                iconColor="text-blue-400"
+              />
+              <StatsCard
+                title="Łączne pytania"
+                value={current?.summary.totalQuestions || 0}
+                icon={TrendingUp}
+                iconColor="text-emerald-400"
+              />
+              <StatsCard
+                title="Luki w bazie wiedzy"
+                value={activeGaps.length}
+                icon={AlertTriangle}
+                iconColor={activeGaps.length > 0 ? 'text-amber-400' : 'text-zinc-400'}
+              />
+            </div>
+
+            {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
+              <div className="flex items-center gap-3 p-4 glass-card border-emerald-500/20 mb-6">
+                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <DollarSign size={18} className="text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-white font-medium">
+                    Hot Lead: &quot;{topBuyingTopic.topicName}&quot;
+                  </p>
+                  <p className="text-xs text-zinc-500">
+                    {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
+                  </p>
+                </div>
+              </div>
+            )}
+
+            <TabsContent value="daily" className="mt-0">
+              {periodLoading.daily && !periodData.daily ? (
+                <div className="flex items-center justify-center py-16">
+                  <RefreshCw size={20} className="animate-spin text-zinc-500" />
+                </div>
+              ) : renderPeriodContent(periodData.daily, 'daily')}
+            </TabsContent>
+            <TabsContent value="weekly" className="mt-0">
+              {periodLoading.weekly && !periodData.weekly ? (
+                <div className="flex items-center justify-center py-16">
+                  <RefreshCw size={20} className="animate-spin text-zinc-500" />
+                </div>
+              ) : renderPeriodContent(periodData.weekly, 'weekly')}
+            </TabsContent>
+            <TabsContent value="monthly" className="mt-0">
+              {periodLoading.monthly && !periodData.monthly ? (
+                <div className="flex items-center justify-center py-16">
+                  <RefreshCw size={20} className="animate-spin text-zinc-500" />
+                </div>
+              ) : renderPeriodContent(periodData.monthly, 'monthly')}
+            </TabsContent>
+          </Tabs>
+
+          {/* Historia naprawionych luk */}
+          {resolvedGapHistory.length > 0 && (
+            <div>
+              <button
+                onClick={() => setHistoryOpen(o => !o)}
+                className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors w-full"
+              >
+                <CheckCircle size={14} className="text-emerald-500/70" />
+                <span>Historia naprawionych luk ({resolvedGapHistory.length})</span>
+                {historyOpen ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+              </button>
+
+              {historyOpen && (
+                <Card className="glass-card mt-3 divide-y divide-white/[0.04]">
+                  {resolvedGapHistory.map((rg) => {
+                    const date = rg.resolvedAt
+                      ? new Date(rg.resolvedAt)
+                      : null;
+                    return (
+                      <div key={rg.topicId} className="flex items-center justify-between px-4 py-3 gap-4">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CheckCircle size={14} className="text-emerald-400 shrink-0" />
+                          <span className="text-sm text-zinc-300 truncate">{rg.topicName}</span>
+                        </div>
+                        <div className="text-right shrink-0">
+                          {date && (
+                            <p className="text-xs text-zinc-500">
+                              {date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </p>
+                          )}
+                          {rg.resolvedBy && rg.resolvedBy !== 'unknown' && (
+                            <p className="text-[11px] text-zinc-600">{rg.resolvedBy}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </Card>
+              )}
+            </div>
           )}
-        </div>
+        </>
+      )}
+
+      {/* ── Raporty tab ── */}
+      {mainTab === 'raporty' && (
+        <ReportsTab clientId={clientId} isOwner={isOwner} />
       )}
     </div>
   );

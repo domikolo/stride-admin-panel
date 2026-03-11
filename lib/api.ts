@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './token';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData, AppNotification } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData, AppNotification, Report } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 if (!API_BASE_URL && typeof window !== 'undefined') {
@@ -665,3 +665,23 @@ export const updateReminderRules = (clientId: string, rules: import('./types').R
       })),
     }
   );
+
+// ─── Reports ─────────────────────────────────────────────────────
+
+export const getReports = (clientId: string) =>
+  api.get<{ reports: Report[]; count: number }>(`/clients/${clientId}/reports`);
+
+export const getReport = (clientId: string, reportId: string) =>
+  api.get<Report>(`/clients/${clientId}/reports/${reportId}`);
+
+export const generateReport = (
+  clientId: string,
+  reportType: 'weekly' | 'monthly' | 'custom',
+  periodStart?: string,
+  periodEnd?: string,
+) =>
+  api.post<Report>(`/clients/${clientId}/reports/generate`, {
+    report_type: reportType,
+    ...(periodStart && { period_start: periodStart }),
+    ...(periodEnd && { period_end: periodEnd }),
+  });
