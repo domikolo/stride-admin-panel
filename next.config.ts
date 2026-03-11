@@ -3,10 +3,7 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: 'standalone',
   reactStrictMode: true,
-  webpack: (config) => {
-    config.resolve.alias.canvas = false;
-    return config;
-  },
+
   async headers() {
     return [
       {
