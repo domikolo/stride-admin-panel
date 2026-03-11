@@ -15,16 +15,19 @@ function buildCsp(nonce: string): string {
     // nonce gates Next.js bootstrap scripts; 'strict-dynamic' trusts all scripts
     // dynamically loaded by those (Next.js chunk loader, lazy imports).
     // No 'unsafe-inline' — any injected inline script is blocked in CSP-L2+ browsers.
-    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic'`,
+    // 'wasm-unsafe-eval' is required for @react-pdf/renderer which uses WebAssembly.
+    `script-src 'self' 'nonce-${nonce}' 'strict-dynamic' 'wasm-unsafe-eval'`,
     // Tailwind + CSS-in-JS generate inline styles at runtime — unavoidable.
     "style-src 'self' 'unsafe-inline'",
     // data: covers favicon/SVG inline; blob: covers KB file upload previews.
     "img-src 'self' data: blob:",
     // next/font/google bundles Inter locally — no Google CDN needed.
     "font-src 'self'",
-    `connect-src 'self' ${CONNECT_ALLOWLIST}`,
+    // data: is required for @react-pdf/renderer to load its WASM binary via data URI.
+    `connect-src 'self' data: ${CONNECT_ALLOWLIST}`,
     "object-src 'none'",
-    "worker-src 'none'",
+    // blob: required for @react-pdf/renderer which spawns a Web Worker via blob URL.
+    "worker-src 'self' blob:",
     // Prevents <base> tag injection (open-redirect vector).
     "base-uri 'self'",
     // Prevents form hijacking to external domains.
