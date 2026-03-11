@@ -8,7 +8,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Lightbulb, CheckCircle, Loader2, Wrench } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Loader2, Wrench } from 'lucide-react';
 import QuestionsModal from './QuestionsModal';
 
 interface GapCardProps {
@@ -19,7 +19,6 @@ interface GapCardProps {
     gapExamples?: string[];
     questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
     gapReason: string;
-    suggestion: string;
     onResolve?: (topicId: string) => void;
     resolving?: boolean;
 }
@@ -38,7 +37,6 @@ export default function GapCard({
     gapExamples,
     questionSources,
     gapReason,
-    suggestion,
     onResolve,
     resolving,
 }: GapCardProps) {
@@ -112,15 +110,10 @@ export default function GapCard({
                         <span className="text-red-400 truncate">{gapReason}</span>
                     </div>
 
-                    {/* Suggestion + Fix */}
-                    <div className="flex items-center gap-2">
-                        <div className="flex-1 flex items-center gap-2 text-[11px] p-2 bg-emerald-500/[0.06] border border-emerald-500/15 rounded-lg min-w-0">
-                            <Lightbulb size={12} className="text-emerald-400 shrink-0" />
-                            <span className="text-emerald-400 truncate">{suggestion}</span>
-                        </div>
+                    {/* Fix button */}
+                    <div className="flex justify-end">
                         <Link
                             href={`/knowledge-base?fix_gap=${encodeURIComponent(topicId)}&topic=${encodeURIComponent(topicName)}&examples=${encodeURIComponent(examples.slice(0, 5).join('|||'))}&reason=${encodeURIComponent(gapReason)}`}
-                            className="shrink-0"
                         >
                             <Button
                                 variant="ghost"
@@ -128,7 +121,7 @@ export default function GapCard({
                                 className="text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 gap-1 h-7 text-xs"
                             >
                                 <Wrench size={12} />
-                                Napraw
+                                Napraw w KB
                             </Button>
                         </Link>
                     </div>

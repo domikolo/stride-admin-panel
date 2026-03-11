@@ -56,6 +56,9 @@ export default function InsightsPage() {
   const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
+  const [refreshedAt, setRefreshedAt] = useState<Record<Period, Date | null>>({
+    daily: null, weekly: null, monthly: null,
+  });
 
   const clientId = useClientId();
 
@@ -77,6 +80,10 @@ export default function InsightsPage() {
     if (resolvedData) setResolvedGaps(resolvedData.resolvedGapIds || []);
   }, [resolvedData]);
 
+  useEffect(() => { if (dailyRaw) setRefreshedAt(prev => ({ ...prev, daily: new Date() })); }, [dailyRaw]);
+  useEffect(() => { if (weeklyRaw) setRefreshedAt(prev => ({ ...prev, weekly: new Date() })); }, [weeklyRaw]);
+  useEffect(() => { if (monthlyRaw) setRefreshedAt(prev => ({ ...prev, monthly: new Date() })); }, [monthlyRaw]);
+
   const topicsToGaps = (topics: Topic[]): Gap[] =>
     topics.filter(t => t.isGap).map(t => ({
       topicId: t.topicId,
@@ -86,7 +93,6 @@ export default function InsightsPage() {
       gapExamples: t.gapExamples || [],
       questionSources: t.questionSources,
       gapReason: t.gapReason || '',
-      suggestion: `Dodaj informacje o "${t.topicName}" do bazy wiedzy chatbota.`,
     }));
 
   const buildPeriodData = (raw: { topics: Topic[] } | undefined): PeriodData | null => {
@@ -125,8 +131,6 @@ export default function InsightsPage() {
     else mutateMonthly();
   };
 
-  const refreshedAt = dailyRaw || weeklyRaw || monthlyRaw ? new Date() : null;
-
   const handleResolveGap = async (topicId: string) => {
     if (!clientId) return;
     const gap = current?.gaps.find(g => g.topicId === topicId);
@@ -153,6 +157,7 @@ export default function InsightsPage() {
 
   const current = periodData[activePeriod];
   const isLoading = periodLoading[activePeriod];
+  const currentRefreshedAt = refreshedAt[activePeriod];
   const activeGaps = current ? current.gaps.filter(gap => !resolvedGaps.includes(gap.topicName)) : [];
   const topBuyingTopic = current
     ? [...current.topics].sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0]
@@ -184,6 +189,15 @@ export default function InsightsPage() {
       );
     }
 
+    // Topics without gaps — gaps are shown separately in the dedicated section below
+    const nonGapTopics = data.topics.filter(t => !t.isGap);
+
+    // Top mover — topic with highest count among trending up/down topics
+    const upTopics = data.topics.filter(t => t.trend === 'up').sort((a, b) => b.count - a.count);
+    const downTopics = data.topics.filter(t => t.trend === 'down').sort((a, b) => b.count - a.count);
+    const topMover = upTopics[0] || downTopics[0] || null;
+    const period = periodKey as Period;
+
     return (
       <div className="space-y-6">
         {isDaily && data.topics.length > 0 && data.topics[0].smartInsight && (
@@ -194,53 +208,15 @@ export default function InsightsPage() {
         )}
 
         {isDaily ? (
-          <motion.div
-            key={`${periodKey}-topics-${data.topics.length}`}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
-            variants={gridVariants}
-            initial="hidden"
-            animate="visible"
-          >
-            {data.topics.map((topic) => (
-              <motion.div key={topic.topicId} variants={cardVariants}>
-                <TrendingTopicCard
-                  rank={topic.rank}
-                  topicName={topic.topicName}
-                  count={topic.count}
-                  totalQuestions={data.summary.totalQuestions}
-                  examples={topic.questionExamples}
-                  questionSources={topic.questionSources}
-                  trend={topic.trend}
-                  intentBreakdown={topic.intentBreakdown}
-                  isGap={topic.isGap}
-                  gapReason={topic.gapReason}
-                />
-              </motion.div>
-            ))}
-          </motion.div>
-        ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
-              {data.topics.some(t => t.trend === 'up') && (
-                <TopMoverCard
-                  topicName={data.topics.find(t => t.trend === 'up')?.topicName || ''}
-                  count={data.topics.find(t => t.trend === 'up')?.count || 0}
-                  trend="up"
-                />
-              )}
-              <WeeklyCategoryChart
-                topics={data.topics}
-                totalQuestions={data.summary.totalQuestions}
-              />
-            </div>
+          <>
             <motion.div
               key={`${periodKey}-topics-${data.topics.length}`}
-              className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
               variants={gridVariants}
               initial="hidden"
               animate="visible"
             >
-              {data.topics.map((topic) => (
+              {nonGapTopics.map((topic) => (
                 <motion.div key={topic.topicId} variants={cardVariants}>
                   <TrendingTopicCard
                     rank={topic.rank}
@@ -251,7 +227,52 @@ export default function InsightsPage() {
                     questionSources={topic.questionSources}
                     trend={topic.trend}
                     intentBreakdown={topic.intentBreakdown}
-                    isGap={topic.isGap}
+                    isGap={false}
+                  />
+                </motion.div>
+              ))}
+            </motion.div>
+            <WeeklyCategoryChart
+              topics={data.topics}
+              totalQuestions={data.summary.totalQuestions}
+              period={period}
+            />
+          </>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+              {topMover && (
+                <TopMoverCard
+                  topicName={topMover.topicName}
+                  count={topMover.count}
+                  trend={topMover.trend as 'up' | 'down'}
+                />
+              )}
+              <WeeklyCategoryChart
+                topics={data.topics}
+                totalQuestions={data.summary.totalQuestions}
+                period={period}
+              />
+            </div>
+            <motion.div
+              key={`${periodKey}-topics-${data.topics.length}`}
+              className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start"
+              variants={gridVariants}
+              initial="hidden"
+              animate="visible"
+            >
+              {nonGapTopics.map((topic) => (
+                <motion.div key={topic.topicId} variants={cardVariants}>
+                  <TrendingTopicCard
+                    rank={topic.rank}
+                    topicName={topic.topicName}
+                    count={topic.count}
+                    totalQuestions={data.summary.totalQuestions}
+                    examples={topic.questionExamples}
+                    questionSources={topic.questionSources}
+                    trend={topic.trend}
+                    intentBreakdown={topic.intentBreakdown}
+                    isGap={false}
                   />
                 </motion.div>
               ))}
@@ -259,41 +280,44 @@ export default function InsightsPage() {
           </div>
         )}
 
-        {filteredGaps.length > 0 && (
-          <>
-            <div className="flex items-center gap-4 pt-4">
-              <div className="h-px flex-1 bg-yellow-500/30" />
-              <span className="text-sm font-medium text-yellow-400 flex items-center gap-2">
-                <AlertTriangle size={14} />
-                Luki w bazie wiedzy ({filteredGaps.length})
-              </span>
-              <div className="h-px flex-1 bg-yellow-500/30" />
-            </div>
-            <motion.div
-              key={`${periodKey}-gaps-${filteredGaps.length}`}
-              className="grid grid-cols-1 md:grid-cols-2 gap-6"
-              variants={gridVariants}
-              initial="hidden"
-              animate="visible"
-            >
-              {filteredGaps.map((gap) => (
-                <motion.div key={gap.topicId} variants={cardVariants}>
-                  <GapCard
-                    topicId={gap.topicId}
-                    topicName={gap.topicName}
-                    count={gap.count}
-                    examples={gap.questionExamples}
-                    gapExamples={gap.gapExamples}
-                    questionSources={gap.questionSources}
-                    gapReason={gap.gapReason}
-                    suggestion={gap.suggestion}
-                    onResolve={handleResolveGap}
-                    resolving={resolvingGaps.has(gap.topicId)}
-                  />
-                </motion.div>
-              ))}
-            </motion.div>
-          </>
+        <div className="flex items-center gap-4 pt-4">
+          <div className="h-px flex-1 bg-yellow-500/30" />
+          <span className="text-sm font-medium text-yellow-400 flex items-center gap-2">
+            <AlertTriangle size={14} />
+            Luki w bazie wiedzy ({filteredGaps.length})
+          </span>
+          <div className="h-px flex-1 bg-yellow-500/30" />
+        </div>
+
+        {filteredGaps.length > 0 ? (
+          <motion.div
+            key={`${periodKey}-gaps-${filteredGaps.length}`}
+            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            variants={gridVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {filteredGaps.map((gap) => (
+              <motion.div key={gap.topicId} variants={cardVariants}>
+                <GapCard
+                  topicId={gap.topicId}
+                  topicName={gap.topicName}
+                  count={gap.count}
+                  examples={gap.questionExamples}
+                  gapExamples={gap.gapExamples}
+                  questionSources={gap.questionSources}
+                  gapReason={gap.gapReason}
+                  onResolve={handleResolveGap}
+                  resolving={resolvingGaps.has(gap.topicId)}
+                />
+              </motion.div>
+            ))}
+          </motion.div>
+        ) : (
+          <Card className="glass-card p-6 text-center border-emerald-500/10">
+            <p className="text-sm text-emerald-400 font-medium">Brak luk w bazie wiedzy</p>
+            <p className="text-xs text-zinc-500 mt-1">Chatbot ma odpowiedzi na wszystkie popularne pytania.</p>
+          </Card>
         )}
       </div>
     );
@@ -331,9 +355,9 @@ export default function InsightsPage() {
                 <p>Analizowane są wyłącznie pytania użytkowników. Odpowiedzi na pytania chatbota (np. &quot;implementuję systemy CRM&quot;) oraz wiadomości niebędące pytaniami są automatycznie pomijane.</p>
               </TooltipContent>
             </Tooltip>
-            {refreshedAt && (
+            {currentRefreshedAt && (
               <span className="ml-2">
-                · Zaktualizowano {formatDistanceToNow(refreshedAt, { addSuffix: true, locale: pl })}
+                · Zaktualizowano {formatDistanceToNow(currentRefreshedAt, { addSuffix: true, locale: pl })}
               </span>
             )}
           </p>

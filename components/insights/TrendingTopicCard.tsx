@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
 import QuestionsModal from './QuestionsModal';
 
 interface TrendingTopicCardProps {
@@ -52,7 +52,7 @@ export default function TrendingTopicCard({
     const trendConfig = {
         up: { icon: TrendingUp, color: 'text-emerald-400', bg: 'bg-emerald-500/10', bar: 'bg-emerald-500', label: '↑ Wzrost' },
         down: { icon: TrendingDown, color: 'text-red-400', bg: 'bg-red-500/10', bar: 'bg-red-500', label: '↓ Spadek' },
-        stable: { icon: TrendingUp, color: 'text-zinc-400', bg: 'bg-zinc-500/10', bar: 'bg-blue-500', label: '→ Stabilny' },
+        stable: { icon: Minus, color: 'text-zinc-400', bg: 'bg-zinc-500/10', bar: 'bg-blue-500', label: '→ Stabilny' },
         new: { icon: Sparkles, color: 'text-violet-400', bg: 'bg-violet-500/10', bar: 'bg-violet-500', label: '✦ Nowy' },
     }[trend];
 

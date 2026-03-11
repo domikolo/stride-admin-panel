@@ -7,6 +7,7 @@ import { Topic } from '@/lib/types';
 interface WeeklyCategoryChartProps {
     topics: Topic[];
     totalQuestions: number;
+    period?: 'daily' | 'weekly' | 'monthly';
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -25,7 +26,13 @@ const CATEGORY_LABELS: Record<string, string> = {
     other: 'Inne',
 };
 
-export default function WeeklyCategoryChart({ topics, totalQuestions }: WeeklyCategoryChartProps) {
+const PERIOD_SUBTITLE: Record<string, string> = {
+    daily:   'Czego dotyczyły rozmowy wczoraj?',
+    weekly:  'Czego dotyczyły rozmowy w tym tygodniu?',
+    monthly: 'Czego dotyczyły rozmowy w tym miesiącu?',
+};
+
+export default function WeeklyCategoryChart({ topics, totalQuestions, period = 'weekly' }: WeeklyCategoryChartProps) {
     // Aggregate data by category
     const categoryCounts: Record<string, number> = {};
 
@@ -48,7 +55,7 @@ export default function WeeklyCategoryChart({ topics, totalQuestions }: WeeklyCa
         <Card className="glass-card">
             <CardHeader>
                 <CardTitle className="text-lg text-white">Kategorie Pytań</CardTitle>
-                <p className="text-sm text-zinc-400">Czego dotyczyły rozmowy w tym tygodniu?</p>
+                <p className="text-sm text-zinc-400">{PERIOD_SUBTITLE[period]}</p>
             </CardHeader>
             <CardContent>
                 <div className="h-[300px] w-full">

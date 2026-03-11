@@ -139,7 +139,7 @@ export interface Gap {
   gapExamples?: string[];
   questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
   gapReason: string;
-  suggestion: string;
+  suggestion?: string;
 }
 
 // Dashboard Hub Types
