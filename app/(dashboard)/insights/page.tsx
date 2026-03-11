@@ -13,7 +13,7 @@ import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
 import { resolveGap } from '@/lib/api';
 import { Timeframe } from '@/lib/api';
-import { Topic, Gap } from '@/lib/types';
+import { Topic, Gap, ResolvedGap } from '@/lib/types';
 import toast from 'react-hot-toast';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
@@ -25,7 +25,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw, Info } from 'lucide-react';
+import { AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw, Info, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
@@ -55,7 +55,9 @@ export default function InsightsPage() {
 
   const [activePeriod, setActivePeriod] = useState<Period>(initialPeriod);
   const [resolvedGaps, setResolvedGaps] = useState<string[]>([]);
+  const [resolvedGapHistory, setResolvedGapHistory] = useState<ResolvedGap[]>([]);
   const [resolvingGaps, setResolvingGaps] = useState<Set<string>>(new Set());
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [refreshedAt, setRefreshedAt] = useState<Record<Period, Date | null>>({
     daily: null, weekly: null, monthly: null,
   });
@@ -72,12 +74,15 @@ export default function InsightsPage() {
   const { data: monthlyRaw, isLoading: monthlyLoading, mutate: mutateMonthly } = useSWR<{ topics: Topic[] }>(
     clientId && activePeriod === 'monthly' ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
   );
-  const { data: resolvedData } = useSWR<{ resolvedGapIds: string[] }>(
+  const { data: resolvedData } = useSWR<{ resolvedGapIds: string[]; resolvedGaps: ResolvedGap[] }>(
     clientId ? `/clients/${clientId}/gaps/resolved` : null, fetcher
   );
 
   useEffect(() => {
-    if (resolvedData) setResolvedGaps(resolvedData.resolvedGapIds || []);
+    if (resolvedData) {
+      setResolvedGaps(resolvedData.resolvedGapIds || []);
+      setResolvedGapHistory(resolvedData.resolvedGaps || []);
+    }
   }, [resolvedData]);
 
   useEffect(() => { if (dailyRaw) setRefreshedAt(prev => ({ ...prev, daily: new Date() })); }, [dailyRaw]);
@@ -449,6 +454,48 @@ export default function InsightsPage() {
           ) : renderPeriodContent(periodData.monthly, 'monthly')}
         </TabsContent>
       </Tabs>
+
+      {/* Historia naprawionych luk */}
+      {resolvedGapHistory.length > 0 && (
+        <div>
+          <button
+            onClick={() => setHistoryOpen(o => !o)}
+            className="flex items-center gap-2 text-sm text-zinc-500 hover:text-zinc-300 transition-colors w-full"
+          >
+            <CheckCircle size={14} className="text-emerald-500/70" />
+            <span>Historia naprawionych luk ({resolvedGapHistory.length})</span>
+            {historyOpen ? <ChevronUp size={14} className="ml-auto" /> : <ChevronDown size={14} className="ml-auto" />}
+          </button>
+
+          {historyOpen && (
+            <Card className="glass-card mt-3 divide-y divide-white/[0.04]">
+              {resolvedGapHistory.map((rg) => {
+                const date = rg.resolvedAt
+                  ? new Date(rg.resolvedAt)
+                  : null;
+                return (
+                  <div key={rg.topicId} className="flex items-center justify-between px-4 py-3 gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <CheckCircle size={14} className="text-emerald-400 shrink-0" />
+                      <span className="text-sm text-zinc-300 truncate">{rg.topicName}</span>
+                    </div>
+                    <div className="text-right shrink-0">
+                      {date && (
+                        <p className="text-xs text-zinc-500">
+                          {date.toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </p>
+                      )}
+                      {rg.resolvedBy && rg.resolvedBy !== 'unknown' && (
+                        <p className="text-[11px] text-zinc-600">{rg.resolvedBy}</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+        </div>
+      )}
     </div>
   );
 }

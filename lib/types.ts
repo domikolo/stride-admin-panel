@@ -131,6 +131,13 @@ export interface Topic {
   rank: number;
 }
 
+export interface ResolvedGap {
+  topicId: string;
+  topicName: string;
+  resolvedAt: string;
+  resolvedBy: string;
+}
+
 export interface Gap {
   topicId: string;
   topicName: string;
