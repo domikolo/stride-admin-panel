@@ -167,7 +167,7 @@ export default function AppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showAdvancedAnalytics, setShowAdvancedAnalytics] = useState(false);
-  const [showAvailability, setShowAvailability] = useState(false);
+  const [mainTab, setMainTab] = useState<'spotkania' | 'statystyki'>('spotkania');
   const [expandedAppointmentId, setExpandedAppointmentId] = useState<string | null>(null);
   const [editingAppointment, setEditingAppointment] = useState<Appointment | null>(null);
   const [editDatetime, setEditDatetime] = useState('');
@@ -346,32 +346,24 @@ export default function AppointmentsPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => mutate()} className="text-zinc-400 hover:text-white gap-2">
-            <RefreshCw size={14} />Odśwież
-          </Button>
-          {/* View Toggle */}
-          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setView('table')}
-            className={view === 'table' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
+        <Button variant="ghost" size="sm" onClick={() => mutate()} className="text-zinc-400 hover:text-white gap-2">
+          <RefreshCw size={14} />Odśwież
+        </Button>
+      </div>
+
+      {/* Sub-tabs */}
+      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
+        {(['spotkania', 'statystyki'] as const).map(tab => (
+          <button
+            key={tab}
+            onClick={() => setMainTab(tab)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${
+              mainTab === tab ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <List size={16} className="mr-2" />
-            Tabela
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setView('calendar')}
-            className={view === 'calendar' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
-          >
-            <Calendar size={16} className="mr-2" />
-            Kalendarz
-          </Button>
-          </div>
-        </div>
+            {tab === 'spotkania' ? 'Spotkania' : 'Statystyki'}
+          </button>
+        ))}
       </div>
 
       {error && (
@@ -380,58 +372,50 @@ export default function AppointmentsPage() {
         </div>
       )}
 
-      {/* Availability Config */}
-      <Card className="glass-card overflow-hidden">
-        <button
-          className={`w-full flex items-center justify-between px-5 py-2.5 text-left transition-colors ${showAvailability ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
-          onClick={() => setShowAvailability(v => !v)}
-        >
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${showAvailability ? 'bg-blue-500/15' : 'bg-white/[0.04]'}`}>
-              <Clock size={15} className={showAvailability ? 'text-blue-400' : 'text-zinc-400'} />
-            </div>
-            <div className="min-w-0">
-              <span className="text-sm font-medium text-white block">Twoja dostępność</span>
-              {availabilityData && !showAvailability && (
-                <span className="text-xs text-zinc-500 truncate block">
-                  {['Nd', 'Pn', 'Wt', 'Śr', 'Cz', 'Pt', 'Sb'].filter((_, i) => availabilityData.days.includes(i)).join(', ')} · {availabilityData.hourFrom}–{availabilityData.hourTo} · {availabilityData.slotDuration} min/slot
-                </span>
-              )}
-            </div>
+      {mainTab === 'spotkania' && (<>
+        {/* Status Filters + View Toggle */}
+        <div className="flex items-center justify-between">
+          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
+            {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
+                  statusFilter === status ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {status === 'all' ? 'Wszystkie' : status === 'verified' ? 'Potwierdzone' : status === 'pending' ? 'Oczekujące' : 'Anulowane'}
+                {status !== 'all' && (
+                  <span className="text-[10px] opacity-60">({appointments.filter(a => a.status === status).length})</span>
+                )}
+              </button>
+            ))}
           </div>
-          <ChevronDown size={14} className={`text-zinc-500 transition-transform flex-shrink-0 ml-3 ${showAvailability ? 'rotate-180' : ''}`} />
-        </button>
-        {showAvailability && clientId && (
-          <div className="px-5 pb-5 border-t border-white/[0.06] pt-5">
-            <AvailabilitySection
-              clientId={clientId}
-              data={availabilityData}
-              onSaved={mutateAvailability}
-            />
+          {/* View Toggle */}
+          <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setView('table')}
+              className={view === 'table' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
+            >
+              <List size={16} className="mr-2" />
+              Tabela
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setView('calendar')}
+              className={view === 'calendar' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
+            >
+              <Calendar size={16} className="mr-2" />
+              Kalendarz
+            </Button>
           </div>
-        )}
-      </Card>
+        </div>
 
-      {/* Status Filters */}
-      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
-        {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(status)}
-            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
-              statusFilter === status ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            {status === 'all' ? 'Wszystkie' : status === 'verified' ? 'Potwierdzone' : status === 'pending' ? 'Oczekujące' : 'Anulowane'}
-            {status !== 'all' && (
-              <span className="text-[10px] opacity-60">({appointments.filter(a => a.status === status).length})</span>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Content */}
-      {view === 'table' ? (
+        {/* Content */}
+        {view === 'table' ? (
         /* Table View */
         <Card className="glass-card">
           {filteredAppointments.length === 0 ? (
@@ -701,7 +685,74 @@ export default function AppointmentsPage() {
         </Card>
       )}
 
-      {/* Analytics Section - Now below appointments table/calendar */}
+        {/* Availability Settings */}
+        {clientId && (
+          <Card className="glass-card p-5">
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center flex-shrink-0">
+                <Clock size={15} className="text-blue-400" />
+              </div>
+              <div>
+                <span className="text-sm font-medium text-white block">Twoja dostępność</span>
+                <span className="text-xs text-zinc-500">Dni i godziny widoczne dla klientów w chatbocie</span>
+              </div>
+            </div>
+            <AvailabilitySection clientId={clientId} data={availabilityData} onSaved={mutateAvailability} />
+          </Card>
+        )}
+      </>)}
+
+      {mainTab === 'statystyki' && stats && (<>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatsCard title="Spotkania" value={stats.appointmentsCreated} icon={Calendar} iconColor="text-purple-400" description="Spotkania umówione w ostatnich 30 dniach" />
+          <StatsCard title="CPA" value={`$${stats.cpaUsd?.toFixed(2) || '0.00'}`} icon={DollarSign} iconColor="text-emerald-400" description="Koszt za spotkanie (ostatnie 30 dni)" />
+          <StatsCard title="Śr. czas konwersji" value={`${stats.avgTimeToConversionMin?.toFixed(1) || 0} min`} icon={Clock} iconColor="text-blue-400" description="Od pierwszej wiadomości do spotkania" />
+          <StatsCard title="Wskaźnik Konwersji" value={`${stats.conversionRate}%`} icon={TrendingUp} iconColor="text-amber-400" description="% rozmów zakończonych spotkaniem" />
+        </div>
+
+        {/* Charts Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <Card className="glass-card p-4">
+            <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart
+                data={[
+                  { name: 'Rozmowy', value: stats.conversationsCount },
+                  { name: 'Spotkania', value: stats.appointmentsCreated },
+                  { name: 'Zweryfikowane', value: stats.appointmentsVerified },
+                ]}
+                layout="vertical"
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
+                <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
+                <Tooltip contentStyle={{ backgroundColor: '#111113', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '8px' }} />
+                <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+          {stats.activityHeatmap && <ActivityHeatmap data={stats.activityHeatmap} />}
+        </div>
+
+        {/* Advanced Analytics Toggle */}
+        <div>
+          <button
+            onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
+            className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors py-2"
+          >
+            <ChevronDown size={16} className={`transition-transform duration-200 ${showAdvancedAnalytics ? 'rotate-180' : ''}`} />
+            Zaawansowana analityka
+          </button>
+          {showAdvancedAnalytics && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
+              {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && <DropOffChart data={stats.dropOffByLength} />}
+              {stats.conversationLengthHistogram && Object.keys(stats.conversationLengthHistogram).length > 0 && <ConversationLengthChart data={stats.conversationLengthHistogram} />}
+            </div>
+          )}
+        </div>
+      </>)}
+
       {/* Edit Appointment Modal */}
       {editingAppointment && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setEditingAppointment(null)}>
@@ -835,101 +886,6 @@ export default function AppointmentsPage() {
         );
       })()}
 
-      {stats && (
-        <>
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mt-8">
-            <StatsCard
-              title="Spotkania"
-              value={stats.appointmentsCreated}
-              icon={Calendar}
-              iconColor="text-purple-400"
-              description="Spotkania umówione w ostatnich 30 dniach"
-            />
-            <StatsCard
-              title="CPA"
-              value={`$${stats.cpaUsd?.toFixed(2) || '0.00'}`}
-              icon={DollarSign}
-              iconColor="text-emerald-400"
-              description="Koszt za spotkanie (ostatnie 30 dni)"
-            />
-            <StatsCard
-              title="Śr. czas konwersji"
-              value={`${stats.avgTimeToConversionMin?.toFixed(1) || 0} min`}
-              icon={Clock}
-              iconColor="text-blue-400"
-              description="Od pierwszej wiadomości do spotkania"
-            />
-            <StatsCard
-              title="Wskaźnik Konwersji"
-              value={`${stats.conversionRate}%`}
-              icon={TrendingUp}
-              iconColor="text-amber-400"
-              description="% rozmów zakończonych spotkaniem"
-            />
-          </div>
-
-          {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            {/* Conversion Funnel */}
-            <Card className="glass-card p-4">
-              <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart
-                  data={[
-                    { name: 'Rozmowy', value: stats.conversationsCount },
-                    { name: 'Spotkania', value: stats.appointmentsCreated },
-                    { name: 'Zweryfikowane', value: stats.appointmentsVerified },
-                  ]}
-                  layout="vertical"
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                  <XAxis type="number" stroke="#71717a" tick={{ fill: '#71717a' }} />
-                  <YAxis type="category" dataKey="name" stroke="#71717a" tick={{ fill: '#a1a1aa' }} width={100} />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: '#111113',
-                      border: '1px solid rgba(255,255,255,0.08)',
-                      borderRadius: '8px',
-                    }}
-                  />
-                  <Bar dataKey="value" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Card>
-
-            {/* Activity Heatmap */}
-            {stats.activityHeatmap && (
-              <ActivityHeatmap data={stats.activityHeatmap} />
-            )}
-          </div>
-
-          {/* Advanced Analytics Toggle */}
-          <div>
-            <button
-              onClick={() => setShowAdvancedAnalytics(!showAdvancedAnalytics)}
-              className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors py-2"
-            >
-              <ChevronDown
-                size={16}
-                className={`transition-transform duration-200 ${showAdvancedAnalytics ? 'rotate-180' : ''}`}
-              />
-              Zaawansowana analityka
-            </button>
-
-            {showAdvancedAnalytics && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
-                {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && (
-                  <DropOffChart data={stats.dropOffByLength} />
-                )}
-                {stats.conversationLengthHistogram && Object.keys(stats.conversationLengthHistogram).length > 0 && (
-                  <ConversationLengthChart data={stats.conversationLengthHistogram} />
-                )}
-              </div>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 }
