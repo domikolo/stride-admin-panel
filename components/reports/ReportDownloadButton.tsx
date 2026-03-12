@@ -25,8 +25,8 @@ export default function ReportDownloadButton({ report, clientId }: Props) {
       Font.register({
         family: 'Roboto',
         fonts: [
-          { src: `${origin}/fonts/Roboto-Regular.ttf`, fontWeight: 400 },
-          { src: `${origin}/fonts/Roboto-Bold.ttf`, fontWeight: 700 },
+          { src: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/files/roboto-latin-400-normal.woff2', fontWeight: 400 },
+          { src: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/files/roboto-latin-700-normal.woff2', fontWeight: 700 },
         ],
       });
 
