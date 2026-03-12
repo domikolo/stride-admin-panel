@@ -223,24 +223,23 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         {/* ── Header: stable layout, bell fades in/out via opacity ── */}
         <div className="flex items-center justify-between px-3 py-[11px] border-b border-white/[0.06] flex-shrink-0">
 
-          {/* Logo button — no overflow-hidden, no width animation.
-              Wordmark overflows naturally; sidebar's own overflow-hidden clips it
-              gradually as sidebar shrinks → no squishing. */}
+          {/* Logo button — wordmark in normal flow gives button its natural width.
+              Icon is absolute overlay. Sidebar overflow-hidden clips naturally. */}
           <button
             onClick={() => { if (isMobile) { close(); router.push('/dashboard'); } else { toggle(); } }}
-            className="relative h-8 w-8 flex-shrink-0 focus:outline-none"
+            className="relative flex items-center h-8 flex-shrink-0 focus:outline-none"
             title={isMobile ? undefined : (isCollapsed ? 'Rozwiń panel' : 'Zwiń panel')}
           >
-            {/* Full wordmark — absolute, overflows the button, sidebar clips it */}
+            {/* Full wordmark — in flow, sets button width */}
             <motion.img
               src="/logo.png"
               alt="Stride"
-              className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-auto pointer-events-none"
+              className="h-6 w-auto pointer-events-none"
               style={logoFilter ? { filter: logoFilter } : undefined}
               animate={{ opacity: isCollapsed ? 0 : 1 }}
               transition={{ duration: 0.2 }}
             />
-            {/* Icon logo — fits within button bounds */}
+            {/* Icon logo — absolute overlay, same anchor */}
             <motion.img
               src={iconLogoSrc}
               alt="Stride"
