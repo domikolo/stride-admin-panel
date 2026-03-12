@@ -347,10 +347,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <Button
                 onClick={() => { close(); signOut(); }}
                 variant="ghost"
-                className={cn(
-                  'text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] h-8 text-[12px] w-full',
-                  isCollapsed ? 'px-0 justify-center' : 'justify-start gap-2.5 px-2'
-                )}
+                className="text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] h-8 text-[12px] w-full justify-start gap-2.5 px-2"
               >
                 <LogOut size={15} />
                 {!isCollapsed && <span className="leading-none">Wyloguj się</span>}
