@@ -331,7 +331,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         <div className="border-t border-white/[0.06] flex-shrink-0 py-2 px-2">
           <div className={cn(
             'h-[38px] flex px-2 min-w-0',
-            isCollapsed ? 'items-center justify-center' : 'flex-col justify-center'
+            isCollapsed ? 'items-center' : 'flex-col justify-center'
           )}>
             {isCollapsed ? (
               <span className="text-zinc-500 text-[13px] leading-none">@</span>
