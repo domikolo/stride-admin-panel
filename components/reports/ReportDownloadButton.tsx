@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { pdf } from '@react-pdf/renderer';
+import { pdf, Font } from '@react-pdf/renderer';
 import ReportPDF from './ReportPDF';
 import { Download, RefreshCw } from 'lucide-react';
 import { Report } from '@/lib/types';
@@ -21,6 +21,14 @@ export default function ReportDownloadButton({ report, clientId }: Props) {
       const origin = window.location.origin;
       const logoUrl = `${origin}/FO51AA85ACF83a1-02.png`;
       const iconUrl = `${origin}/icon-logo-czarne.png`;
+
+      Font.register({
+        family: 'Roboto',
+        fonts: [
+          { src: `${origin}/fonts/Roboto-Regular.ttf`, fontWeight: 400 },
+          { src: `${origin}/fonts/Roboto-Bold.ttf`, fontWeight: 700 },
+        ],
+      });
 
       const blob = await pdf(
         <ReportPDF

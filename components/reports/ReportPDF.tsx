@@ -1,7 +1,9 @@
 'use client';
 
-import { Document, Page, Text, View, Image, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, Image, StyleSheet, Font } from '@react-pdf/renderer';
 import { Report } from '@/lib/types';
+
+// Font is registered externally (ReportDownloadButton) with absolute URLs
 
 interface Props {
   report: Report;
@@ -20,7 +22,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 36,
     paddingTop: 32,
     paddingBottom: 48, // room for footer
-    fontFamily: 'Helvetica',
+    fontFamily: 'Roboto',
     fontSize: 10,
   },
 
@@ -43,7 +45,7 @@ const s = StyleSheet.create({
   titleBlock: { marginBottom: 18 },
   reportTitle: {
     fontSize: 16,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto', fontWeight: 700,
     color: '#111827',
     marginBottom: 5,
   },
@@ -81,7 +83,7 @@ const s = StyleSheet.create({
   },
   boxHeadText: {
     fontSize: 7.5,
-    fontFamily: 'Helvetica-Bold',
+    fontFamily: 'Roboto', fontWeight: 700,
     color: '#374151',
     textTransform: 'uppercase',
     letterSpacing: 0.6,
@@ -108,8 +110,8 @@ const s = StyleSheet.create({
     paddingVertical: 5,
   },
   rowLabel: { fontSize: 9, color: '#6b7280' },
-  rowValue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#111827' },
-  rowValueBlue: { fontSize: 9, fontFamily: 'Helvetica-Bold', color: '#2563eb' },
+  rowValue: { fontSize: 9, fontFamily: 'Roboto', fontWeight: 700, color: '#111827' },
+  rowValueBlue: { fontSize: 9, fontFamily: 'Roboto', fontWeight: 700, color: '#2563eb' },
 
   // ── Footer ────────────────────────────────────────────────────
   footer: {
@@ -189,7 +191,7 @@ export default function ReportPDF({ report, clientId, logoUrl, iconUrl }: Props)
         <View style={s.header}>
           {logoUrl
             ? <Image src={logoUrl} style={s.logoImg} />
-            : <Text style={{ fontSize: 15, fontFamily: 'Helvetica-Bold', color: '#111827' }}>Stride Services</Text>
+            : <Text style={{ fontSize: 15, fontFamily: 'Roboto', fontWeight: 700, color: '#111827' }}>Stride Services</Text>
           }
           <View style={s.headerRight}>
             <Text style={s.headerRightLabel}>Raport chatbota</Text>
