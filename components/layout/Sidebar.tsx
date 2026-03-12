@@ -130,11 +130,13 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
 
 function SectionDivider({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
-    <div className={cn('pt-3 pb-1', collapsed ? 'px-2' : 'px-3')}>
-      {collapsed
-        ? <div className="h-px bg-white/[0.06]" />
-        : <p className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 select-none">{label}</p>
-      }
+    <div className="pt-3 pb-1 px-3">
+      <p
+        className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 select-none transition-opacity duration-200"
+        style={{ opacity: collapsed ? 0 : 1 }}
+      >
+        {label}
+      </p>
     </div>
   );
 }
