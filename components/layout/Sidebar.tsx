@@ -234,7 +234,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             <motion.img
               src="/logo.png"
               alt="Stride"
-              className="h-6 w-auto pointer-events-none"
+              className="h-5 w-auto pointer-events-none"
               style={logoFilter ? { filter: logoFilter } : undefined}
               animate={{ opacity: isCollapsed ? 0 : 1 }}
               transition={{ duration: 0.2 }}
