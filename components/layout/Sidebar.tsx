@@ -1,5 +1,10 @@
 /**
- * Sidebar Navigation — grouped nav, manual collapse toggle, settings pinned to bottom
+ * Sidebar Navigation — collapsible, grouped nav, settings pinned to bottom
+ *
+ * Layout rules:
+ *  - Expanded (224px): header = logo + bell, nav = labels + icons, toggle at bottom of nav
+ *  - Collapsed (56px): header = icon logo only (centered), nav = icons only, toggle at bottom
+ *  - Mobile: fixed slide-in overlay, always expanded, no toggle
  */
 
 'use client';
@@ -62,7 +67,6 @@ const contentGroup = {
   ],
 };
 
-// owner-only
 const ownerGroup = {
   label: 'Platforma',
   items: [
@@ -70,7 +74,6 @@ const ownerGroup = {
   ],
 };
 
-// always at the bottom
 const bottomLinks = [
   { href: '/getting-started', icon: Rocket,   label: 'Pierwsze kroki' },
   { href: '/settings',        icon: Settings, label: 'Ustawienia'     },
@@ -122,19 +125,12 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
           )}
         </Link>
       </TooltipTrigger>
-      {collapsed && (
-        <TooltipContent side="right">{label}</TooltipContent>
-      )}
+      {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
     </Tooltip>
   );
 }
 
-interface SectionProps {
-  label: string;
-  collapsed: boolean;
-}
-
-function SectionDivider({ label, collapsed }: SectionProps) {
+function SectionDivider({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
     <div className={cn('pt-3 pb-1', collapsed ? 'px-2' : 'px-3')}>
       {collapsed
@@ -147,8 +143,6 @@ function SectionDivider({ label, collapsed }: SectionProps) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
-const LOGO_EXPANDED_W = 90; // approximate px width of /logo.png at h-6
-
 export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
@@ -156,12 +150,12 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const logoFilter    = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
-  const iconLogoSrc   = mounted && resolvedTheme === 'light'
+  const logoFilter  = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
+  const iconLogoSrc = mounted && resolvedTheme === 'light'
     ? '/icon-logo-czarne.png'
     : '/icon-logo-biale.png';
 
-  // ── Viewport awareness ──────────────────────────────────────────────────────
+  // ── Viewport ────────────────────────────────────────────────────────────────
   const [autoCollapsed, setAutoCollapsed] = useState(false);
   const [isMobile, setIsMobile]           = useState(false);
 
@@ -176,7 +170,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  // ── Manual toggle with localStorage ────────────────────────────────────────
+  // ── Manual toggle + localStorage ────────────────────────────────────────────
   const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
 
   useEffect(() => {
@@ -192,7 +186,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
     localStorage.setItem('sidebar-collapsed', String(next));
   };
 
-  // Width driven by framer-motion; mobile is always full-width overlay
+  // Width animated by framer-motion; mobile always 256
   const sidebarWidth = isMobile ? 256 : (isCollapsed ? 56 : 224);
 
   const close    = () => onClose?.();
@@ -223,65 +217,48 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         className={cn(
           'bg-card flex flex-col z-50 border-r border-border',
           'h-screen overflow-hidden flex-shrink-0',
-          // Mobile: fixed slide-in overlay; desktop: static in flex row
           'fixed inset-y-0 left-0 transition-transform duration-300 md:static md:transition-none',
           open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        {/* ── Logo + Bell + Toggle ─────────────────────────────── */}
-        <div className="flex items-center gap-2 border-b border-white/[0.06] flex-shrink-0 px-3 py-3">
-
-          {/* Logo area — crossfade between wordmark and icon logo */}
+        {/* ── Header: logo (+ bell when expanded) ─────────────────── */}
+        <div className={cn(
+          'border-b border-white/[0.06] flex-shrink-0',
+          isCollapsed
+            ? 'flex justify-center items-center py-[11px]'
+            : 'flex items-center justify-between px-4 py-3'
+        )}>
+          {/* Logo crossfade — container clips during width animation */}
           <Link
             href="/dashboard"
             onClick={close}
             className="relative h-6 flex-shrink-0 overflow-hidden"
             style={{
-              width: isCollapsed ? '24px' : `${LOGO_EXPANDED_W}px`,
+              width: isCollapsed ? '24px' : '90px',
               transition: 'width 250ms ease-in-out',
             }}
           >
-            {/* Full wordmark */}
             <motion.img
               src="/logo.png"
               alt="Stride"
               className="absolute left-0 top-0 h-6 w-auto pointer-events-none"
               style={logoFilter ? { filter: logoFilter } : undefined}
               animate={{ opacity: isCollapsed ? 0 : 1 }}
-              transition={{ duration: 0.15 }}
+              transition={{ duration: 0.12 }}
             />
-            {/* Icon logo */}
             <motion.img
               src={iconLogoSrc}
               alt="Stride"
               className="absolute left-0 top-0 h-6 w-6 object-contain pointer-events-none"
               animate={{ opacity: isCollapsed ? 1 : 0 }}
-              transition={{ duration: 0.15, delay: isCollapsed ? 0.06 : 0 }}
+              transition={{ duration: 0.12, delay: isCollapsed ? 0.08 : 0 }}
             />
           </Link>
 
-          {/* Bell + collapse toggle */}
-          <div className="ml-auto flex items-center gap-0.5">
+          {/* Bell — only when expanded; on mobile it's in the top bar */}
+          {!isCollapsed && (
             <NotificationBell clientId={user?.clientId || 'stride-services'} />
-
-            {/* Toggle button — desktop only */}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggle}
-                  className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors"
-                >
-                  {isCollapsed
-                    ? <PanelLeft size={14} />
-                    : <PanelLeftClose size={14} />
-                  }
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right">
-                {isCollapsed ? 'Rozwiń panel' : 'Zwiń panel'}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          )}
         </div>
 
         {/* ── Search ──────────────────────────────────────────────── */}
@@ -295,7 +272,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
                   isCollapsed ? 'justify-center px-0' : 'justify-between px-3'
                 )}
               >
-                <div className={cn('flex items-center', isCollapsed ? 'gap-0' : 'gap-2.5')}>
+                <div className={cn('flex items-center', isCollapsed ? '' : 'gap-2.5')}>
                   <Search size={15} className="flex-shrink-0" />
                   {!isCollapsed && <span className="text-zinc-500">Szukaj...</span>}
                 </div>
@@ -352,6 +329,27 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <NavLink key={link.href} {...link} isActive={isActive(link.href)} collapsed={isCollapsed} onClick={close} />
             ))}
           </div>
+
+          {/* ── Collapse toggle — desktop only, always at bottom of nav ── */}
+          <div className={cn('pt-1', isCollapsed ? '' : '')}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggle}
+                  className={cn(
+                    'hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-colors text-[13px]',
+                    isCollapsed && 'justify-center px-0'
+                  )}
+                >
+                  {isCollapsed
+                    ? <PanelLeft size={17} className="flex-shrink-0" />
+                    : <><PanelLeftClose size={17} className="flex-shrink-0" /><span>Zwiń panel</span></>
+                  }
+                </button>
+              </TooltipTrigger>
+              {isCollapsed && <TooltipContent side="right">Rozwiń panel</TooltipContent>}
+            </Tooltip>
+          </div>
         </nav>
 
         {/* ── User section ─────────────────────────────────────────── */}
@@ -372,7 +370,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className={isCollapsed ? '' : 'flex-1'}>
-                  <ThemeToggle />
+                  <ThemeToggle collapsed={isCollapsed} />
                 </div>
               </TooltipTrigger>
               {isCollapsed && <TooltipContent side="right">Zmień motyw</TooltipContent>}
