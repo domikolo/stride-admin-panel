@@ -95,8 +95,7 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
           href={href}
           onClick={onClick}
           className={cn(
-            'flex items-center gap-3 px-3 py-2 rounded-lg transition-colors duration-150 relative group text-[13px]',
-            collapsed && 'justify-center px-0',
+            'flex items-center gap-3 px-2 py-2 rounded-lg transition-colors duration-150 relative group text-[13px]',
             isActive
               ? 'text-white font-medium'
               : 'text-zinc-500 hover:text-zinc-200 hover:bg-white/[0.04]'
@@ -129,7 +128,7 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
 
 function SectionDivider({ label, collapsed }: { label: string; collapsed: boolean }) {
   return (
-    <div className="relative pt-3 pb-1 px-3">
+    <div className="relative pt-3 pb-1 px-2">
       <p
         className="text-[10px] font-semibold uppercase tracking-widest text-zinc-600 select-none transition-opacity duration-200"
         style={{ opacity: collapsed ? 0 : 1 }}
@@ -137,7 +136,7 @@ function SectionDivider({ label, collapsed }: { label: string; collapsed: boolea
         {label}
       </p>
       <div
-        className="absolute left-3 right-3 top-1/2 -translate-y-1/2 h-px bg-white/[0.08] transition-opacity duration-200"
+        className="absolute left-2 right-2 top-1/2 -translate-y-1/2 h-px bg-white/[0.08] transition-opacity duration-200"
         style={{ opacity: collapsed ? 1 : 0 }}
       />
     </div>
@@ -258,17 +257,17 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </div>
 
         {/* ── Search ──────────────────────────────────────────────── */}
-        <div className={cn('flex-shrink-0 pt-3 pb-1', isCollapsed ? 'px-2' : 'px-3')}>
+        <div className="flex-shrink-0 pt-3 pb-1 px-2">
           <Tooltip>
             <TooltipTrigger asChild>
               <button
                 onClick={() => { close(); onSearchOpen?.(); }}
                 className={cn(
-                  'w-full flex items-center py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-all border border-white/[0.06] text-[13px]',
-                  isCollapsed ? 'justify-center px-0' : 'justify-between px-3'
+                  'w-full flex items-center py-2 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-all border border-white/[0.06] text-[13px] px-2',
+                  !isCollapsed && 'justify-between'
                 )}
               >
-                <div className={cn('flex items-center', isCollapsed ? '' : 'gap-2.5')}>
+                <div className="flex items-center gap-2.5">
                   <Search size={15} className="flex-shrink-0" />
                   {!isCollapsed && <span className="text-zinc-500 leading-none">Szukaj...</span>}
                 </div>
@@ -284,7 +283,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </div>
 
         {/* ── Navigation (scrollable) ──────────────────────────────── */}
-        <nav className={cn('flex-1 overflow-y-auto overflow-x-hidden py-2', isCollapsed ? 'px-2' : 'px-3')}>
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-2 px-2">
 
           <div className="space-y-0.5">
             {mainGroup.map(link => (
@@ -329,13 +328,20 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </nav>
 
         {/* ── User section ─────────────────────────────────────────── */}
-        <div className={cn('border-t border-white/[0.06] flex-shrink-0 py-2', isCollapsed ? 'px-2' : 'px-3')}>
-          {!isCollapsed && (
-            <div className="px-2 py-1.5 min-w-0">
-              <p className="font-medium text-white text-[12px] truncate leading-none">{user?.email}</p>
-              <span className="text-[10px] text-zinc-600 capitalize leading-none mt-1 block">{user?.role}</span>
-            </div>
-          )}
+        <div className="border-t border-white/[0.06] flex-shrink-0 py-2 px-2">
+          <div className={cn(
+            'h-[38px] flex px-2 min-w-0',
+            isCollapsed ? 'items-center justify-center' : 'flex-col justify-center'
+          )}>
+            {isCollapsed ? (
+              <span className="text-zinc-500 text-[13px] leading-none">@</span>
+            ) : (
+              <>
+                <p className="font-medium text-white text-[12px] truncate leading-none">{user?.email}</p>
+                <span className="text-[10px] text-zinc-600 capitalize leading-none mt-1 block">{user?.role}</span>
+              </>
+            )}
+          </div>
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
