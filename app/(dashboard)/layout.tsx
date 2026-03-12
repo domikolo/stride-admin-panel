@@ -53,33 +53,33 @@ export default function DashboardLayout({
   const notifClientId = user.clientId || 'stride-services';
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {/* Mobile top bar */}
-        <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-card border-b border-border">
+        <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-4 py-3 bg-card border-b border-border flex-shrink-0">
           <button
             onClick={() => setSidebarOpen(true)}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
-          <img src="/logo.png" alt="Stride" className="h-6 w-auto" style={logoFilter ? { filter: logoFilter } : undefined} />
+          <img src="/logo.png" alt="Stride" className="h-5 w-auto" style={logoFilter ? { filter: logoFilter } : undefined} />
           <div className="ml-auto flex items-center gap-1">
             <button
               onClick={() => setSearchOpen(true)}
               className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
             >
-              <Search size={20} />
+              <Search size={18} />
             </button>
             <NotificationBell clientId={notifClientId} />
           </div>
         </div>
 
         <main className="flex-1 overflow-y-auto bg-background">
-          <div className="p-5 md:p-8 lg:p-10">
-            <div className="max-w-[1440px] mx-auto">
+          <div className="p-4 md:p-5 lg:p-6">
+            <div className="max-w-[1600px] mx-auto">
               <PageTransition>
                 {children}
               </PageTransition>
