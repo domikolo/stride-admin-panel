@@ -329,18 +329,20 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
         {/* ── User section ─────────────────────────────────────────── */}
         <div className="border-t border-white/[0.06] flex-shrink-0 py-2 px-2">
-          <div className={cn(
-            'h-[38px] flex px-2 min-w-0',
-            isCollapsed ? 'items-center' : 'flex-col justify-center'
-          )}>
-            {isCollapsed ? (
-              <span className="text-zinc-500 text-[13px] leading-none">@</span>
-            ) : (
-              <>
-                <p className="font-medium text-white text-[12px] truncate leading-none">{user?.email}</p>
-                <span className="text-[10px] text-zinc-600 capitalize leading-none mt-1 block">{user?.role}</span>
-              </>
-            )}
+          <div className="relative h-[38px] overflow-hidden">
+            <div
+              className="absolute inset-0 px-2 flex flex-col justify-center transition-opacity duration-200"
+              style={{ opacity: isCollapsed ? 0 : 1, pointerEvents: isCollapsed ? 'none' : 'auto' }}
+            >
+              <p className="font-medium text-white text-[12px] truncate leading-none">{user?.email}</p>
+              <span className="text-[10px] text-zinc-600 capitalize leading-none mt-1 block">{user?.role}</span>
+            </div>
+            <div
+              className="absolute inset-0 px-2 flex items-center transition-opacity duration-200"
+              style={{ opacity: isCollapsed ? 1 : 0, pointerEvents: 'none' }}
+            >
+              <span className="text-zinc-500 text-[13px] leading-none w-[17px] text-center inline-block">@</span>
+            </div>
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
