@@ -1,5 +1,5 @@
 /**
- * Sidebar Navigation — grouped nav, settings pinned to bottom, collapsed icon mode on md
+ * Sidebar Navigation — grouped nav, manual collapse toggle, settings pinned to bottom
  */
 
 'use client';
@@ -24,6 +24,8 @@ import {
   Settings,
   Rocket,
   Building2,
+  PanelLeft,
+  PanelLeftClose,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -60,7 +62,7 @@ const contentGroup = {
   ],
 };
 
-// owner-only, shown after contentGroup
+// owner-only
 const ownerGroup = {
   label: 'Platforma',
   items: [
@@ -68,7 +70,7 @@ const ownerGroup = {
   ],
 };
 
-// always at the bottom of the nav (before user section)
+// always at the bottom
 const bottomLinks = [
   { href: '/getting-started', icon: Rocket,   label: 'Pierwsze kroki' },
   { href: '/settings',        icon: Settings, label: 'Ustawienia'     },
@@ -115,7 +117,6 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
             )}
           />
           {!collapsed && <span className="relative truncate">{label}</span>}
-          {/* Active dot in collapsed mode */}
           {isActive && collapsed && (
             <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
           )}
@@ -146,24 +147,55 @@ function SectionDivider({ label, collapsed }: SectionProps) {
 
 // ─── Main component ──────────────────────────────────────────────────────────
 
+const LOGO_EXPANDED_W = 90; // approximate px width of /logo.png at h-6
+
 export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  const logoFilter = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
 
-  // md = collapsed icon-only, lg = full width
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const logoFilter    = mounted && resolvedTheme === 'light' ? 'brightness(0)' : undefined;
+  const iconLogoSrc   = mounted && resolvedTheme === 'light'
+    ? '/icon-logo-czarne.png'
+    : '/icon-logo-biale.png';
+
+  // ── Viewport awareness ──────────────────────────────────────────────────────
+  const [autoCollapsed, setAutoCollapsed] = useState(false);
+  const [isMobile, setIsMobile]           = useState(false);
+
   useEffect(() => {
-    const check = () => setIsCollapsed(window.innerWidth >= 768 && window.innerWidth < 1024);
+    const check = () => {
+      const w = window.innerWidth;
+      setAutoCollapsed(w >= 768 && w < 1024);
+      setIsMobile(w < 768);
+    };
     check();
     window.addEventListener('resize', check);
     return () => window.removeEventListener('resize', check);
   }, []);
 
-  const close = () => onClose?.();
+  // ── Manual toggle with localStorage ────────────────────────────────────────
+  const [userCollapsed, setUserCollapsed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('sidebar-collapsed');
+    if (stored !== null) setUserCollapsed(stored === 'true');
+  }, []);
+
+  const isCollapsed = userCollapsed !== null ? userCollapsed : autoCollapsed;
+
+  const toggle = () => {
+    const next = !isCollapsed;
+    setUserCollapsed(next);
+    localStorage.setItem('sidebar-collapsed', String(next));
+  };
+
+  // Width driven by framer-motion; mobile is always full-width overlay
+  const sidebarWidth = isMobile ? 256 : (isCollapsed ? 56 : 224);
+
+  const close    = () => onClose?.();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   const getInitials = (email?: string) => {
@@ -185,34 +217,71 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         />
       )}
 
-      <aside
+      <motion.aside
+        animate={{ width: sidebarWidth }}
+        transition={{ duration: 0.25, ease: 'easeInOut' }}
         className={cn(
           'bg-card flex flex-col z-50 border-r border-border',
-          'h-screen overflow-hidden',
-          // Width
-          'w-64 md:w-14 lg:w-56',
-          // Mobile: fixed slide-in
-          'fixed inset-y-0 left-0 transition-transform duration-300 md:transition-none',
-          open ? 'translate-x-0' : '-translate-x-full',
-          'md:translate-x-0 md:static',
+          'h-screen overflow-hidden flex-shrink-0',
+          // Mobile: fixed slide-in overlay; desktop: static in flex row
+          'fixed inset-y-0 left-0 transition-transform duration-300 md:static md:transition-none',
+          open ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
         )}
       >
-        {/* ── Logo + Bell ─────────────────────────────────────────── */}
-        <div className={cn(
-          'flex items-center border-b border-white/[0.06] flex-shrink-0',
-          isCollapsed ? 'justify-center px-2 py-3' : 'justify-between px-4 py-3'
-        )}>
-          {!isCollapsed && (
-            <Link href="/dashboard" onClick={close} className="flex items-center min-w-0">
-              <img
-                src="/logo.png"
-                alt="Stride"
-                className="h-6 w-auto flex-shrink-0"
-                style={logoFilter ? { filter: logoFilter } : undefined}
-              />
-            </Link>
-          )}
-          <NotificationBell clientId={user?.clientId || 'stride-services'} />
+        {/* ── Logo + Bell + Toggle ─────────────────────────────── */}
+        <div className="flex items-center gap-2 border-b border-white/[0.06] flex-shrink-0 px-3 py-3">
+
+          {/* Logo area — crossfade between wordmark and icon logo */}
+          <Link
+            href="/dashboard"
+            onClick={close}
+            className="relative h-6 flex-shrink-0 overflow-hidden"
+            style={{
+              width: isCollapsed ? '24px' : `${LOGO_EXPANDED_W}px`,
+              transition: 'width 250ms ease-in-out',
+            }}
+          >
+            {/* Full wordmark */}
+            <motion.img
+              src="/logo.png"
+              alt="Stride"
+              className="absolute left-0 top-0 h-6 w-auto pointer-events-none"
+              style={logoFilter ? { filter: logoFilter } : undefined}
+              animate={{ opacity: isCollapsed ? 0 : 1 }}
+              transition={{ duration: 0.15 }}
+            />
+            {/* Icon logo */}
+            <motion.img
+              src={iconLogoSrc}
+              alt="Stride"
+              className="absolute left-0 top-0 h-6 w-6 object-contain pointer-events-none"
+              animate={{ opacity: isCollapsed ? 1 : 0 }}
+              transition={{ duration: 0.15, delay: isCollapsed ? 0.06 : 0 }}
+            />
+          </Link>
+
+          {/* Bell + collapse toggle */}
+          <div className="ml-auto flex items-center gap-0.5">
+            <NotificationBell clientId={user?.clientId || 'stride-services'} />
+
+            {/* Toggle button — desktop only */}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={toggle}
+                  className="hidden md:flex items-center justify-center p-1.5 rounded-lg text-zinc-500 hover:text-zinc-300 hover:bg-white/[0.04] transition-colors"
+                >
+                  {isCollapsed
+                    ? <PanelLeft size={14} />
+                    : <PanelLeftClose size={14} />
+                  }
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isCollapsed ? 'Rozwiń panel' : 'Zwiń panel'}
+              </TooltipContent>
+            </Tooltip>
+          </div>
         </div>
 
         {/* ── Search ──────────────────────────────────────────────── */}
@@ -244,14 +313,12 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         {/* ── Navigation (scrollable) ──────────────────────────────── */}
         <nav className={cn('flex-1 overflow-y-auto py-2', isCollapsed ? 'px-2' : 'px-3')}>
 
-          {/* Main group — no label */}
           <div className="space-y-0.5">
             {mainGroup.map(link => (
               <NavLink key={link.href} {...link} isActive={isActive(link.href)} collapsed={isCollapsed} onClick={close} />
             ))}
           </div>
 
-          {/* Client management group */}
           <SectionDivider label={clientGroup.label} collapsed={isCollapsed} />
           <div className="space-y-0.5">
             {clientGroup.items.map(link => (
@@ -259,7 +326,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             ))}
           </div>
 
-          {/* Content/analytics group */}
           <SectionDivider label={contentGroup.label} collapsed={isCollapsed} />
           <div className="space-y-0.5">
             {contentGroup.items.map(link => (
@@ -267,7 +333,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             ))}
           </div>
 
-          {/* Owner: platform group */}
           {isOwner && (
             <>
               <SectionDivider label={ownerGroup.label} collapsed={isCollapsed} />
@@ -279,10 +344,8 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             </>
           )}
 
-          {/* Spacer */}
           <div className="flex-1" />
 
-          {/* Bottom links: Getting Started + Settings */}
           <SectionDivider label="Konfiguracja" collapsed={isCollapsed} />
           <div className="space-y-0.5">
             {bottomLinks.map(link => (
@@ -293,7 +356,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
         {/* ── User section ─────────────────────────────────────────── */}
         <div className={cn('border-t border-white/[0.06] flex-shrink-0 py-2', isCollapsed ? 'px-2' : 'px-3')}>
-          {/* Avatar row */}
           <div className={cn('flex items-center gap-3 px-2 py-2 rounded-lg', isCollapsed && 'justify-center px-0')}>
             <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-white/[0.08] flex items-center justify-center flex-shrink-0">
               <span className="text-[10px] font-semibold text-blue-400">{getInitials(user?.email)}</span>
@@ -306,7 +368,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             )}
           </div>
 
-          {/* Theme + Logout row */}
           <div className={cn('flex mt-1', isCollapsed ? 'flex-col gap-0.5 items-center' : 'items-center gap-1')}>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -334,7 +395,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             </Tooltip>
           </div>
         </div>
-      </aside>
+      </motion.aside>
     </>
   );
 }
