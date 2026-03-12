@@ -10,7 +10,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -29,8 +29,6 @@ import {
   Settings,
   Rocket,
   Building2,
-  PanelLeft,
-  PanelLeftClose,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -145,6 +143,7 @@ function SectionDivider({ label, collapsed }: { label: string; collapsed: boolea
 
 export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const pathname = usePathname();
+  const router   = useRouter();
   const { user, signOut } = useAuth();
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
@@ -228,15 +227,15 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             ? 'flex justify-center items-center py-[11px]'
             : 'flex items-center justify-between px-4 py-3'
         )}>
-          {/* Logo crossfade — container clips during width animation */}
-          <Link
-            href="/dashboard"
-            onClick={close}
-            className="relative h-6 flex-shrink-0 overflow-hidden"
+          {/* Logo — click toggles collapse on desktop, navigates on mobile */}
+          <button
+            onClick={() => { if (isMobile) { close(); router.push('/dashboard'); } else { toggle(); } }}
+            className="relative h-6 flex-shrink-0 overflow-hidden focus:outline-none"
             style={{
               width: isCollapsed ? '24px' : '90px',
               transition: 'width 250ms ease-in-out',
             }}
+            title={isMobile ? undefined : (isCollapsed ? 'Rozwiń panel' : 'Zwiń panel')}
           >
             <motion.img
               src="/logo.png"
@@ -253,7 +252,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               animate={{ opacity: isCollapsed ? 1 : 0 }}
               transition={{ duration: 0.12, delay: isCollapsed ? 0.08 : 0 }}
             />
-          </Link>
+          </button>
 
           {/* Bell — only when expanded; on mobile it's in the top bar */}
           {!isCollapsed && (
@@ -330,26 +329,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             ))}
           </div>
 
-          {/* ── Collapse toggle — desktop only, always at bottom of nav ── */}
-          <div className={cn('pt-1', isCollapsed ? '' : '')}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={toggle}
-                  className={cn(
-                    'hidden md:flex w-full items-center gap-3 px-3 py-2 rounded-lg text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] transition-colors text-[13px]',
-                    isCollapsed && 'justify-center px-0'
-                  )}
-                >
-                  {isCollapsed
-                    ? <PanelLeft size={17} className="flex-shrink-0" />
-                    : <><PanelLeftClose size={17} className="flex-shrink-0" /><span>Zwiń panel</span></>
-                  }
-                </button>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Rozwiń panel</TooltipContent>}
-            </Tooltip>
-          </div>
         </nav>
 
         {/* ── User section ─────────────────────────────────────────── */}
