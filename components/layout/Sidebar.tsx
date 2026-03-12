@@ -32,7 +32,6 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import NotificationBell from '@/components/layout/NotificationBell';
 
 interface SidebarProps {
@@ -197,13 +196,6 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const close    = () => onClose?.();
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
-  const getInitials = (email?: string) => {
-    if (!email) return '?';
-    const parts = email.split('@')[0].split(/[._-]/);
-    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
-    return email[0].toUpperCase();
-  };
-
   const isOwner = user?.role === 'owner';
 
   return (
@@ -292,7 +284,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         </div>
 
         {/* ── Navigation (scrollable) ──────────────────────────────── */}
-        <nav className={cn('flex-1 overflow-y-auto py-2', isCollapsed ? 'px-2' : 'px-3')}>
+        <nav className={cn('flex-1 overflow-y-auto overflow-x-hidden py-2', isCollapsed ? 'px-2' : 'px-3')}>
 
           <div className="space-y-0.5">
             {mainGroup.map(link => (
@@ -338,44 +330,28 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
         {/* ── User section ─────────────────────────────────────────── */}
         <div className={cn('border-t border-white/[0.06] flex-shrink-0 py-2', isCollapsed ? 'px-2' : 'px-3')}>
-          <div className={cn('flex items-center gap-3 px-2 py-2 rounded-lg', isCollapsed && 'justify-center px-0')}>
-            <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500/20 to-blue-600/10 border border-white/[0.08] flex items-center justify-center flex-shrink-0">
-              <span className="text-[10px] font-semibold text-blue-400">{getInitials(user?.email)}</span>
+          {!isCollapsed && (
+            <div className="px-2 py-1.5 min-w-0">
+              <p className="font-medium text-white text-[12px] truncate leading-none">{user?.email}</p>
+              <span className="text-[10px] text-zinc-600 capitalize leading-none mt-1 block">{user?.role}</span>
             </div>
-            {!isCollapsed && (
-              <div className="min-w-0">
-                <p className="font-medium text-white text-[12px] truncate leading-tight">{user?.email}</p>
-                <span className="text-[10px] text-zinc-600 capitalize">{user?.role}</span>
-              </div>
-            )}
-          </div>
-
-          <div className={cn('flex mt-1', isCollapsed ? 'flex-col gap-0.5 items-center' : 'items-center gap-1')}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className={isCollapsed ? '' : 'flex-1'}>
-                  <ThemeToggle collapsed={isCollapsed} />
-                </div>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Zmień motyw</TooltipContent>}
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  onClick={() => { close(); signOut(); }}
-                  variant="ghost"
-                  className={cn(
-                    'text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] h-8 text-[12px]',
-                    isCollapsed ? 'w-8 px-0 justify-center' : 'flex-1 justify-start gap-2.5 px-2'
-                  )}
-                >
-                  <LogOut size={15} />
-                  {!isCollapsed && <span>Wyloguj się</span>}
-                </Button>
-              </TooltipTrigger>
-              {isCollapsed && <TooltipContent side="right">Wyloguj się</TooltipContent>}
-            </Tooltip>
-          </div>
+          )}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => { close(); signOut(); }}
+                variant="ghost"
+                className={cn(
+                  'text-zinc-600 hover:text-zinc-400 hover:bg-white/[0.04] h-8 text-[12px] w-full',
+                  isCollapsed ? 'px-0 justify-center' : 'justify-start gap-2.5 px-2'
+                )}
+              >
+                <LogOut size={15} />
+                {!isCollapsed && <span className="leading-none">Wyloguj się</span>}
+              </Button>
+            </TooltipTrigger>
+            {isCollapsed && <TooltipContent side="right">Wyloguj się</TooltipContent>}
+          </Tooltip>
         </div>
       </motion.aside>
     </>
