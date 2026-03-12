@@ -117,7 +117,7 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
               isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'
             )}
           />
-          {!collapsed && <span className="relative truncate">{label}</span>}
+          {!collapsed && <span className="relative truncate leading-none">{label}</span>}
           {isActive && collapsed && (
             <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
           )}
@@ -278,10 +278,10 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               >
                 <div className={cn('flex items-center', isCollapsed ? '' : 'gap-2.5')}>
                   <Search size={15} className="flex-shrink-0" />
-                  {!isCollapsed && <span className="text-zinc-500">Szukaj...</span>}
+                  {!isCollapsed && <span className="text-zinc-500 leading-none">Szukaj...</span>}
                 </div>
                 {!isCollapsed && (
-                  <kbd className="text-[10px] bg-white/[0.04] text-zinc-600 px-1.5 py-0.5 rounded border border-white/[0.06] font-mono">
+                  <kbd className="text-[10px] bg-white/[0.04] text-zinc-600 px-1.5 py-0.5 rounded border border-white/[0.06] font-mono leading-none">
                     ⌘K
                   </kbd>
                 )}
