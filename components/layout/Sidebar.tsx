@@ -223,26 +223,28 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
         {/* ── Header: stable layout, bell fades in/out via opacity ── */}
         <div className="flex items-center justify-between px-3 py-[11px] border-b border-white/[0.06] flex-shrink-0">
 
-          {/* Logo button — overflow-hidden clips the wordmark as sidebar shrinks.
-              Container width snaps instantly (no CSS transition); only images fade. */}
+          {/* Logo button — no overflow-hidden, no width animation.
+              Wordmark overflows naturally; sidebar's own overflow-hidden clips it
+              gradually as sidebar shrinks → no squishing. */}
           <button
             onClick={() => { if (isMobile) { close(); router.push('/dashboard'); } else { toggle(); } }}
-            className="relative h-6 overflow-hidden flex-shrink-0 focus:outline-none"
-            style={{ width: isCollapsed ? '24px' : '88px' }}
+            className="relative h-8 w-8 flex-shrink-0 focus:outline-none"
             title={isMobile ? undefined : (isCollapsed ? 'Rozwiń panel' : 'Zwiń panel')}
           >
+            {/* Full wordmark — absolute, overflows the button, sidebar clips it */}
             <motion.img
               src="/logo.png"
               alt="Stride"
-              className="absolute left-0 top-0 h-6 w-auto pointer-events-none"
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-auto pointer-events-none"
               style={logoFilter ? { filter: logoFilter } : undefined}
               animate={{ opacity: isCollapsed ? 0 : 1 }}
               transition={{ duration: 0.2 }}
             />
+            {/* Icon logo — fits within button bounds */}
             <motion.img
               src={iconLogoSrc}
               alt="Stride"
-              className="absolute left-0 top-0 h-6 w-6 object-contain pointer-events-none"
+              className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-8 object-contain pointer-events-none"
               animate={{ opacity: isCollapsed ? 1 : 0 }}
               transition={{ duration: 0.2, delay: isCollapsed ? 0.1 : 0 }}
             />
