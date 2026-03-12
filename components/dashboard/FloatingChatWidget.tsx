@@ -403,7 +403,7 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
           background: 'var(--card)',
           border: '1px solid var(--border)',
           borderRadius: '20px',
-          boxShadow: '0 4px 24px rgba(0,0,0,0.28), 0 1px 6px rgba(0,0,0,0.15)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.22), 0 1px 3px rgba(0,0,0,0.12)',
           fontSize: 0,
           zIndex: 2003,
           cursor: 'pointer',
