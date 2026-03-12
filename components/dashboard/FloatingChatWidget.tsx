@@ -402,7 +402,6 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
           height: 'var(--floating-chat-btn-height)',
           background: 'var(--card)',
           border: '1px solid var(--border)',
-          borderLeft: '2px solid rgba(59,130,246,0.5)',
           borderRadius: '20px',
           boxShadow: '0 4px 24px rgba(0,0,0,0.28), 0 1px 6px rgba(0,0,0,0.15)',
           fontSize: 0,
