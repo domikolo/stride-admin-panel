@@ -253,8 +253,8 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
     const widget = document.getElementById('chat-widget-floating');
     if (!widget) return;
 
-    widget.style.setProperty('height', '115px', 'important');
-    widget.style.setProperty('width', '35px', 'important');
+    widget.style.setProperty('height', '92px', 'important');
+    widget.style.setProperty('width', '28px', 'important');
     widget.style.setProperty('transform', 'translateY(-50%) translateX(40px)', 'important');
     widget.style.setProperty('transition', 'none', 'important');
     widget.style.setProperty('z-index', '2002', 'important');
@@ -328,7 +328,7 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
     if (closeBtn) closeBtn.style.opacity = '0';
 
     widget.style.setProperty('transition', 'height 0.5s cubic-bezier(0.77,0,0.18,1), box-shadow 0.4s ease-out', 'important');
-    widget.style.setProperty('height', '115px', 'important');
+    widget.style.setProperty('height', '92px', 'important');
     widget.style.setProperty('box-shadow', 'none', 'important');
 
     scheduleTimer(() => {
@@ -338,7 +338,7 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
 
     scheduleTimer(() => {
       widget.style.setProperty('transition', 'width 0.5s cubic-bezier(0.77,0,0.18,1), transform 0.5s cubic-bezier(0.77,0,0.18,1)', 'important');
-      widget.style.setProperty('width', '35px', 'important');
+      widget.style.setProperty('width', '28px', 'important');
     }, 500);
 
     scheduleTimer(() => {
@@ -402,8 +402,9 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
           height: 'var(--floating-chat-btn-height)',
           background: 'var(--card)',
           border: '1px solid var(--border)',
+          borderLeft: '2px solid rgba(59,130,246,0.5)',
           borderRadius: '20px',
-          boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.28), 0 1px 6px rgba(0,0,0,0.15)',
           fontSize: 0,
           zIndex: 2003,
           cursor: 'pointer',
@@ -411,16 +412,16 @@ function FloatingChatWidget({ clientId }: FloatingChatWidgetProps) {
           transition: 'transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease-out',
         }}
       >
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center opacity-40 group-hover:opacity-100 transition-opacity duration-200">
           <div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 rounded-[11px] bg-black/[0.05] dark:bg-white/[0.08]"
-            style={{ width: '23px', height: '62px' }}
+            style={{ width: '18px', height: '50px' }}
           />
           {[...Array(3)].map((_, i) => (
             <span
               key={i}
-              className="block rounded-full z-10 bg-zinc-500 dark:bg-white/60"
-              style={{ width: '11px', height: '11px', margin: '3.5px 0' }}
+              className="block rounded-full z-10 bg-zinc-500 dark:bg-white/70"
+              style={{ width: '9px', height: '9px', margin: '3px 0' }}
             />
           ))}
         </div>

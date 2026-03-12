@@ -49,11 +49,11 @@
 :root {
   /* FloatingChat */
   --floating-chat-right: 20px;
-  --floating-chat-btn-width: 35px;
-  --floating-chat-btn-height: 115px;
-  --floating-chat-widget-width: 420px;
-  --floating-chat-widget-height: 560px;
-  --floating-chat-widget-right: calc(20px + 35px + 5px);
+  --floating-chat-btn-width: 28px;
+  --floating-chat-btn-height: 92px;
+  --floating-chat-widget-width: 336px;
+  --floating-chat-widget-height: 448px;
+  --floating-chat-widget-right: calc(20px + 28px + 5px);
 
   --radius: 0.625rem;
   /* Page bg: subtle warm grey — cards (white) visually pop off it */
@@ -147,9 +147,9 @@
 @media (min-width: 1280px) {
   :root {
     --floating-chat-right: 30px;
-    --floating-chat-widget-width: 450px;
-    --floating-chat-widget-height: 620px;
-    --floating-chat-widget-right: calc(30px + 35px + 5px);
+    --floating-chat-widget-width: 360px;
+    --floating-chat-widget-height: 496px;
+    --floating-chat-widget-right: calc(30px + 28px + 5px);
   }
 }
 
