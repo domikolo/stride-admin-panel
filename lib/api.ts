@@ -685,3 +685,6 @@ export const generateReport = (
     ...(periodStart && { period_start: periodStart }),
     ...(periodEnd && { period_end: periodEnd }),
   });
+
+export const deleteReport = (clientId: string, reportId: string) =>
+  api.delete<{ deleted: boolean }>(`/clients/${clientId}/reports/${reportId}`);

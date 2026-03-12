@@ -12,7 +12,7 @@ import dynamic from 'next/dynamic';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
-import { resolveGap, generateReport } from '@/lib/api';
+import { resolveGap, generateReport, deleteReport } from '@/lib/api';
 import { Timeframe } from '@/lib/api';
 import { Topic, Gap, ResolvedGap, Report } from '@/lib/types';
 import toast from 'react-hot-toast';
@@ -29,7 +29,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   AlertTriangle, MessageSquare, TrendingUp, DollarSign, RefreshCw,
   Info, CheckCircle, ChevronDown, ChevronUp, FileText,
-  Sparkles, Calendar, Users, Phone, Mail,
+  Calendar, Users, Phone, Mail, Trash2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatDistanceToNow } from 'date-fns';
@@ -83,11 +83,11 @@ function StatRow({ label, value }: { label: string; value: string | number }) {
 
 function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
-  const [generating, setGenerating] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
   const [customGenerating, setCustomGenerating] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'weekly' | 'monthly' | 'custom'>('all');
 
   const {
     data,
@@ -107,17 +107,14 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
     });
   };
 
-  const handleGenerate = async (reportType: 'weekly' | 'monthly') => {
-    if (!clientId) return;
-    setGenerating(true);
+  const handleDelete = async (reportId: string) => {
+    if (!clientId || !confirm('Usunąć ten raport?')) return;
     try {
-      await generateReport(clientId, reportType);
+      await deleteReport(clientId, reportId);
       await mutate();
-      toast.success(`Raport ${reportType === 'weekly' ? 'tygodniowy' : 'miesięczny'} wygenerowany`);
+      toast.success('Raport usunięty');
     } catch {
-      toast.error('Nie udało się wygenerować raportu');
-    } finally {
-      setGenerating(false);
+      toast.error('Nie udało się usunąć raportu');
     }
   };
 
@@ -146,45 +143,52 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
     );
   }
 
-  const reports = data?.reports ?? [];
+  const allReports = data?.reports ?? [];
+  const reports = filterType === 'all' ? allReports : allReports.filter(r => r.reportType === filterType);
+
+  const filterLabels: Record<typeof filterType, string> = {
+    all: 'Wszystkie',
+    weekly: 'Tygodniowe',
+    monthly: 'Miesięczne',
+    custom: 'Niestandardowe',
+  };
 
   return (
     <div className="space-y-4">
       {/* Header row */}
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="text-sm font-medium text-zinc-300">Archiwum raportów</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        {/* Filter pills */}
+        <div className="flex items-center gap-1.5">
+          {(['all', 'weekly', 'monthly', 'custom'] as const).map(type => (
+            <button
+              key={type}
+              onClick={() => setFilterType(type)}
+              className={`px-3 py-1 rounded-full text-xs transition-colors ${
+                filterType === type
+                  ? 'bg-white/[0.1] text-white border border-white/[0.15]'
+                  : 'text-zinc-500 hover:text-zinc-300 border border-transparent'
+              }`}
+            >
+              {filterLabels[type]}
+              {type !== 'all' && allReports.filter(r => r.reportType === type).length > 0 && (
+                <span className="ml-1.5 text-zinc-600">
+                  {allReports.filter(r => r.reportType === type).length}
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+        {/* Custom range button (owner only) */}
         {isOwner && (
-          <div className="flex items-center gap-2 flex-wrap justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={generating}
-              onClick={() => handleGenerate('weekly')}
-              className="gap-1.5 text-xs border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
-            >
-              <Calendar size={13} />
-              Tygodniowy
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={generating}
-              onClick={() => handleGenerate('monthly')}
-              className="gap-1.5 text-xs border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
-            >
-              <Sparkles size={13} />
-              Miesięczny
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCustomOpen(o => !o)}
-              className={`gap-1.5 text-xs border-white/[0.08] hover:bg-white/[0.06] text-zinc-300 ${customOpen ? 'bg-white/[0.08]' : 'bg-white/[0.03]'}`}
-            >
-              <Calendar size={13} />
-              Własny zakres
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCustomOpen(o => !o)}
+            className={`gap-1.5 text-xs border-white/[0.08] hover:bg-white/[0.06] text-zinc-300 ${customOpen ? 'bg-white/[0.08]' : 'bg-white/[0.03]'}`}
+          >
+            <Calendar size={13} />
+            Własny zakres
+          </Button>
         )}
       </div>
 
@@ -221,32 +225,20 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
         <Card className="glass-card p-10 text-center space-y-3">
           <FileText size={32} className="mx-auto text-zinc-600" />
           <p className="text-zinc-400 text-sm">
-            Brak raportów. Raporty tygodniowe i miesięczne generowane są automatycznie.
-            Możesz też wygenerować raport ręcznie.
+            {filterType === 'all'
+              ? 'Brak raportów. Raporty tygodniowe i miesięczne generowane są automatycznie co poniedziałek i 1. dnia miesiąca.'
+              : `Brak raportów typu „${filterLabels[filterType]}".`}
           </p>
-          {isOwner && (
-            <div className="flex items-center gap-2 justify-center flex-wrap">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={generating}
-                onClick={() => handleGenerate('weekly')}
-                className="gap-2 border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
-              >
-                <Calendar size={14} />
-                Tygodniowy
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={generating}
-                onClick={() => handleGenerate('monthly')}
-                className="gap-2 border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
-              >
-                <Sparkles size={14} />
-                Miesięczny
-              </Button>
-            </div>
+          {filterType === 'all' && isOwner && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setCustomOpen(true)}
+              className="gap-2 border-white/[0.08] bg-white/[0.03] hover:bg-white/[0.06] text-zinc-300"
+            >
+              <Calendar size={14} />
+              Wygeneruj raport za własny zakres dat
+            </Button>
           )}
         </Card>
       ) : (
@@ -301,10 +293,19 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
                       {isOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                     </div>
                   </button>
-                  {/* PDF download — separate from expand click */}
+                  {/* PDF download + delete — separate from expand click */}
                   {clientId && (
-                    <div className="shrink-0 mt-1" onClick={e => e.stopPropagation()}>
+                    <div className="shrink-0 mt-1 flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
                       <ReportDownloadButton report={report} clientId={clientId} />
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDelete(report.reportId)}
+                          className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
+                          title="Usuń raport"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
