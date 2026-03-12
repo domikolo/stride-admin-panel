@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { pdf, Font } from '@react-pdf/renderer';
 import ReportPDF from './ReportPDF';
+import { ROBOTO_REGULAR, ROBOTO_BOLD } from '@/lib/pdfFonts';
 import { Download, RefreshCw } from 'lucide-react';
 import { Report } from '@/lib/types';
 
@@ -25,8 +26,8 @@ export default function ReportDownloadButton({ report, clientId }: Props) {
       Font.register({
         family: 'Roboto',
         fonts: [
-          { src: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/files/roboto-latin-400-normal.woff2', fontWeight: 400 },
-          { src: 'https://cdn.jsdelivr.net/npm/@fontsource/roboto@5/files/roboto-latin-700-normal.woff2', fontWeight: 700 },
+          { src: ROBOTO_REGULAR, fontWeight: 400 },
+          { src: ROBOTO_BOLD, fontWeight: 700 },
         ],
       });
 
