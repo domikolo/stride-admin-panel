@@ -227,30 +227,30 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
             ? 'flex justify-center items-center py-[11px]'
             : 'flex items-center justify-between px-4 py-3'
         )}>
-          {/* Logo — click toggles collapse on desktop, navigates on mobile */}
+          {/* Logo — click toggles collapse on desktop, navigates on mobile.
+              Width snaps instantly (no CSS transition); only opacity animates. */}
           <button
             onClick={() => { if (isMobile) { close(); router.push('/dashboard'); } else { toggle(); } }}
-            className="relative h-6 flex-shrink-0 overflow-hidden focus:outline-none"
-            style={{
-              width: isCollapsed ? '24px' : '90px',
-              transition: 'width 250ms ease-in-out',
-            }}
+            className="relative h-6 flex-shrink-0 focus:outline-none"
+            style={{ width: isCollapsed ? '24px' : '90px' }}
             title={isMobile ? undefined : (isCollapsed ? 'Rozwiń panel' : 'Zwiń panel')}
           >
+            {/* Full wordmark */}
             <motion.img
               src="/logo.png"
               alt="Stride"
               className="absolute left-0 top-0 h-6 w-auto pointer-events-none"
               style={logoFilter ? { filter: logoFilter } : undefined}
               animate={{ opacity: isCollapsed ? 0 : 1 }}
-              transition={{ duration: 0.12 }}
+              transition={{ duration: 0.18 }}
             />
+            {/* Icon logo */}
             <motion.img
               src={iconLogoSrc}
               alt="Stride"
-              className="absolute left-0 top-0 h-6 w-6 object-contain pointer-events-none"
+              className="absolute left-0 top-0 h-6 w-auto pointer-events-none"
               animate={{ opacity: isCollapsed ? 1 : 0 }}
-              transition={{ duration: 0.12, delay: isCollapsed ? 0.08 : 0 }}
+              transition={{ duration: 0.18, delay: isCollapsed ? 0.1 : 0 }}
             />
           </button>
 
