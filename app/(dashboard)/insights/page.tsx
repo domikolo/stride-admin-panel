@@ -254,7 +254,7 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
                 className="glass-card overflow-hidden"
               >
                 {/* Card header — always visible */}
-                <div className="px-5 py-4 flex items-start gap-4">
+                <div className="px-5 py-2.5 flex items-start gap-4">
                   <button
                     className="flex items-start gap-4 flex-1 text-left hover:opacity-80 transition-opacity"
                     onClick={() => toggleExpand(report.reportId)}
@@ -542,7 +542,7 @@ export default function InsightsPage() {
     const period = periodKey as Period;
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         {isDaily && data.topics.length > 0 && data.topics[0].smartInsight && (
           <SmartInsightCard
             insight={data.topics[0].smartInsight}
@@ -554,7 +554,7 @@ export default function InsightsPage() {
           <>
             <motion.div
               key={`${periodKey}-topics-${data.topics.length}`}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
               variants={gridVariants}
               initial="hidden"
               animate="visible"
@@ -582,8 +582,8 @@ export default function InsightsPage() {
             />
           </>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1 space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <div className="lg:col-span-1 space-y-4">
               {topMover && (
                 <TopMoverCard
                   topicName={topMover.topicName}
@@ -599,7 +599,7 @@ export default function InsightsPage() {
             </div>
             <motion.div
               key={`${periodKey}-topics-${data.topics.length}`}
-              className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6 content-start"
+              className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 content-start"
               variants={gridVariants}
               initial="hidden"
               animate="visible"
@@ -635,7 +635,7 @@ export default function InsightsPage() {
         {filteredGaps.length > 0 ? (
           <motion.div
             key={`${periodKey}-gaps-${filteredGaps.length}`}
-            className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
             variants={gridVariants}
             initial="hidden"
             animate="visible"
@@ -657,7 +657,7 @@ export default function InsightsPage() {
             ))}
           </motion.div>
         ) : (
-          <Card className="glass-card p-6 text-center border-emerald-500/10">
+          <Card className="glass-card p-4 text-center border-emerald-500/10">
             <p className="text-sm text-emerald-400 font-medium">Brak luk w bazie wiedzy</p>
             <p className="text-xs text-zinc-500 mt-1">Chatbot ma odpowiedzi na wszystkie popularne pytania.</p>
           </Card>
@@ -670,12 +670,12 @@ export default function InsightsPage() {
   const nothingLoaded = Object.values(periodData).every(d => d === null);
   if (mainTab === 'trendy' && nothingLoaded && isLoading) {
     return (
-      <div className="space-y-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-5">
+        <h1 className="text-lg font-semibold tracking-tight text-white">Insights</h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-32" />)}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => <Skeleton key={i} className="h-64" />)}
         </div>
       </div>
@@ -683,11 +683,11 @@ export default function InsightsPage() {
   }
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-5 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Insights</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-white">Insights</h1>
           <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1.5">
             Analiza pytań, trendów i raporty
             {mainTab === 'trendy' && (

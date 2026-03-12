@@ -175,7 +175,7 @@ export default function ConversationDetailPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center gap-4">
           <Skeleton className="h-10 w-10" />
           <Skeleton className="h-8 w-64" />
@@ -190,9 +190,9 @@ export default function ConversationDetailPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-4 max-w-4xl mx-auto">
       {/* Sticky Header */}
-      <div className="sticky top-0 z-20 -mx-5 md:-mx-8 lg:-mx-10 px-5 md:px-8 lg:px-10 py-4 bg-background/80 backdrop-blur-xl border-b border-white/[0.04]">
+      <div className="sticky top-0 z-20 -mx-5 md:-mx-8 lg:-mx-10 px-5 md:px-8 lg:px-10 py-2.5 bg-background/80 backdrop-blur-xl border-b border-white/[0.04]">
         <div className="flex items-center justify-between max-w-4xl mx-auto">
           <div>
             {/* Breadcrumb */}
@@ -211,7 +211,7 @@ export default function ConversationDetailPage() {
             </nav>
 
             <div className="flex items-center gap-3">
-              <h1 className="text-xl font-semibold text-white">
+              <h1 className="text-lg font-semibold text-white">
                 Rozmowa {conversationNumber ? `#${conversationNumber}` : ''}
               </h1>
               <Badge variant="secondary" className="text-[11px]">{messages.length} wiadomości</Badge>

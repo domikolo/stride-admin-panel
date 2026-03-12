@@ -322,23 +322,23 @@ export default function AppointmentsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
         <div className="flex gap-4">
           <Skeleton className="h-10 w-32" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="mb-2">
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
+          <h1 className="text-lg font-semibold tracking-tight text-white">
             Spotkania
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
@@ -383,7 +383,7 @@ export default function AppointmentsPage() {
       {/* Availability Config */}
       <Card className="glass-card overflow-hidden">
         <button
-          className={`w-full flex items-center justify-between px-5 py-4 text-left transition-colors ${showAvailability ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
+          className={`w-full flex items-center justify-between px-5 py-2.5 text-left transition-colors ${showAvailability ? 'bg-white/[0.02]' : 'hover:bg-white/[0.02]'}`}
           onClick={() => setShowAvailability(v => !v)}
         >
           <div className="flex items-center gap-3 min-w-0">
@@ -542,10 +542,10 @@ export default function AppointmentsPage() {
         </Card>
       ) : (
         /* Calendar View */
-        <Card className="glass-card p-6">
+        <Card className="glass-card p-4">
           {/* Calendar Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-white">
+            <h2 className="text-lg font-semibold text-white">
               {format(currentMonth, 'MMMM yyyy')}
             </h2>
             <div className="flex gap-2">
@@ -708,13 +708,13 @@ export default function AppointmentsPage() {
       {editingAppointment && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setEditingAppointment(null)}>
           <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-5 border-b border-border">
+            <div className="flex items-center justify-between p-4 border-b border-border">
               <h2 className="font-semibold text-white text-[15px]">Edytuj wizytę</h2>
               <button onClick={() => setEditingAppointment(null)} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
                 <X size={18} />
               </button>
             </div>
-            <div className="p-5 space-y-4">
+            <div className="p-4 space-y-4">
               <div>
                 <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina</label>
                 <input
@@ -768,7 +768,7 @@ export default function AppointmentsPage() {
         return (
           <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setCancellingAppointment(null)}>
             <div className="bg-card border border-border rounded-xl w-full max-w-md shadow-2xl" onClick={e => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-5 border-b border-border">
+              <div className="flex items-center justify-between p-4 border-b border-border">
                 <div className="flex items-center gap-2">
                   <Ban size={16} className="text-red-400" />
                   <h2 className="font-semibold text-white text-[15px]">Odwołaj wizytę</h2>
@@ -777,7 +777,7 @@ export default function AppointmentsPage() {
                   <X size={18} />
                 </button>
               </div>
-              <div className="p-5 space-y-4">
+              <div className="p-4 space-y-4">
                 {/* Channel info */}
                 <div className={`flex items-center gap-2 text-xs px-3 py-2 rounded-lg ${
                   channel === 'email' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20'
@@ -872,7 +872,7 @@ export default function AppointmentsPage() {
           </div>
 
           {/* Charts Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Conversion Funnel */}
             <Card className="glass-card p-4">
               <h3 className="text-lg font-semibold text-white mb-4">Lejek konwersji</h3>
@@ -920,7 +920,7 @@ export default function AppointmentsPage() {
             </button>
 
             {showAdvancedAnalytics && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4">
                 {stats.dropOffByLength && Object.keys(stats.dropOffByLength).length > 0 && (
                   <DropOffChart data={stats.dropOffByLength} />
                 )}

@@ -94,7 +94,7 @@ export default function InsightsPreview({ topics, gapsCount, loading }: Insights
 
             {/* Top Topics List */}
             {topTopics.length === 0 ? (
-                <p className="text-zinc-500 text-sm text-center py-4">
+                <p className="text-zinc-500 text-sm text-center py-2.5">
                     Brak danych. Poczekaj na pierwszą analizę.
                 </p>
             ) : (

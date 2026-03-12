@@ -121,13 +121,13 @@ export default function DashboardPage() {
 
   if (loading && clientId) {
     return (
-      <div className="space-y-8">
+      <div className="space-y-5">
         <Skeleton className="h-10 w-48" />
-        <Skeleton className="h-48" />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <Skeleton className="h-36" />
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => <Skeleton key={i} className="h-28" />)}
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <Skeleton className="h-80" />
           <Skeleton className="h-80" />
         </div>
@@ -146,11 +146,11 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-5 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
+          <h1 className="text-lg font-semibold tracking-tight text-white">
             Dashboard
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
@@ -184,7 +184,7 @@ export default function DashboardPage() {
 
       {/* Quick Stats - 4 cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
         variants={cardGridVariants}
         initial="hidden"
         animate="visible"
@@ -236,7 +236,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* 7-day Activity Chart */}
-      <Card className="glass-card p-5">
+      <Card className="glass-card p-4">
         <h3 className="text-sm font-medium text-zinc-500 mb-4">
           Aktywność — ostatnie 7 dni
         </h3>
@@ -290,7 +290,7 @@ export default function DashboardPage() {
 
       {/* Main Content: Insights + Recent Activity */}
       <motion.div
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6"
+        className="grid grid-cols-1 lg:grid-cols-2 gap-4"
         variants={cardGridVariants}
         initial="hidden"
         animate="visible"

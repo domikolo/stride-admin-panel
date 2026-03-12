@@ -91,16 +91,16 @@ export default function ClientsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <h1 className="text-4xl font-bold text-white">Clients</h1>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
 
   if (user?.role !== 'owner') {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <h1 className="text-4xl font-bold text-white">Clients</h1>
         <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400">
           Access denied. Owner role required.
@@ -124,7 +124,7 @@ export default function ClientsPage() {
     : 1;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-4xl font-bold bg-gradient-to-br from-white via-white to-white/60 bg-clip-text text-transparent">
           Clients
@@ -199,7 +199,7 @@ export default function ClientsPage() {
 
       {/* ── Observability tab ── */}
       {activeTab === 'observability' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Period selector */}
           <div className="flex items-center gap-3">
             <span className="text-sm text-zinc-400">Okres:</span>
@@ -336,7 +336,7 @@ export default function ClientsPage() {
                         {expandedClient === c.clientId && (
                           <TableRow key={`${c.clientId}-detail`}>
                             <TableCell colSpan={8} className="bg-white/5 py-3 px-4">
-                              <div className="flex flex-col sm:flex-row gap-6">
+                              <div className="flex flex-col sm:flex-row gap-4">
                                 {/* Per-reason */}
                                 <div className="flex-1">
                                   <div className="text-xs text-zinc-400 mb-2 font-medium">Po typie wywołania:</div>

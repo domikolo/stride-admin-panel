@@ -61,7 +61,7 @@ export default function TrendingTopicCard({
     return (
         <>
             <Card className={`glass-card group ${isGap ? 'border-yellow-500/20' : ''}`}>
-                <CardContent className="p-5 space-y-4">
+                <CardContent className="p-4 space-y-4">
                     {/* Top row: rank + name + trend */}
                     <div className="flex items-start justify-between gap-3">
                         <div className="flex items-start gap-3 min-w-0">

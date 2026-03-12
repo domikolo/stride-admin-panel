@@ -43,7 +43,7 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
 
     if (loading) {
         return (
-            <Card className="glass-card p-5">
+            <Card className="glass-card p-4">
                 <h3 className="text-lg font-semibold text-white mb-5 flex items-center gap-2">
                     <Clock size={18} className="text-zinc-400" />
                     Ostatnia aktywność

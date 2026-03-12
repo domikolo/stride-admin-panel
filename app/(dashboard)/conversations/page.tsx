@@ -147,7 +147,7 @@ function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initi
   return (
     <div className="fixed inset-y-0 right-0 w-[360px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
+      <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card z-10">
         <div>
           <h2 className="font-semibold text-white text-[15px]">Notatki</h2>
           <p className="text-xs text-zinc-500 mt-0.5">Prywatne — widoczne tylko w panelu</p>
@@ -157,7 +157,7 @@ function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initi
         </button>
       </div>
 
-      <div className="flex-1 p-5 space-y-5">
+      <div className="flex-1 p-4 space-y-5">
         {/* Session ID */}
         <div className="text-xs text-zinc-500 font-mono truncate">{sessionId}</div>
 
@@ -443,31 +443,31 @@ export default function ConversationsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
         <div className="flex gap-4">
           <Skeleton className="h-10 flex-1 max-w-md" />
           <Skeleton className="h-10 w-32" />
         </div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
 
   if (error && !conversations.length) {
     return (
-      <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+      <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
         {error}
       </div>
     );
   }
 
   return (
-    <div className={`space-y-6 animate-fadeIn transition-all duration-300 ${selectedAnnotationSession ? 'pr-[368px]' : ''}`}>
+    <div className={`space-y-4 animate-fadeIn transition-all duration-300 ${selectedAnnotationSession ? 'pr-[368px]' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between mb-2">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">
+          <h1 className="text-lg font-semibold tracking-tight text-white">
             Rozmowy
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
@@ -644,7 +644,7 @@ export default function ConversationsPage() {
                           }
                         }}
                       >
-                        <TableCell className="font-mono text-sm py-4">
+                        <TableCell className="font-mono text-sm py-2.5">
                           <div className="flex items-center gap-3">
                             {!isSingleSession ? (
                               <div className={`p-1 rounded-md transition-colors ${isExpanded ? 'bg-white/10 text-white' : 'text-zinc-500'}`}>
@@ -780,7 +780,7 @@ export default function ConversationsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-4 border-t border-white/5">
+              <div className="flex items-center justify-between px-6 py-2.5 border-t border-white/5">
                 <span className="text-sm text-zinc-400">
                   Strona {currentPage} z {totalPages}
                 </span>

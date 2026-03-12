@@ -39,7 +39,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     if (loading) {
         return (
-            <Card className="glass-card p-6 md:p-8">
+            <Card className="glass-card p-4 md:p-8">
                 <div className="flex items-center gap-4 mb-4">
                     <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
                         <img src={iconLogoSrc} alt="Stride" className="w-9 h-9 object-contain animate-pulse" />
@@ -49,7 +49,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         <p className="text-xs text-zinc-500">Generowanie briefingu...</p>
                     </div>
                 </div>
-                <div className="inset-panel p-5">
+                <div className="inset-panel p-4">
                     <div className="space-y-3">
                         <Skeleton className="h-4 w-full" />
                         <Skeleton className="h-4 w-[90%]" />
@@ -62,7 +62,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     if (!briefing) {
         return (
-            <Card className="glass-card p-6 md:p-8 flex items-center gap-4">
+            <Card className="glass-card p-4 md:p-8 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-lg bg-white/[0.06] flex items-center justify-center">
                     <img src={iconLogoSrc} alt="Stride" className="w-9 h-9 object-contain" />
                 </div>
@@ -76,7 +76,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
 
     return (
         <Card
-            className="glass-card p-6 md:p-8 relative overflow-hidden"
+            className="glass-card p-4 md:p-8 relative overflow-hidden"
             style={{
                 background: isDark
                     ? 'radial-gradient(ellipse 80% 60% at 50% -10%, rgba(139, 92, 246, 0.07) 0%, transparent 70%), #111113'
@@ -109,7 +109,7 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                 )}
             </div>
 
-            <div className="inset-panel p-5">
+            <div className="inset-panel p-4">
                 <p className="text-zinc-200 leading-relaxed">
                     {isNew
                         ? <TypewriterText text={briefing.briefing} speed={12} />

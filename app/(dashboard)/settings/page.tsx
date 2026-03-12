@@ -88,7 +88,7 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
   return (
-    <Card className="glass-card p-6 space-y-4">
+    <Card className="glass-card p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Key size={16} className="text-zinc-400" />
@@ -298,7 +298,7 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
   if (loading || !config) return null;
 
   return (
-    <Card className="glass-card p-6 space-y-4">
+    <Card className="glass-card p-4 space-y-4">
       {/* Header row with toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -478,7 +478,7 @@ function MfaSection({ email }: { email: string }) {
   };
 
   return (
-    <Card className="glass-card p-6 space-y-4">
+    <Card className="glass-card p-4 space-y-4">
       <div className="flex items-center gap-3">
         <ShieldCheck size={16} className="text-zinc-400" />
         <h2 className="text-sm font-semibold text-white">Weryfikacja dwuetapowa (MFA)</h2>
@@ -567,7 +567,7 @@ function MfaSection({ email }: { email: string }) {
               maxLength={6}
               value={verifyCode}
               onChange={e => { setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setVerifyError(''); }}
-              className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white text-center tracking-[0.5em] text-xl placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30"
+              className="w-full px-3 py-2.5 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white text-center tracking-[0.5em] text-lg placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30"
               placeholder="000000"
               autoFocus
             />
@@ -656,7 +656,7 @@ function AuditLogSection({ clientId }: { clientId: string }) {
   }
 
   if (error) {
-    return <div className="text-sm text-red-400 py-4">Nie udało się załadować dziennika zmian.</div>;
+    return <div className="text-sm text-red-400 py-2.5">Nie udało się załadować dziennika zmian.</div>;
   }
 
   const allEvents: AuditEvent[] = data?.events ?? [];
@@ -808,10 +808,10 @@ export default function SettingsPage() {
   const badge = getRoleBadge(user?.role);
 
   return (
-    <div className="space-y-8 max-w-2xl">
+    <div className="space-y-5 max-w-2xl">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
+        <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-3">
           <Settings className="text-zinc-400" size={22} />
           Ustawienia
         </h1>
@@ -830,9 +830,9 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="general">
-          <div className="space-y-8">
+          <div className="space-y-5">
             {/* Profile */}
-            <Card className="glass-card p-6 space-y-4">
+            <Card className="glass-card p-4 space-y-4">
               <div className="flex items-center gap-3">
                 <User size={16} className="text-zinc-400" />
                 <h2 className="text-sm font-semibold text-white">Profil</h2>
@@ -867,7 +867,7 @@ export default function SettingsPage() {
             <ApiKeysSection clientId={clientId ?? ''} />
 
             {/* Appearance */}
-            <Card className="glass-card p-6 space-y-4">
+            <Card className="glass-card p-4 space-y-4">
               <div className="flex items-center gap-3">
                 <Sun size={16} className="text-zinc-400" />
                 <h2 className="text-sm font-semibold text-white">Wygląd</h2>
@@ -901,7 +901,7 @@ export default function SettingsPage() {
             {user?.role === 'owner' && <MfaSection email={user.email} />}
 
             {/* Change password */}
-            <Card className="glass-card p-6 space-y-4">
+            <Card className="glass-card p-4 space-y-4">
               <div className="flex items-center gap-3">
                 <Lock size={16} className="text-zinc-400" />
                 <h2 className="text-sm font-semibold text-white">Zmień hasło</h2>
@@ -957,7 +957,7 @@ export default function SettingsPage() {
             </Card>
 
             {/* Logout */}
-            <Card className="glass-card p-6">
+            <Card className="glass-card p-4">
               <div className="flex items-center gap-3 mb-4">
                 <LogOut size={16} className="text-zinc-400" />
                 <h2 className="text-sm font-semibold text-white">Sesja</h2>

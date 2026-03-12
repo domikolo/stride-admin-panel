@@ -200,7 +200,7 @@ function CreateAppointmentModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-4 w-full max-w-sm mx-4" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-white text-[15px]">Umów spotkanie</h3>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
@@ -362,7 +362,7 @@ function AddReminderWithPickerModal({
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-4 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-white text-[15px]">Nowe przypomnienie</h3>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md hover:bg-white/[0.06] transition-colors"><X size={16} /></button>
@@ -386,7 +386,7 @@ function AddReminderWithPickerModal({
                 <input placeholder="Szukaj kontaktu..." value={contactSearch} onChange={e => setContactSearch(e.target.value)}
                   className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors" />
                 {filteredContacts.length > 0 && (
-                  <div className="absolute top-full mt-1 w-full bg-card border border-border rounded-lg shadow-xl z-10 overflow-hidden max-h-48 overflow-y-auto">
+                  <div className="absolute top-full mt-1 w-full bg-card border border-border rounded-lg shadow-xl z-10 overflow-hidden max-h-36 overflow-y-auto">
                     {filteredContacts.map(c => (
                       <button key={c.profileId} onClick={() => { setProfileId(c.profileId); setContactSearch(''); }}
                         className="w-full text-left px-3 py-2.5 hover:bg-white/[0.05] transition-colors border-b border-white/[0.04] last:border-0">
@@ -489,7 +489,7 @@ function AddRuleModal({ clientId, existingRules, onClose, onCreated }: {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="bg-card border border-border rounded-2xl shadow-2xl p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+      <div className="bg-card border border-border rounded-2xl shadow-2xl p-4 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <h3 className="font-semibold text-white text-[15px]">Nowa reguła automatyczna</h3>
           <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 p-1 rounded-md hover:bg-white/[0.06] transition-colors"><X size={16} /></button>
@@ -643,7 +643,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
   const activeRulesCount = rules.filter(r => r.enabled).length;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4">
         {[
@@ -652,7 +652,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
           { value: activeRulesCount, label: 'Aktywnych reguł' },
         ].map(s => (
           <Card key={s.label} className="glass-card p-4">
-            <div className="text-2xl font-semibold text-white">{s.value}</div>
+            <div className="text-lg font-semibold text-white">{s.value}</div>
             <div className="text-sm text-zinc-500 mt-0.5">{s.label}</div>
           </Card>
         ))}
@@ -660,7 +660,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
 
       {/* Reminders list */}
       <Card className="glass-card">
-        <div className="flex items-center justify-between p-5 border-b border-border flex-wrap gap-3">
+        <div className="flex items-center justify-between p-4 border-b border-border flex-wrap gap-3">
           <div className="flex items-center gap-3">
             <h2 className="font-semibold text-white text-[15px]">Przypomnienia</h2>
             <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
@@ -686,7 +686,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
         </div>
 
         {loadingR ? (
-          <div className="p-5 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
+          <div className="p-4 space-y-3">{[1,2,3].map(i => <Skeleton key={i} className="h-14 w-full" />)}</div>
         ) : displayed.length === 0 ? (
           <EmptyState icon={Bell}
             title={reminderFilter === 'fired' ? 'Brak wykonanych przypomnień' : 'Brak nadchodzących przypomnień'}
@@ -766,7 +766,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
 
       {/* Automation Rules */}
       <Card className="glass-card">
-        <div className="flex items-center justify-between p-5 border-b border-border">
+        <div className="flex items-center justify-between p-4 border-b border-border">
           <div>
             <h2 className="font-semibold text-white text-[15px]">Reguły automatyczne</h2>
             <p className="text-xs text-zinc-500 mt-0.5">Automatycznie tworzą przypomnienia gdy zajdzie określone zdarzenie</p>
@@ -777,7 +777,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
         </div>
 
         {loadingRules ? (
-          <div className="p-5 space-y-3">{[1,2].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
+          <div className="p-4 space-y-3">{[1,2].map(i => <Skeleton key={i} className="h-16 w-full" />)}</div>
         ) : rules.length === 0 ? (
           <div className="p-8 text-center">
             <div className="w-12 h-12 bg-white/[0.04] rounded-full flex items-center justify-center mx-auto mb-3">
@@ -791,7 +791,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
         ) : (
           <div className="divide-y divide-white/[0.04]">
             {rules.map(rule => (
-              <div key={rule.id} className={`flex items-start gap-4 px-5 py-4 transition-opacity ${!rule.enabled ? 'opacity-40' : ''}`}>
+              <div key={rule.id} className={`flex items-start gap-4 px-5 py-2.5 transition-opacity ${!rule.enabled ? 'opacity-40' : ''}`}>
                 {/* Toggle */}
                 <button onClick={() => handleToggleRule(rule.id)} disabled={savingRules}
                   className={`mt-1 w-9 h-5 rounded-full transition-colors flex-shrink-0 flex items-center px-0.5 ${rule.enabled ? 'bg-blue-600' : 'bg-white/[0.1]'}`}>
@@ -968,7 +968,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   return (
     <div className="fixed inset-y-0 right-0 w-[380px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-border sticky top-0 bg-card z-10">
+      <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card z-10">
         <h2 className="font-semibold text-white text-[15px]">Szczegóły kontaktu</h2>
         <button onClick={onClose} className="text-zinc-500 hover:text-zinc-200 transition-colors p-1 rounded-md hover:bg-white/[0.06]">
           <X size={18} />
@@ -985,15 +985,15 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       )}
 
       {loading ? (
-        <div className="p-5 space-y-3">
+        <div className="p-4 space-y-3">
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="h-24 w-full" />
         </div>
       ) : !contact ? (
-        <div className="p-5 text-zinc-500 text-sm">Nie znaleziono kontaktu.</div>
+        <div className="p-4 text-zinc-500 text-sm">Nie znaleziono kontaktu.</div>
       ) : (
-        <div className="flex-1 p-5 space-y-5">
+        <div className="flex-1 p-4 space-y-5">
           {/* Contact info */}
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500/20 to-blue-600/10 border border-white/[0.08] flex items-center justify-center flex-shrink-0">
@@ -1482,10 +1482,10 @@ export default function ContactsPage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
         <div className="flex gap-3">{[1,2,3,4].map(i => <Skeleton key={i} className="h-9 w-28" />)}</div>
-        <Skeleton className="h-96" />
+        <Skeleton className="h-64" />
       </div>
     );
   }
@@ -1495,7 +1495,7 @@ export default function ContactsPage() {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Kontakty</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-white">Kontakty</h1>
           <p className="text-sm text-zinc-500 mt-1">Leady zebrane przez chatbota i system przypomnień</p>
         </div>
         {mainTab === 'contacts' && (

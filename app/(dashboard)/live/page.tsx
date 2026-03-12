@@ -505,10 +505,10 @@ export default function LivePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center gap-3">
           <Radio size={24} className="text-green-400" />
-          <h1 className="text-2xl font-semibold text-white">Live</h1>
+          <h1 className="text-lg font-semibold text-white">Live</h1>
         </div>
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-2">
@@ -517,7 +517,7 @@ export default function LivePage() {
             ))}
           </div>
           <div className="col-span-2">
-            <Skeleton className="h-96" />
+            <Skeleton className="h-64" />
           </div>
         </div>
       </div>
@@ -530,7 +530,7 @@ export default function LivePage() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Radio size={24} className="text-green-400" />
-          <h1 className="text-2xl font-semibold text-white">Live</h1>
+          <h1 className="text-lg font-semibold text-white">Live</h1>
           <Badge
             variant="secondary"
             className={connected ? 'bg-green-500/20 text-green-400' : 'bg-zinc-700/50 text-zinc-500'}

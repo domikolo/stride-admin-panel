@@ -249,7 +249,7 @@ export default function KnowledgeBasePage() {
 
   if (loading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Skeleton className="h-10 w-48" />
         <Skeleton className="h-16 w-full" />
         <Skeleton className="h-40 w-full" />
@@ -261,9 +261,9 @@ export default function KnowledgeBasePage() {
   // Empty state
   if (entries.length === 0) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-3">
             <BookOpen className="text-blue-400" />
             Baza Wiedzy
           </h1>
@@ -302,11 +302,11 @@ export default function KnowledgeBasePage() {
   }
 
   return (
-    <div className="space-y-6 animate-fadeIn">
+    <div className="space-y-4 animate-fadeIn">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-3">
             <BookOpen className="text-blue-400" />
             Baza Wiedzy
           </h1>

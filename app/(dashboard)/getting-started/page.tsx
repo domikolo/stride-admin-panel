@@ -186,14 +186,14 @@ export default function GettingStartedPage() {
   const allDone = checkedSteps.size === SETUP_STEPS.length;
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-5 animate-fadeIn">
       {/* Header */}
       <div className="flex items-start gap-4">
         <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 mt-0.5">
           <Rocket size={22} className="text-blue-400" />
         </div>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-white">Pierwsze kroki</h1>
+          <h1 className="text-lg font-semibold tracking-tight text-white">Pierwsze kroki</h1>
           <p className="text-sm text-zinc-500 mt-1">
             Przewodnik po panelu — co robi każda zakładka i jak zacząć.
           </p>
@@ -201,7 +201,7 @@ export default function GettingStartedPage() {
       </div>
 
       {/* Quick Setup */}
-      <Card className="glass-card p-6">
+      <Card className="glass-card p-4">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-base font-semibold text-white">Szybki setup</h2>
@@ -275,7 +275,7 @@ export default function GettingStartedPage() {
           {SECTIONS.map((section) => {
             const Icon = section.icon;
             return (
-              <Card key={section.href} className="glass-card p-5 flex flex-col gap-4 group hover:border-white/[0.1] transition-colors">
+              <Card key={section.href} className="glass-card p-4 flex flex-col gap-4 group hover:border-white/[0.1] transition-colors">
                 {/* Header */}
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-center gap-3">
