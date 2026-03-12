@@ -132,15 +132,15 @@ export default function ClientsPage() {
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 border-b border-white/10">
+      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
         {(['clients', 'observability'] as Tab[]).map(tab => (
           <button
             key={tab}
             onClick={() => handleTabChange(tab)}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors capitalize ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors capitalize ${
               activeTab === tab
-                ? 'bg-white/10 text-white border-b-2 border-violet-400'
-                : 'text-zinc-400 hover:text-white hover:bg-white/5'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab === 'clients' ? 'Klienci' : 'Observability'}

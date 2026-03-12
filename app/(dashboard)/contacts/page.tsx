@@ -666,7 +666,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
             <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
               {([['pending', 'Nadchodzące'], ['fired', 'Wykonane'], ['', 'Wszystkie']] as const).map(([v, lbl]) => (
                 <button key={v} onClick={() => setReminderFilter(v)}
-                  className={`px-2.5 py-1 text-xs rounded-md transition-colors ${reminderFilter === v ? 'bg-blue-500/20 text-blue-300' : 'text-zinc-400 hover:text-white'}`}>
+                  className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${reminderFilter === v ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}>
                   {lbl}
                   {v === 'pending' && pending.length > 0 && (
                     <span className="ml-1.5 bg-blue-500 text-white rounded-full px-1.5 text-[9px] font-bold">{pending.length}</span>
@@ -1508,11 +1508,11 @@ export default function ContactsPage() {
             </Button>
             <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border">
               <Button variant="ghost" size="sm" onClick={() => setView('table')}
-                className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
+                className={view === 'table' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}>
                 <List size={15} className="mr-1.5" />Tabela
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setView('kanban')}
-                className={view === 'kanban' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}>
+                className={view === 'kanban' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}>
                 <Columns size={15} className="mr-1.5" />Kanban
               </Button>
             </div>
@@ -1521,32 +1521,32 @@ export default function ContactsPage() {
       </div>
 
       {/* Main tab switcher */}
-      <div className="flex gap-1 border-b border-white/[0.06]">
+      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
         <button
           onClick={() => setMainTab('contacts')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
             mainTab === 'contacts'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-zinc-500 hover:text-zinc-200'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Users size={15} />
+          <Users size={13} />
           Kontakty
           {contacts.length > 0 && (
-            <span className="text-xs bg-white/[0.06] text-zinc-400 px-1.5 py-0.5 rounded-full">
+            <span className="text-[10px] bg-border text-muted-foreground px-1.5 py-0.5 rounded-full">
               {contacts.length}
             </span>
           )}
         </button>
         <button
           onClick={() => setMainTab('reminders')}
-          className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
             mainTab === 'reminders'
-              ? 'border-blue-500 text-blue-400'
-              : 'border-transparent text-zinc-500 hover:text-zinc-200'
+              ? 'bg-card text-foreground shadow-sm'
+              : 'text-muted-foreground hover:text-foreground'
           }`}
         >
-          <Bell size={15} />
+          <Bell size={13} />
           Przypomnienia
         </button>
       </div>

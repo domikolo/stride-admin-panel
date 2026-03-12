@@ -726,15 +726,15 @@ export default function InsightsPage() {
       </div>
 
       {/* Main tab switcher */}
-      <div className="flex items-center gap-1 p-1 bg-white/[0.04] rounded-xl border border-white/[0.06] w-fit">
+      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
         {(['trendy', 'raporty'] as const).map(tab => (
           <button
             key={tab}
             onClick={() => setMainTab(tab)}
-            className={`px-4 py-1.5 text-sm rounded-lg transition-colors ${
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
               mainTab === tab
-                ? 'bg-white/[0.08] text-white font-medium'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-card text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
             }`}
           >
             {tab === 'trendy' ? 'Trendy' : 'Raporty'}
@@ -748,13 +748,13 @@ export default function InsightsPage() {
           {/* Period Tabs */}
           <Tabs value={activePeriod} onValueChange={(v) => handleTabChange(v as Period)} className="w-full">
             <TabsList className="mb-4">
-              <TabsTrigger value="daily" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+              <TabsTrigger value="daily" >
                 Wczoraj
               </TabsTrigger>
-              <TabsTrigger value="weekly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+              <TabsTrigger value="weekly" >
                 7 dni
               </TabsTrigger>
-              <TabsTrigger value="monthly" className="data-[state=active]:bg-white/[0.08] data-[state=active]:text-white text-sm">
+              <TabsTrigger value="monthly" >
                 30 dni
               </TabsTrigger>
             </TabsList>

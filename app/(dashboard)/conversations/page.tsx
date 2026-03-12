@@ -530,8 +530,8 @@ export default function ConversationsPage() {
               onClick={() => setFilter(f)}
               className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
                 filter === f
-                  ? 'bg-card text-white shadow-sm border border-white/[0.08]'
-                  : 'text-zinc-500 hover:text-zinc-300'
+                  ? 'bg-card text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               {f === 'all' ? 'Wszystkie' : f === 'today' ? 'Dziś' : f === 'week' ? 'Ten tydzień' : 'Ten miesiąc'}

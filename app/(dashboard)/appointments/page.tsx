@@ -356,7 +356,7 @@ export default function AppointmentsPage() {
             variant="ghost"
             size="sm"
             onClick={() => setView('table')}
-            className={view === 'table' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}
+            className={view === 'table' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
           >
             <List size={16} className="mr-2" />
             Tabela
@@ -365,7 +365,7 @@ export default function AppointmentsPage() {
             variant="ghost"
             size="sm"
             onClick={() => setView('calendar')}
-            className={view === 'calendar' ? 'bg-blue-500/10 text-blue-400' : 'text-zinc-400 hover:text-white'}
+            className={view === 'calendar' ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}
           >
             <Calendar size={16} className="mr-2" />
             Kalendarz
@@ -413,22 +413,20 @@ export default function AppointmentsPage() {
       </Card>
 
       {/* Status Filters */}
-      <div className="flex gap-2">
+      <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
         {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
-          <Button
+          <button
             key={status}
-            variant={statusFilter === status ? 'default' : 'ghost'}
-            size="sm"
             onClick={() => setStatusFilter(status)}
-            className={statusFilter === status ? '' : 'text-zinc-400 hover:text-white'}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
+              statusFilter === status ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
             {status === 'all' ? 'Wszystkie' : status === 'verified' ? 'Potwierdzone' : status === 'pending' ? 'Oczekujące' : 'Anulowane'}
             {status !== 'all' && (
-              <span className="ml-2 text-xs opacity-60">
-                ({appointments.filter(a => a.status === status).length})
-              </span>
+              <span className="text-[10px] opacity-60">({appointments.filter(a => a.status === status).length})</span>
             )}
-          </Button>
+          </button>
         ))}
       </div>
 
