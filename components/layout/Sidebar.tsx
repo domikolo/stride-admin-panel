@@ -89,7 +89,7 @@ interface NavLinkProps {
 
 function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavLinkProps) {
   return (
-    <Tooltip>
+    <Tooltip open={collapsed ? undefined : false}>
       <TooltipTrigger asChild>
         <Link
           href={href}
@@ -116,9 +116,6 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
             )}
           />
           {!collapsed && <span className="relative truncate leading-none">{label}</span>}
-          {isActive && collapsed && (
-            <span className="absolute -right-0.5 top-1/2 -translate-y-1/2 w-1.5 h-1.5 rounded-full bg-blue-500" />
-          )}
         </Link>
       </TooltipTrigger>
       {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
@@ -258,7 +255,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
         {/* ── Search ──────────────────────────────────────────────── */}
         <div className="flex-shrink-0 pt-3 pb-1 px-2">
-          <Tooltip>
+          <Tooltip open={isCollapsed ? undefined : false}>
             <TooltipTrigger asChild>
               <button
                 onClick={() => { close(); onSearchOpen?.(); }}
@@ -344,7 +341,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
               <span className="text-zinc-500 text-[13px] leading-none w-[17px] text-center inline-block">@</span>
             </div>
           </div>
-          <Tooltip>
+          <Tooltip open={isCollapsed ? undefined : false}>
             <TooltipTrigger asChild>
               <Button
                 onClick={() => { close(); signOut(); }}
