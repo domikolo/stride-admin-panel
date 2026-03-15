@@ -1368,6 +1368,12 @@ export default function ContactsPage() {
   const [mainTab, setMainTab] = useState<'contacts' | 'reminders'>('contacts');
   const [view, setView] = useState<'table' | 'kanban'>('table');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setSelectedId(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, []);
+
   const [filterStatus, setFilterStatus] = useState('');
   const [filterSource, setFilterSource] = useState('');
   const [filterType, setFilterType] = useState('');

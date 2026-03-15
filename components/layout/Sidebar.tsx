@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
+import { useBadges } from '@/hooks/useBadges';
 import {
   LayoutDashboard,
   MessageSquare,
@@ -85,9 +86,10 @@ interface NavLinkProps {
   isActive: boolean;
   collapsed: boolean;
   onClick: () => void;
+  badge?: number;
 }
 
-function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavLinkProps) {
+function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick, badge }: NavLinkProps) {
   return (
     <Tooltip open={collapsed ? undefined : false}>
       <TooltipTrigger asChild>
@@ -108,14 +110,27 @@ function NavLink({ href, icon: Icon, label, isActive, collapsed, onClick }: NavL
               transition={{ type: 'spring', stiffness: 350, damping: 30 }}
             />
           )}
-          <Icon
-            size={17}
-            className={cn(
-              'relative flex-shrink-0',
-              isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'
+          <span className="relative flex-shrink-0">
+            <Icon
+              size={17}
+              className={cn(
+                isActive ? 'text-blue-400' : 'text-zinc-500 group-hover:text-zinc-300'
+              )}
+            />
+            {collapsed && badge != null && badge > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] flex items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white px-0.5 leading-none">
+                {badge > 99 ? '99+' : badge}
+              </span>
             )}
-          />
-          {!collapsed && <span className="relative truncate leading-none">{label}</span>}
+          </span>
+          {!collapsed && (
+            <span className="relative truncate leading-none flex-1">{label}</span>
+          )}
+          {!collapsed && badge != null && badge > 0 && (
+            <span className="relative ml-auto min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-blue-500/20 text-blue-400 text-[10px] font-semibold px-1 leading-none">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
         </Link>
       </TooltipTrigger>
       {collapsed && <TooltipContent side="right">{label}</TooltipContent>}
@@ -193,6 +208,7 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
   const isActive = (href: string) => pathname === href || pathname.startsWith(href + '/');
 
   const isOwner = user?.role === 'owner';
+  const { liveCount } = useBadges();
 
   return (
     <>
@@ -284,7 +300,14 @@ export default function Sidebar({ open, onClose, onSearchOpen }: SidebarProps) {
 
           <div className="space-y-0.5">
             {mainGroup.map(link => (
-              <NavLink key={link.href} {...link} isActive={isActive(link.href)} collapsed={isCollapsed} onClick={close} />
+              <NavLink
+                key={link.href}
+                {...link}
+                isActive={isActive(link.href)}
+                collapsed={isCollapsed}
+                onClick={close}
+                badge={link.href === '/live' && liveCount > 0 ? liveCount : undefined}
+              />
             ))}
           </div>
 

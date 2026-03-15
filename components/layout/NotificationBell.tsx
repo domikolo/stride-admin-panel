@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { AppNotification } from '@/lib/types';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api';
+import { useBadges } from '@/hooks/useBadges';
 
 // ── Icon map ────────────────────────────────────────────────────────────────
 
@@ -109,6 +110,7 @@ interface Props { clientId: string; }
 
 export default function NotificationBell({ clientId }: Props) {
   const router = useRouter();
+  const { setUnreadNotifCount } = useBadges();
   const [open, setOpen]               = useState(false);
   const [notifications, setNotif]     = useState<AppNotification[]>([]);
   const [unreadCount, setUnread]      = useState(0);
@@ -178,6 +180,7 @@ export default function NotificationBell({ clientId }: Props) {
 
       setNotif(incoming);
       setUnread(data.unreadCount);
+      setUnreadNotifCount(data.unreadCount);
       setHighPri(incoming.some(n => !n.read && n.priority === 'high'));
     } catch { /* ignore */ } finally {
       if (!silent) setLoading(false);
@@ -237,7 +240,7 @@ export default function NotificationBell({ clientId }: Props) {
     if (!n.read) {
       await markNotificationRead(clientId, n.notificationId).catch(() => {});
       setNotif(prev => prev.map(x => x.notificationId === n.notificationId ? { ...x, read: true } : x));
-      setUnread(prev => Math.max(0, prev - 1));
+      setUnread(prev => { const next = Math.max(0, prev - 1); setUnreadNotifCount(next); return next; });
     }
     const link = getLink(n);
     if (link) { setOpen(false); router.push(link); }
@@ -247,6 +250,7 @@ export default function NotificationBell({ clientId }: Props) {
     await markAllNotificationsRead(clientId).catch(() => {});
     setNotif(prev => prev.map(x => ({ ...x, read: true })));
     setUnread(0);
+    setUnreadNotifCount(0);
     setHighPri(false);
   };
 

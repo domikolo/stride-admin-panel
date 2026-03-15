@@ -99,6 +99,25 @@ export default function DashboardPage() {
   const gapsCount = (gapsData as { gaps?: unknown[] } | undefined)?.gaps?.length ?? 0;
   const activities = activityData?.activities ?? [];
 
+  // Trend: today vs yesterday from 7-day daily stats
+  const todayKey = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const yesterdayKey = (() => {
+    const d = new Date(); d.setDate(d.getDate() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  })();
+  const statsMap7 = new Map(dailyStats.map(d => [d.date, d]));
+  const todayConvs = statsMap7.get(todayKey)?.conversations ?? 0;
+  const yesterdayConvs = statsMap7.get(yesterdayKey)?.conversations ?? 0;
+  const convChange = yesterdayConvs > 0
+    ? Math.round(((todayConvs - yesterdayConvs) / yesterdayConvs) * 100)
+    : undefined;
+  const convTrend: 'up' | 'down' | 'neutral' | undefined = convChange == null
+    ? undefined
+    : convChange > 0 ? 'up' : convChange < 0 ? 'down' : 'neutral';
+
   const loading = !stats && !dailyData && !topicsData && !gapsData && !activityData;
 
   // Build 7-day chart with all days (fill missing days with 0)
@@ -198,6 +217,8 @@ export default function DashboardPage() {
             description="Liczba rozmow w ostatnich 30 dniach"
             valueHref="/conversations"
             sparklineData={dailyStats.map(d => d.conversations)}
+            change={convChange}
+            trend={convTrend}
           />
         </motion.div>
         <motion.div variants={cardItemVariants}>

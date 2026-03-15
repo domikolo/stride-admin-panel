@@ -13,6 +13,7 @@ import { getLiveSessions, getConversationDetails, getLiveAiSuggestion, getLeadSc
 import { getIdToken } from '@/lib/token';
 import { wsClient, WSEvent } from '@/lib/websocket';
 import { LiveSession, LiveMessage, LeadScore, LeadScoreTier } from '@/lib/types';
+import { useBadges } from '@/hooks/useBadges';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -142,6 +143,7 @@ function getScoreBadgeClass(tier: LeadScoreTier) {
 export default function LivePage() {
   const { user } = useAuth();
   const clientId = useClientId();
+  const { setLiveCount } = useBadges();
 
   // State
   const [sessions, setSessions] = useState<LiveSession[]>([]);
@@ -177,6 +179,7 @@ export default function LivePage() {
   const fetchLeadScoreRef = useRef<(session: LiveSession, force?: boolean) => void>(() => {});
 
   useEffect(() => { selectedSessionIdRef.current = selectedSessionId; }, [selectedSessionId]);
+  useEffect(() => { setLiveCount(sessions.length); }, [sessions.length, setLiveCount]);
   useEffect(() => { sessionMessagesRef.current = sessionMessages; }, [sessionMessages]);
   useEffect(() => { leadScoresRef.current = leadScores; }, [leadScores]);
   useEffect(() => { sessionsRef.current = sessions; }, [sessions]);

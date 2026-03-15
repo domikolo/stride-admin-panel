@@ -4,8 +4,8 @@
 
 'use client';
 
-import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
@@ -232,9 +232,12 @@ function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initi
 export default function ConversationsPage() {
   const { user } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Init from URL params (persisted across refresh)
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<FilterType>('all');
-  const [ratingFilter, setRatingFilter] = useState<RatingFilter>('all');
+  const [filter, setFilter] = useState<FilterType>(() => (searchParams.get('f') as FilterType) || 'all');
+  const [ratingFilter, setRatingFilter] = useState<RatingFilter>(() => (searchParams.get('r') as RatingFilter) || 'all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortKey, setSortKey] = useState<SortKey>('date');
   const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
@@ -242,6 +245,25 @@ export default function ConversationsPage() {
   const [selectedAnnotationSession, setSelectedAnnotationSession] = useState<string | null>(null);
   // Local annotation overrides (after saving)
   const [annotationOverrides, setAnnotationOverrides] = useState<Record<string, { tags: string[]; notes: string; flagged: boolean }>>({});
+
+  // Sync filter/rating to URL params
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (filter === 'all') params.delete('f'); else params.set('f', filter);
+    if (ratingFilter === 'all') params.delete('r'); else params.set('r', ratingFilter);
+    const qs = params.toString();
+    router.replace(qs ? `/conversations?${qs}` : '/conversations', { scroll: false });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, ratingFilter]);
+
+  // Escape closes annotation panel
+  const handleEscape = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Escape') setSelectedAnnotationSession(null);
+  }, []);
+  useEffect(() => {
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [handleEscape]);
 
   const clientId = useClientId();
   const itemsPerPage = 15;

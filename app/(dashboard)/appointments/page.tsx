@@ -25,7 +25,7 @@ import ActivityHeatmap from '@/components/dashboard/charts/ActivityHeatmap';
 import ConversationLengthChart from '@/components/dashboard/charts/ConversationLengthChart';
 import DropOffChart from '@/components/dashboard/charts/DropOffChart';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth, addMonths, subMonths, getDay } from 'date-fns';
-import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw, Pencil, X, Ban } from 'lucide-react';
+import { Calendar, List, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Clock, User, Phone, Mail, ExternalLink, TrendingUp, DollarSign, RefreshCw, Pencil, X, Ban } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 type ViewType = 'table' | 'calendar';
@@ -174,6 +174,8 @@ export default function AppointmentsPage() {
   const [editNotes, setEditNotes] = useState('');
   const [editSaving, setEditSaving] = useState(false);
 
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
   const [cancellingAppointment, setCancellingAppointment] = useState<Appointment | null>(null);
   const [cancelMessage, setCancelMessage] = useState('');
   const [cancelSaving, setCancelSaving] = useState(false);
@@ -196,11 +198,15 @@ export default function AppointmentsPage() {
   const loading = isLoading;
   const error = apptError ? 'Nie udało się załadować danych. Spróbuj ponownie.' : null;
 
-  // Filter appointments
+  // Filter + sort appointments
   const filteredAppointments = useMemo(() => {
-    if (statusFilter === 'all') return appointments;
-    return appointments.filter(a => a.status === statusFilter);
-  }, [appointments, statusFilter]);
+    const filtered = statusFilter === 'all' ? [...appointments] : appointments.filter(a => a.status === statusFilter);
+    filtered.sort((a, b) => {
+      const diff = new Date(a.datetime).getTime() - new Date(b.datetime).getTime();
+      return sortDir === 'asc' ? diff : -diff;
+    });
+    return filtered;
+  }, [appointments, statusFilter, sortDir]);
 
   // Scroll to + flash row when navigated from search (?hl=appointmentId)
   // useSearchParams is reactive — fires even when already on /appointments
@@ -430,7 +436,15 @@ export default function AppointmentsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Data i godzina</TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => setSortDir(d => d === 'asc' ? 'desc' : 'asc')}
+                      className="flex items-center gap-1 hover:text-white transition-colors"
+                    >
+                      Data i godzina
+                      {sortDir === 'asc' ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                    </button>
+                  </TableHead>
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Sesja</TableHead>

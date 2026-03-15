@@ -9,12 +9,21 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useTheme } from 'next-themes';
+import { BadgesProvider, useBadges } from '@/hooks/useBadges';
 import Sidebar from '@/components/layout/Sidebar';
 import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 import SearchDialog from '@/components/layout/SearchDialog';
 import NotificationBell from '@/components/layout/NotificationBell';
 import PageTransition from '@/components/layout/PageTransition';
 import { Menu, Search } from 'lucide-react';
+
+function TabTitleSync() {
+  const { unreadNotifCount } = useBadges();
+  useEffect(() => {
+    document.title = unreadNotifCount > 0 ? `(${unreadNotifCount}) Panel Stride` : 'Panel Stride';
+  }, [unreadNotifCount]);
+  return null;
+}
 
 export default function DashboardLayout({
   children,
@@ -53,6 +62,8 @@ export default function DashboardLayout({
   const notifClientId = user.clientId || 'stride-services';
 
   return (
+    <BadgesProvider>
+    <TabTitleSync />
     <div className="flex h-screen overflow-hidden">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} onSearchOpen={() => setSearchOpen(true)} />
 
@@ -91,6 +102,7 @@ export default function DashboardLayout({
       <FloatingChatWrapper />
       <SearchDialog open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
+    </BadgesProvider>
   );
 }
 
