@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
-import { getAuditLog, getApiKeys, createApiKey, revokeApiKey, getChatbotSettings, updateChatbotSettings, ChatbotHours } from '@/lib/api';
+import { getAuditLog, getApiKeys, createApiKey, revokeApiKey, getChatbotSettings, updateChatbotSettings, ChatbotHours, getCalendarConfig, updateCalendarConfig, testCalendarConfig } from '@/lib/api';
 import { AuditEvent, ApiKey } from '@/lib/types';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock } from 'lucide-react';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock, CalendarDays, ChevronDown, ChevronRight, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -394,6 +394,296 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
             {saving ? <Loader2 size={14} className="animate-spin mr-2" /> : null}
             Zapisz
           </Button>
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ─── Calendar Integration Section ────────────────────────────────────────────
+
+const CALENDAR_GUIDES = [
+  {
+    id: 'google',
+    name: 'Google Calendar',
+    emoji: '📅',
+    steps: [
+      'Otwórz Google Calendar i kliknij ikonę koła zębatego (⚙️) → Ustawienia',
+      'W lewym panelu kliknij nazwę kalendarza, który chcesz zsynchronizować',
+      'Przewiń do sekcji "Integruj kalendarz"',
+      'Skopiuj "Tajny adres w formacie iCal" — to długi URL kończący się na .ics. Ważne: skopiuj tajny adres, nie publiczny link.',
+    ],
+    note: 'Tajny adres iCal znajdziesz tylko w ustawieniach na calendar.google.com — nie w aplikacji mobilnej.',
+    docsLabel: 'Pomoc Google Calendar',
+    docsUrl: 'https://support.google.com/calendar/answer/37648',
+  },
+  {
+    id: 'outlook',
+    name: 'Outlook / Office 365',
+    emoji: '📧',
+    steps: [
+      'Zaloguj się na outlook.com lub outlook.office.com',
+      'Przejdź do Kalendarza → kliknij "..." (trzy kropki) obok nazwy kalendarza → "Udostępnianie i uprawnienia"',
+      'Kliknij "Opublikuj kalendarz" i wybierz "Można wyświetlać wszystkie szczegóły"',
+      'Skopiuj wygenerowany link ICS (ikona kalendarza ze strzałką w górę)',
+    ],
+    note: 'Dotyczy kont Microsoft 365 i outlook.com. Korporacyjne konta Exchange mogą mieć inne ustawienia.',
+    docsLabel: 'Centrum pomocy Microsoft',
+    docsUrl: 'https://support.microsoft.com',
+  },
+  {
+    id: 'apple',
+    name: 'Apple iCloud Calendar',
+    emoji: '🍎',
+    steps: [
+      'Zaloguj się na icloud.com i otwórz Kalendarz',
+      'Najedź kursorem na nazwę kalendarza w lewym panelu i kliknij ikonę sygnału WiFi (udostępnianie)',
+      'Zaznacz "Publiczny kalendarz" — pojawi się link',
+      'Skopiuj ten link (kliknij "Kopiuj link" lub ⌘+C na adresie)',
+    ],
+    note: 'Publiczny link iCloud zawiera unikalny token — nie musisz się martwić o bezpieczeństwo, ale nie udostępniaj go publicznie.',
+    docsLabel: 'Wsparcie Apple',
+    docsUrl: 'https://support.apple.com/icloud',
+  },
+  {
+    id: 'calendly',
+    name: 'Calendly',
+    emoji: '🗓️',
+    steps: [
+      'Zaloguj się na calendly.com i przejdź do Account Settings',
+      'Kliknij zakładkę "Calendar Sync" lub "Integrations"',
+      'Znajdź sekcję "Export your Calendly events" lub "ICS feed"',
+      'Skopiuj wygenerowany URL — możesz go użyć jako adres ICS',
+    ],
+    note: 'Calendly eksportuje Twoje zarezerwowane spotkania jako ICS feed. Dzięki temu chatbot nie pokaże terminów zajętych w Calendly.',
+    docsLabel: 'Pomoc Calendly',
+    docsUrl: 'https://help.calendly.com',
+  },
+  {
+    id: 'calcom',
+    name: 'Cal.com',
+    emoji: '📆',
+    steps: [
+      'Zaloguj się na cal.com i przejdź do Settings → Calendars',
+      'Kliknij "Add calendar" i wybierz opcję subskrypcji lub synchronizacji',
+      'Alternatywnie: w profilu kliknij swój event type → "..." → "Download ICS"',
+      'Lub pobierz adres ICS ze swojego połączonego kalendarza Google/Outlook przez Cal.com',
+    ],
+    note: 'Cal.com zazwyczaj synchronizuje się z Google Calendar lub Outlookiem — najprościej użyć ICS bezpośrednio z tamtych kalendarzy.',
+    docsLabel: 'Dokumentacja Cal.com',
+    docsUrl: 'https://cal.com/docs',
+  },
+  {
+    id: 'other',
+    name: 'Inne (Proton, Fastmail, Nextcloud…)',
+    emoji: '📋',
+    steps: [
+      'W ustawieniach kalendarza poszukaj opcji "Udostępnij", "Publish" lub "Export"',
+      'Wybierz format ICS lub iCalendar',
+      'Upewnij się że link jest dostępny publicznie (lub zawiera token w adresie URL)',
+      'Skopiuj wygenerowany adres URL — powinien kończyć się na .ics lub zawierać słowo "ical"',
+    ],
+    note: 'Większość nowoczesnych kalendarzy (Proton Calendar, Fastmail, Nextcloud, Zoho, Bitrix24) obsługuje eksport ICS. Szukaj opcji "Share calendar" lub "Calendar feed".',
+  },
+];
+
+function CalendarIntegrationSection({ clientId }: { clientId: string }) {
+  const [enabled, setEnabled] = useState(false);
+  const [icsUrl, setIcsUrl]   = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving]   = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<{ ok: boolean; eventsFound: number; message: string } | null>(null);
+  const [openGuide, setOpenGuide] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!clientId) return;
+    getCalendarConfig(clientId)
+      .then(d => { setEnabled(d.enabled); setIcsUrl(d.icsUrl || ''); })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [clientId]);
+
+  const handleToggle = async () => {
+    const next = !enabled;
+    setEnabled(next);
+    try {
+      await updateCalendarConfig(clientId, { enabled: next, ics_url: icsUrl });
+    } catch {
+      setEnabled(!next);
+      toast.error('Nie udało się zmienić ustawienia');
+    }
+  };
+
+  const handleSave = async () => {
+    if (!icsUrl.trim()) {
+      toast.error('Wpisz adres ICS przed zapisaniem');
+      return;
+    }
+    setSaving(true);
+    setTestResult(null);
+    try {
+      await updateCalendarConfig(clientId, { enabled, ics_url: icsUrl.trim() });
+      toast.success('Zapisano adres kalendarza');
+    } catch {
+      toast.error('Nie udało się zapisać');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleTest = async () => {
+    if (!icsUrl.trim()) {
+      toast.error('Wpisz adres ICS przed testem');
+      return;
+    }
+    setTesting(true);
+    setTestResult(null);
+    try {
+      const result = await testCalendarConfig(clientId, icsUrl.trim());
+      setTestResult(result);
+    } catch (err: any) {
+      setTestResult({ ok: false, eventsFound: 0, message: err.message || 'Błąd połączenia' });
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  if (loading) return null;
+
+  return (
+    <Card className="glass-card p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <CalendarDays size={16} className="text-zinc-400" />
+          <div>
+            <h2 className="text-sm font-semibold text-white">Integracja kalendarza</h2>
+            <p className="text-xs text-zinc-500 mt-0.5">
+              Chatbot sprawdza zajętość w Twoim kalendarzu i pokazuje tylko wolne terminy
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleToggle}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+            enabled ? 'bg-blue-600' : 'bg-white/10'
+          }`}
+        >
+          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+            enabled ? 'translate-x-4' : 'translate-x-0.5'
+          }`} />
+        </button>
+      </div>
+
+      {/* Config — visible when enabled */}
+      {enabled && (
+        <div className="space-y-4 pt-1 border-t border-white/[0.06]">
+          {/* ICS URL input */}
+          <div>
+            <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">
+              Adres ICS kalendarza
+            </label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={icsUrl}
+                onChange={e => { setIcsUrl(e.target.value); setTestResult(null); }}
+                placeholder="https://calendar.google.com/calendar/ical/…/basic.ics"
+                className="flex-1 px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg text-sm text-white placeholder:text-zinc-600 focus:outline-none focus:ring-1 focus:ring-blue-500/20 focus:border-blue-500/30 font-mono text-xs"
+              />
+              <Button
+                onClick={handleTest}
+                disabled={testing || !icsUrl.trim()}
+                variant="outline"
+                className="shrink-0 border-white/[0.08] text-zinc-400 hover:text-white text-xs h-9 px-3"
+              >
+                {testing ? <Loader2 size={13} className="animate-spin" /> : 'Testuj'}
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={saving || !icsUrl.trim()}
+                className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white text-xs h-9 px-3"
+              >
+                {saving ? <Loader2 size={13} className="animate-spin" /> : 'Zapisz'}
+              </Button>
+            </div>
+            <p className="text-[11px] text-zinc-600 mt-1">
+              Prywatny link — nie udostępniaj go nikomu. Jak znaleźć ten adres — patrz poradniki poniżej.
+            </p>
+          </div>
+
+          {/* Test result */}
+          {testResult && (
+            <div className={`flex items-start gap-2.5 px-3 py-2.5 rounded-lg border text-sm ${
+              testResult.ok
+                ? 'bg-emerald-500/5 border-emerald-500/20 text-emerald-400'
+                : 'bg-red-500/5 border-red-500/20 text-red-400'
+            }`}>
+              {testResult.ok
+                ? <CheckCircle2 size={15} className="shrink-0 mt-0.5" />
+                : <XCircle size={15} className="shrink-0 mt-0.5" />
+              }
+              <span className="text-xs">{testResult.message}</span>
+            </div>
+          )}
+
+          {/* Provider guides */}
+          <div>
+            <p className="text-xs text-zinc-500 uppercase tracking-wider mb-2">
+              Jak znaleźć adres ICS — poradniki
+            </p>
+            <div className="space-y-1 rounded-lg border border-white/[0.06] overflow-hidden">
+              {CALENDAR_GUIDES.map((guide, idx) => (
+                <div key={guide.id} className={idx > 0 ? 'border-t border-white/[0.04]' : ''}>
+                  {/* Accordion trigger */}
+                  <button
+                    onClick={() => setOpenGuide(openGuide === guide.id ? null : guide.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/[0.02] transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2.5 text-sm text-zinc-300">
+                      <span>{guide.emoji}</span>
+                      <span className="font-medium">{guide.name}</span>
+                    </span>
+                    {openGuide === guide.id
+                      ? <ChevronDown size={14} className="text-zinc-500 shrink-0" />
+                      : <ChevronRight size={14} className="text-zinc-500 shrink-0" />
+                    }
+                  </button>
+
+                  {/* Accordion content */}
+                  {openGuide === guide.id && (
+                    <div className="px-4 pb-4 space-y-3">
+                      <ol className="space-y-2">
+                        {guide.steps.map((step, i) => (
+                          <li key={i} className="flex gap-3 text-xs text-zinc-400">
+                            <span className="shrink-0 w-5 h-5 rounded-full bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-[11px] text-zinc-500 font-medium">
+                              {i + 1}
+                            </span>
+                            <span className="pt-0.5">{step}</span>
+                          </li>
+                        ))}
+                      </ol>
+                      {guide.note && (
+                        <p className="text-[11px] text-zinc-600 pl-8 italic">{guide.note}</p>
+                      )}
+                      {guide.docsUrl && (
+                        <a
+                          href={guide.docsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 text-[11px] text-blue-400 hover:text-blue-300 pl-8 transition-colors"
+                        >
+                          <ExternalLink size={11} />
+                          {guide.docsLabel}
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       )}
     </Card>
@@ -896,6 +1186,9 @@ export default function SettingsPage() {
 
             {/* Chatbot hours */}
             <ChatbotHoursSection clientId={clientId ?? ''} />
+
+            {/* Calendar integration */}
+            <CalendarIntegrationSection clientId={clientId ?? ''} />
 
             {/* MFA — owner only */}
             {user?.role === 'owner' && <MfaSection email={user.email} />}

@@ -693,3 +693,34 @@ export const generateReport = (
 
 export const deleteReport = (clientId: string, reportId: string) =>
   api.delete<{ deleted: boolean }>(`/clients/${clientId}/reports/${reportId}`);
+
+// ─── Calendar Integration (ICS) ──────────────────────────────────
+
+export interface CalendarConfig {
+  enabled: boolean;
+  icsUrl: string;
+}
+
+export const getCalendarConfig = (clientId: string) =>
+  api.get<CalendarConfig>(`/clients/${clientId}/calendar`);
+
+export const updateCalendarConfig = (clientId: string, config: { enabled: boolean; ics_url: string }) =>
+  api.put<CalendarConfig>(`/clients/${clientId}/calendar`, config);
+
+export const testCalendarConfig = (clientId: string, icsUrl: string) =>
+  api.post<{ ok: boolean; eventsFound: number; message: string }>(
+    `/clients/${clientId}/calendar/test`,
+    { ics_url: icsUrl }
+  );
+
+export interface CalendarBusySlot {
+  date: string;       // YYYY-MM-DD
+  allDay: boolean;
+  startTime: string | null;  // HH:MM or null if all-day
+  endTime: string | null;
+}
+
+export const getCalendarBusy = (clientId: string, month: string) =>
+  api.get<{ busySlots: CalendarBusySlot[]; calendarEnabled: boolean; month: string }>(
+    `/clients/${clientId}/calendar/busy?month=${month}`
+  );

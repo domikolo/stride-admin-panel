@@ -10,7 +10,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { useSWR, fetcher } from '@/lib/swr';
-import { updateAppointment, cancelAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability } from '@/lib/api';
+import { updateAppointment, cancelAppointment, getAppointmentAvailability, updateAppointmentAvailability, AppointmentAvailability, getCalendarBusy, CalendarBusySlot } from '@/lib/api';
 import toast from 'react-hot-toast';
 import { flashElement } from '@/hooks/useSearchHighlight';
 import { Appointment, ClientStats } from '@/lib/types';
@@ -192,6 +192,26 @@ export default function AppointmentsPage() {
   const { data: availabilityData, mutate: mutateAvailability } = useSWR<AppointmentAvailability>(
     clientId ? `/clients/${clientId}/appointments/availability` : null, fetcher
   );
+
+  // Busy slots from external ICS calendar — only fetch when in calendar view
+  const calendarMonth = format(currentMonth, 'yyyy-MM');
+  const { data: busyData } = useSWR(
+    clientId && view === 'calendar' ? `/clients/${clientId}/calendar/busy?month=${calendarMonth}` : null,
+    () => getCalendarBusy(clientId!, calendarMonth),
+    { revalidateOnFocus: false }
+  );
+  const busySlots: CalendarBusySlot[] = busyData?.busySlots ?? [];
+  const calendarEnabled = busyData?.calendarEnabled ?? false;
+
+  // Build lookup: date string → busy slots for that day
+  const busyByDate = useMemo(() => {
+    const map: Record<string, CalendarBusySlot[]> = {};
+    for (const slot of busySlots) {
+      if (!map[slot.date]) map[slot.date] = [];
+      map[slot.date].push(slot);
+    }
+    return map;
+  }, [busySlots]);
 
   const appointments: Appointment[] = apptData?.appointments ?? [];
   const stats: ClientStats | null = statsData ?? null;
@@ -591,6 +611,8 @@ export default function AppointmentsPage() {
               const dayAppointments = getAppointmentsForDay(day);
               const isCurrentMonth = isSameMonth(day, currentMonth);
               const isToday = isSameDay(day, new Date());
+              const dateKey = format(day, 'yyyy-MM-dd');
+              const dayBusy = busyByDate[dateKey] ?? [];
 
               return (
                 <div
@@ -604,6 +626,7 @@ export default function AppointmentsPage() {
                     {format(day, 'd')}
                   </div>
                   <div className="space-y-1 overflow-hidden">
+                    {/* Appointments from Stride */}
                     {dayAppointments.slice(0, 2).map((appt) => (
                       <div key={appt.appointmentId}>
                         <div
@@ -622,10 +645,51 @@ export default function AppointmentsPage() {
                         +{dayAppointments.length - 2} więcej
                       </div>
                     )}
+                    {/* Busy blocks from external ICS calendar (no details — privacy) */}
+                    {dayBusy.slice(0, 3).map((slot, i) => (
+                      <div
+                        key={`busy-${i}`}
+                        title="Zajęty — zdarzenie z zewnętrznego kalendarza"
+                        className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-700/50 text-zinc-500 truncate flex items-center gap-1 select-none"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-zinc-600 flex-shrink-0" />
+                        {slot.allDay
+                          ? 'Zajęty (cały dzień)'
+                          : `Zajęty ${slot.startTime}–${slot.endTime}`
+                        }
+                      </div>
+                    ))}
+                    {dayBusy.length > 3 && (
+                      <div className="text-[10px] text-zinc-600 px-1">
+                        +{dayBusy.length - 3} zajęte
+                      </div>
+                    )}
                   </div>
                 </div>
               );
             })}
+          </div>
+
+          {/* Legend */}
+          <div className="flex flex-wrap items-center gap-4 mt-4 pt-3 border-t border-white/[0.04]">
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              Potwierdzone
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              Oczekujące
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              Odwołane
+            </div>
+            {calendarEnabled && (
+              <div className="flex items-center gap-1.5 text-xs text-zinc-500">
+                <span className="w-2 h-2 rounded-full bg-zinc-600" />
+                Zajęty (zewnętrzny kalendarz)
+              </div>
+            )}
           </div>
 
           {/* Expanded appointment detail panel */}
