@@ -18,9 +18,10 @@ import {
   updateContactStages, createAppointment,
   getReminders, createReminder, deleteReminder,
   getReminderRules, updateReminderRules,
+  getContactTimeline,
 } from '@/lib/api';
 import { useSWR, fetcher } from '@/lib/swr';
-import { ContactProfile, Reminder, ReminderRule } from '@/lib/types';
+import { ContactProfile, ContactTimelineEvent, Reminder, ReminderRule } from '@/lib/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -32,7 +33,7 @@ import {
   Users, Mail, Phone, Calendar, MessageSquare,
   Copy, Check, X, Trash2, ExternalLink, Download,
   RefreshCw, List, Columns, ChevronUp, ChevronDown, Plus,
-  Bell, CalendarPlus, Clock, Repeat,
+  Bell, CalendarPlus, Clock, Repeat, Activity, Loader2, ArrowRight,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -884,10 +885,13 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   const [editTags, setEditTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [showCreateAppt, setShowCreateAppt] = useState(false);
+  const [timeline, setTimeline] = useState<ContactTimelineEvent[]>([]);
+  const [timelineLoading, setTimelineLoading] = useState(false);
 
   useEffect(() => {
     setConfirmDelete(false);
     setShowAddStage(false);
+    setTimeline([]);
     // Pre-populate from list data to avoid loading flash
     const fromList = contacts.find(c => c.profileId === profileId);
     if (fromList) {
@@ -909,6 +913,12 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       setEditTags(c.tags || []);
       setLoading(false);
     }).catch(() => setLoading(false));
+    // Fetch activity timeline separately (enriched, lazy)
+    setTimelineLoading(true);
+    getContactTimeline(clientId, profileId)
+      .then(data => setTimeline(data.timeline))
+      .catch(() => {})
+      .finally(() => setTimelineLoading(false));
   }, [profileId, clientId]);
 
   const save = async (field: string, value: string) => {
@@ -1120,33 +1130,123 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
             <div>Źródła: <span className="text-zinc-400">{contact.sourceCount}</span></div>
           </div>
 
-          {/* Sources */}
-          {contact.sources && contact.sources.length > 0 && (
-            <div>
-              <p className="text-xs text-zinc-500 uppercase tracking-wide mb-2">Historia źródeł</p>
-              <div className="space-y-1.5">
-                {contact.sources.map((src, i) => (
-                  <div key={i} className="flex items-center justify-between bg-white/[0.03] rounded-lg px-3 py-2 border border-white/[0.04]">
-                    <div className="flex items-center gap-2">
-                      {src.sourceType === 'appointment'
-                        ? <Calendar size={13} className="text-violet-400" />
-                        : <MessageSquare size={13} className="text-blue-400" />}
-                      <span className={`text-xs ${src.sourceType === 'appointment' ? 'text-violet-400' : 'text-blue-400'}`}>
-                        {src.sourceType === 'appointment' ? 'Spotkanie' : 'Rozmowa'}
-                      </span>
-                      <span className="text-xs text-zinc-600">{formatTs(src.createdAt)}</span>
-                    </div>
-                    {src.sessionId && (
-                      <button onClick={() => router.push(`/conversations/${src.sessionId}`)}
-                        className="text-zinc-600 hover:text-zinc-300 transition-colors" title="Otwórz rozmowę">
-                        <ExternalLink size={13} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
+          {/* Activity Timeline */}
+          <div>
+            <div className="flex items-center gap-1.5 mb-3">
+              <Activity size={13} className="text-zinc-500" />
+              <p className="text-xs text-zinc-500 uppercase tracking-wide">Aktywność</p>
             </div>
-          )}
+            {timelineLoading && (
+              <div className="flex items-center gap-2 py-3 text-zinc-600 text-xs">
+                <Loader2 size={12} className="animate-spin" />Ładowanie historii…
+              </div>
+            )}
+            {!timelineLoading && timeline.length === 0 && (
+              <p className="text-xs text-zinc-600 py-2">Brak aktywności</p>
+            )}
+            {!timelineLoading && timeline.length > 0 && (
+              <div className="relative pl-4">
+                {/* Vertical connector line */}
+                <div className="absolute left-[5px] top-2 bottom-2 w-px bg-white/[0.06]" />
+                <div className="space-y-3">
+                  {timeline.map((event, i) => (
+                    <div key={i} className="relative">
+                      {/* Dot on the line */}
+                      <div className={`absolute -left-4 top-[7px] w-2 h-2 rounded-full border ${
+                        event.type === 'appointment'  ? 'bg-violet-500/30 border-violet-500/60' :
+                        event.type === 'status_change' ? 'bg-zinc-500/30 border-zinc-500/60' :
+                                                         'bg-blue-500/30 border-blue-500/60'
+                      }`} />
+                      <div className="bg-white/[0.03] border border-white/[0.05] rounded-lg px-3 py-2.5 space-y-1.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            {event.type === 'appointment'
+                              ? <Calendar size={11} className="text-violet-400 flex-shrink-0" />
+                              : event.type === 'status_change'
+                              ? <ArrowRight size={11} className="text-zinc-500 flex-shrink-0" />
+                              : <MessageSquare size={11} className="text-blue-400 flex-shrink-0" />}
+                            <span className={`text-[11px] font-medium ${
+                              event.type === 'appointment'   ? 'text-violet-400' :
+                              event.type === 'status_change' ? 'text-zinc-400' :
+                                                               'text-blue-400'
+                            }`}>
+                              {event.type === 'appointment' ? 'Spotkanie' : event.type === 'status_change' ? 'Zmiana etapu' : 'Rozmowa'}
+                            </span>
+                            <span className="text-[10px] text-zinc-600">
+                              {new Date(event.timestamp * 1000).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          </div>
+                          {(event.type === 'conversation' || event.type === 'appointment') && event.sessionId && (
+                            <button
+                              onClick={() => router.push(`/conversations/${event.sessionId}`)}
+                              className="text-zinc-600 hover:text-zinc-300 transition-colors flex-shrink-0"
+                              title="Otwórz rozmowę"
+                            >
+                              <ExternalLink size={11} />
+                            </button>
+                          )}
+                        </div>
+
+                        {event.type === 'conversation' && event.firstMessagePreview && (
+                          <p className="text-[11px] text-zinc-400 leading-snug line-clamp-2 italic">
+                            &ldquo;{event.firstMessagePreview}&rdquo;
+                          </p>
+                        )}
+                        {event.type === 'conversation' && event.keywords && (
+                          <div className="flex flex-wrap gap-1">
+                            {event.keywords.split(',').slice(0, 4).map(kw => kw.trim()).filter(Boolean).map(kw => (
+                              <span key={kw} className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.05] text-zinc-500 border border-white/[0.06]">
+                                {kw}
+                              </span>
+                            ))}
+                            {event.messageCount > 0 && (
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-white/[0.04] text-zinc-600">
+                                {event.messageCount} wiad.
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {event.type === 'appointment' && event.datetime && (
+                          <p className="text-[11px] text-zinc-400">
+                            {new Date(event.datetime).toLocaleString('pl-PL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        {event.type === 'appointment' && event.status && (
+                          <span className={`inline-block text-[9px] px-1.5 py-0.5 rounded-full font-medium ${
+                            event.status === 'verified'  ? 'bg-green-500/15 text-green-400' :
+                            event.status === 'cancelled' ? 'bg-red-500/15 text-red-400' :
+                                                           'bg-yellow-500/15 text-yellow-400'
+                          }`}>
+                            {event.status === 'verified' ? 'potwierdzone' : event.status === 'cancelled' ? 'odwołane' : 'oczekuje'}
+                          </span>
+                        )}
+
+                        {event.type === 'status_change' && (
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <ArrowRight size={10} className="text-zinc-500 flex-shrink-0" />
+                            {(() => {
+                              const s = allStages.find(x => x.value === event.newStatus);
+                              return (
+                                <span className={`text-[11px] font-medium ${s?.textClass ?? 'text-zinc-400'}`}>
+                                  {s?.label ?? event.newStatus}
+                                </span>
+                              );
+                            })()}
+                            {event.userEmail && (
+                              <span className="text-[10px] text-zinc-600">
+                                · {event.userEmail.split('@')[0]}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Delete */}
           <div className="pt-2 border-t border-white/[0.06]">

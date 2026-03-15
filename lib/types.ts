@@ -254,6 +254,34 @@ export interface ContactSource {
   createdAt: number;
 }
 
+export type ContactTimelineEvent =
+  | {
+      type: 'conversation';
+      timestamp: number;
+      sessionId: string;
+      conversationNumber: number;
+      firstMessagePreview: string;
+      messageCount: number;
+      keywords: string;
+      status: string;
+    }
+  | {
+      type: 'appointment';
+      timestamp: number;
+      appointmentId: string;
+      sessionId: string;
+      datetime: string | null;
+      status: string;
+      notes: string;
+      name: string;
+    }
+  | {
+      type: 'status_change';
+      timestamp: number;
+      newStatus: string;
+      userEmail: string;
+    };
+
 // API Key Types
 export interface ApiKey {
   keyId: string;

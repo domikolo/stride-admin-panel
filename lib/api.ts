@@ -3,7 +3,7 @@
  */
 
 import { getIdToken } from './token';
-import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, AuditEvent, ApiKey, ObservabilityData, AppNotification, Report } from './types';
+import { Client, ClientStats, DailyStat, Conversation, ConversationMessage, Appointment, Topic, Gap, Activity, DailyBriefing, ChatHistoryMessage, ChatResponse, ChatIntent, KBEntry, KBVersion, LiveSession, ContactProfile, ContactTimelineEvent, AuditEvent, ApiKey, ObservabilityData, AppNotification, Report } from './types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '';
 if (!API_BASE_URL && typeof window !== 'undefined') {
@@ -467,6 +467,11 @@ export const updateContact = (
 export const deleteContact = (clientId: string, profileId: string) =>
   api.delete<{ status: string; profileId: string }>(
     `/clients/${clientId}/contacts/${profileId}`
+  );
+
+export const getContactTimeline = (clientId: string, profileId: string) =>
+  api.get<{ timeline: ContactTimelineEvent[] }>(
+    `/clients/${clientId}/contacts/${profileId}/timeline`
   );
 
 export const updateConversationAnnotations = (

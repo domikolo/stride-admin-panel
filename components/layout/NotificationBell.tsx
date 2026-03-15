@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 import {
   Bell, BellRing, X, CalendarPlus, CalendarCheck, CalendarX,
   UserPlus, Lightbulb, CheckCheck,
@@ -115,10 +116,33 @@ export default function NotificationBell({ clientId }: Props) {
   const [hasHighPriority, setHighPri] = useState(false);
   const [pos, setPos]                 = useState<{ top: number; left: number; origin: string } | null>(null);
   const [mounted, setMounted]         = useState(false);
-  const btnRef   = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLDivElement>(null);
+  const btnRef      = useRef<HTMLButtonElement>(null);
+  const panelRef    = useRef<HTMLDivElement>(null);
+  const seenIdsRef  = useRef<Set<string> | null>(null); // null = first fetch not done yet
+  const bellAnim    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [ringing, setRinging] = useState(false);
 
   useEffect(() => setMounted(true), []);
+
+  // ── Helpers ────────────────────────────────────────────────────────────────
+
+  function ringBell() {
+    setRinging(true);
+    if (bellAnim.current) clearTimeout(bellAnim.current);
+    bellAnim.current = setTimeout(() => setRinging(false), 2000);
+  }
+
+  function showBrowserPush(n: AppNotification) {
+    if (typeof window === 'undefined') return;
+    if (Notification.permission !== 'granted') return;
+    try {
+      new Notification(n.title, {
+        body: n.body ?? undefined,
+        icon: '/favicon.ico',
+        tag:  n.notificationId,
+      });
+    } catch { /* ignore */ }
+  }
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -126,9 +150,35 @@ export default function NotificationBell({ clientId }: Props) {
     if (!silent) setLoading(true);
     try {
       const data = await getNotifications(clientId);
-      setNotif(data.notifications);
+      const incoming: AppNotification[] = data.notifications;
+
+      // First fetch: populate seen set silently (no alerts on page load)
+      if (seenIdsRef.current === null) {
+        seenIdsRef.current = new Set(incoming.map(n => n.notificationId));
+      } else {
+        // Detect newly arrived unread notifications
+        const newOnes = incoming.filter(
+          n => !n.read && !seenIdsRef.current!.has(n.notificationId)
+        );
+        if (newOnes.length > 0) {
+          ringBell();
+          const first = newOnes[0];
+          toast(first.title + (first.body ? `\n${first.body}` : ''), {
+            icon: '🔔',
+            duration: 6000,
+          });
+          // Browser push when tab is hidden
+          if (document.visibilityState === 'hidden') {
+            showBrowserPush(first);
+          }
+        }
+        // Add all incoming to seen (even if read — prevents re-alerting on mark-read)
+        for (const n of incoming) seenIdsRef.current!.add(n.notificationId);
+      }
+
+      setNotif(incoming);
       setUnread(data.unreadCount);
-      setHighPri(data.notifications.some(n => !n.read && n.priority === 'high'));
+      setHighPri(incoming.some(n => !n.read && n.priority === 'high'));
     } catch { /* ignore */ } finally {
       if (!silent) setLoading(false);
     }
@@ -136,9 +186,9 @@ export default function NotificationBell({ clientId }: Props) {
 
   useEffect(() => {
     fetchNotif();
-    const id = setInterval(() => {
-      if (document.visibilityState === 'visible') fetchNotif(true);
-    }, 30000);
+    // Poll always (hidden tab → browser push; visible tab → toast + bell)
+    const id = setInterval(() => fetchNotif(true), 30000);
+    // Re-fetch immediately when tab becomes visible again
     const onVisible = () => { if (document.visibilityState === 'visible') fetchNotif(true); };
     document.addEventListener('visibilitychange', onVisible);
     return () => {
@@ -316,15 +366,29 @@ export default function NotificationBell({ clientId }: Props) {
     </div>
   );
 
+  // ── Push permission ────────────────────────────────────────────────────────
+
+  function handleBellClick() {
+    // Ask for browser push permission on first open (if not yet decided)
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission().catch(() => {});
+    }
+    setOpen(prev => !prev);
+  }
+
   return (
     <div className="relative">
       <button
         ref={btnRef}
-        onClick={() => setOpen(prev => !prev)}
+        onClick={handleBellClick}
         className="relative p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-white/[0.08] transition-colors"
         aria-label="Powiadomienia"
       >
-        <Bell size={20} />
+        {ringing ? (
+          <BellRing size={20} className="text-blue-400 bell-ringing" />
+        ) : (
+          <Bell size={20} />
+        )}
         {unreadCount > 0 && (
           <span className={`
             absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1
