@@ -976,7 +976,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[380px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 w-full md:w-[380px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card z-10">
         <h2 className="font-semibold text-white text-[15px]">Szczegóły kontaktu</h2>
@@ -1597,7 +1597,7 @@ export default function ContactsPage() {
   }
 
   return (
-    <div className={`space-y-5 transition-all duration-300 ${selectedId && mainTab === 'contacts' ? 'pr-[388px]' : ''}`}>
+    <div className={`space-y-5 transition-all duration-300 ${selectedId && mainTab === 'contacts' ? 'md:pr-[388px]' : ''}`}>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
@@ -1668,7 +1668,7 @@ export default function ContactsPage() {
       <div className="flex gap-2 flex-wrap items-center">
         <input type="text" placeholder="Szukaj..." value={search}
           onChange={e => { setSearch(e.target.value); setPage(1); }}
-          className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors w-48" />
+          className="bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-1.5 text-sm text-white placeholder-zinc-600 focus:outline-none focus:border-white/20 transition-colors w-full md:w-48" />
         <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setPage(1); }}
           className="bg-muted border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:outline-none cursor-pointer">
           <option value="">Wszystkie statusy</option>
@@ -1708,7 +1708,7 @@ export default function ContactsPage() {
 
       {/* Table */}
       {view === 'table' ? (
-        <Card className="glass-card">
+        <Card className="glass-card overflow-x-auto">
           {sorted.length === 0 ? (
             <EmptyState icon={Users} title="Brak kontaktów"
               description="Kontakty pojawią się tutaj gdy chatbot zbierze email lub telefon." />

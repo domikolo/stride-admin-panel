@@ -167,7 +167,7 @@ export default function DashboardPage() {
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white">
             Dashboard
@@ -203,7 +203,7 @@ export default function DashboardPage() {
 
       {/* Quick Stats - 4 cards */}
       <motion.div
-        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
         variants={cardGridVariants}
         initial="hidden"
         animate="visible"

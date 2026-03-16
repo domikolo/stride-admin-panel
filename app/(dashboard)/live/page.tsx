@@ -540,7 +540,7 @@ export default function LivePage() {
           <Radio size={24} className="text-green-400" />
           <h1 className="text-lg font-semibold text-white">Live</h1>
         </div>
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="space-y-2">
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-20" />
@@ -581,9 +581,9 @@ export default function LivePage() {
       </div>
 
       {/* Main layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4" style={{ height: 'calc(100vh - 160px)' }}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[calc(100vh-160px)]">
         {/* Sessions list */}
-        <Card className="glass-card overflow-y-auto">
+        <Card className="glass-card overflow-y-auto min-h-[200px] lg:overflow-y-auto">
           {sessions.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
@@ -700,7 +700,7 @@ export default function LivePage() {
           ) : (
             <>
               {/* Conversation header */}
-              <div className="p-4 border-b border-white/[0.04] flex items-center justify-between flex-shrink-0">
+              <div className="p-4 border-b border-white/[0.04] flex items-center justify-between flex-shrink-0 flex-wrap gap-2">
                 <div className="flex items-center gap-3">
                   <div>
                     <h2 className="text-sm font-semibold text-white">

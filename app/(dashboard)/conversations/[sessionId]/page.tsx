@@ -193,7 +193,7 @@ export default function ConversationDetailPage() {
     <div className="space-y-4 max-w-4xl mx-auto">
       {/* Sticky Header */}
       <div className="sticky top-0 z-20 -mx-5 md:-mx-8 lg:-mx-10 px-5 md:px-8 lg:px-10 py-2.5 bg-background/80 backdrop-blur-xl border-b border-white/[0.04]">
-        <div className="flex items-center justify-between max-w-4xl mx-auto">
+        <div className="flex items-center justify-between max-w-4xl mx-auto flex-wrap gap-2">
           <div>
             {/* Breadcrumb */}
             <nav className="flex items-center gap-1.5 text-sm mb-1">
@@ -273,7 +273,7 @@ export default function ConversationDetailPage() {
                 </div>
 
                 {/* Bubble */}
-                <div className={`flex-1 max-w-[85%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
+                <div className={`flex-1 max-w-[90%] sm:max-w-[85%] ${message.role === 'user' ? 'ml-auto' : 'mr-auto'}`}>
                   <div className={`px-4 py-3 rounded-xl transition-shadow ${message.role === 'user'
                       ? 'bg-blue-500/10 rounded-tr-sm'
                       : 'bg-white/[0.04] rounded-tl-sm'

@@ -685,7 +685,7 @@ export default function InsightsPage() {
   return (
     <div className="space-y-5 animate-fadeIn">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white">Insights</h1>
           <p className="text-sm text-zinc-500 mt-1 flex items-center gap-1.5">

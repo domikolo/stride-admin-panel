@@ -304,7 +304,7 @@ export default function KnowledgeBasePage() {
   return (
     <div className="space-y-4 animate-fadeIn">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white flex items-center gap-3">
             <BookOpen className="text-blue-400" />
@@ -317,7 +317,7 @@ export default function KnowledgeBasePage() {
             }
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <div className="relative">
             <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-500" />
             <input
@@ -325,7 +325,7 @@ export default function KnowledgeBasePage() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Szukaj w bazie wiedzy..."
-              className="h-8 w-56 rounded-md border border-white/[0.08] bg-white/[0.03] pl-8 pr-8 text-sm text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-blue-500/40"
+              className="h-8 w-full md:w-56 rounded-md border border-white/[0.08] bg-white/[0.03] pl-8 pr-8 text-sm text-zinc-300 outline-none placeholder:text-zinc-600 focus:border-blue-500/40"
             />
             {searchQuery && (
               <button

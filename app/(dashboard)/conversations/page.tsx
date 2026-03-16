@@ -68,7 +68,8 @@ function SortableHeader({
   currentSort,
   direction,
   onSort,
-  tooltip
+  tooltip,
+  className,
 }: {
   label: string;
   sortKey: SortKey;
@@ -76,9 +77,10 @@ function SortableHeader({
   direction: SortDirection;
   onSort: (key: SortKey) => void;
   tooltip?: string;
+  className?: string;
 }) {
   return (
-    <TableHead>
+    <TableHead className={className}>
       <div
         className="flex items-center gap-1.5 cursor-pointer hover:text-white transition-colors group select-none relative"
         onClick={() => onSort(sortKey)}
@@ -145,7 +147,7 @@ function AnnotationPanel({ sessionId, clientId, initialTags, initialNotes, initi
   };
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[360px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
+    <div className="fixed inset-y-0 right-0 w-full md:w-[360px] bg-card border-l border-border z-50 flex flex-col shadow-2xl overflow-y-auto">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border sticky top-0 bg-card z-10">
         <div>
@@ -485,9 +487,9 @@ export default function ConversationsPage() {
   }
 
   return (
-    <div className={`space-y-4 animate-fadeIn transition-all duration-300 ${selectedAnnotationSession ? 'pr-[368px]' : ''}`}>
+    <div className={`space-y-4 animate-fadeIn transition-all duration-300 ${selectedAnnotationSession ? 'md:pr-[368px]' : ''}`}>
       {/* Header */}
-      <div className="flex items-start justify-between mb-2">
+      <div className="flex items-start justify-between mb-2 flex-wrap gap-2">
         <div>
           <h1 className="text-lg font-semibold tracking-tight text-white">
             Rozmowy
@@ -533,7 +535,7 @@ export default function ConversationsPage() {
       {/* Search and Filters */}
       <div className="flex gap-3 flex-wrap items-center">
         {/* Search */}
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
           <input
             type="text"
@@ -580,7 +582,7 @@ export default function ConversationsPage() {
       </div>
 
       {/* Table */}
-      <Card className="glass-card">
+      <Card className="glass-card overflow-x-auto">
         {paginatedGroups.length === 0 ? (
           <EmptyState
             icon={MessageSquare}
@@ -602,7 +604,7 @@ export default function ConversationsPage() {
                     onSort={handleSort}
                     tooltip="Identyfikator urządzenia/sesji użytkownika. Jeśli w ramach jednej sesji odbyło się więcej rozmów, są one tutaj grupowane."
                   />
-                  <TableHead className="w-24">
+                  <TableHead className="w-24 hidden sm:table-cell">
                     <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji. Jeśli sesja zawiera tylko jedną rozmowę, funkcja zwijania jest nieaktywna, co oznacza, że w sesji miała miejsce tylko jedna rozmowa.">
                       Rozmowa #
                     </HeaderTooltip>
@@ -614,6 +616,7 @@ export default function ConversationsPage() {
                     direction={sortDirection}
                     onSort={handleSort}
                     tooltip="Status sesji. In Progress - jeśli trwa. Test - jeśli testowa. Completed - jeśli zakończona."
+                    className="hidden md:table-cell"
                   />
                   <SortableHeader
                     label="Wiadomości"
@@ -621,6 +624,7 @@ export default function ConversationsPage() {
                     currentSort={sortKey}
                     direction={sortDirection}
                     onSort={handleSort}
+                    className="hidden md:table-cell"
                   />
                   <SortableHeader
                     label="Data i godzina"
@@ -629,7 +633,7 @@ export default function ConversationsPage() {
                     direction={sortDirection}
                     onSort={handleSort}
                   />
-                  <TableHead className="w-16 text-center">
+                  <TableHead className="w-16 text-center hidden sm:table-cell">
                     <HeaderTooltip tooltip="Ocena rozmowy wystawiona przez użytkownika w widgecie czatu.">
                       Ocena
                     </HeaderTooltip>
@@ -686,16 +690,16 @@ export default function ConversationsPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-zinc-600 font-mono text-xs text-center">
+                        <TableCell className="text-zinc-600 font-mono text-xs text-center hidden sm:table-cell">
                           —
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <Badge variant={statusDisplay.variant} className={`gap-1 ${statusDisplay.className}`}>
                             <statusDisplay.icon size={12} />
                             {statusDisplay.label}
                           </Badge>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="hidden md:table-cell">
                           <div className="flex items-center gap-1.5 font-medium text-zinc-300">
                             <MessageSquare size={14} className="text-zinc-500" />
                             {group.metrics.totalMessages}
@@ -709,7 +713,7 @@ export default function ConversationsPage() {
                             <span className="text-xs text-zinc-500">{latestDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className="text-center hidden sm:table-cell">
                           {isSingleSession ? (
                             <>
                               {group.metrics.rating === 'positive' && <span title="Pozytywna ocena"><ThumbsUp size={13} className="text-emerald-400 inline-block" /></span>}
@@ -766,11 +770,11 @@ export default function ConversationsPage() {
                                 <div className="w-5 h-5 flex items-center justify-center border-l border-b border-zinc-700/50 rounded-bl-md mr-3"></div>
                               </div>
                             </TableCell>
-                            <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold">
+                            <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold hidden sm:table-cell">
                               #{conv.conversationNumber || 1}
                             </TableCell>
-                            <TableCell></TableCell> {/* No status for individual sub-convs in this view to keep it clean, or could add */}
-                            <TableCell className="text-sm text-zinc-400 pl-4">
+                            <TableCell className="hidden md:table-cell"></TableCell> {/* No status for individual sub-convs in this view to keep it clean, or could add */}
+                            <TableCell className="text-sm text-zinc-400 pl-4 hidden md:table-cell">
                               {conv.messagesCount}
                             </TableCell>
                             <TableCell className="text-sm text-zinc-400">
@@ -779,7 +783,7 @@ export default function ConversationsPage() {
                                 <span className="text-xs text-zinc-600">{convDate.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit', hour12: false })}</span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-center">
+                            <TableCell className="text-center hidden sm:table-cell">
                               {conv.rating === 'positive' && <span title="Pozytywna ocena"><ThumbsUp size={13} className="text-emerald-400 inline-block" /></span>}
                               {conv.rating === 'negative' && <span title="Negatywna ocena"><ThumbsDown size={13} className="text-red-400 inline-block" /></span>}
                               {!conv.rating && <span className="text-zinc-700 text-xs">—</span>}
@@ -802,7 +806,7 @@ export default function ConversationsPage() {
 
             {/* Pagination */}
             {totalPages > 1 && (
-              <div className="flex items-center justify-between px-6 py-2.5 border-t border-white/5">
+              <div className="flex items-center justify-between px-6 py-2.5 border-t border-white/5 flex-wrap gap-2">
                 <span className="text-sm text-zinc-400">
                   Strona {currentPage} z {totalPages}
                 </span>

@@ -178,7 +178,7 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
       ) : keys.length === 0 && !newKey ? (
         <p className="text-sm text-zinc-600">Brak aktywnych kluczy.</p>
       ) : keys.length > 0 && (
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <div className="rounded-lg border border-white/[0.06] overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">
@@ -350,7 +350,7 @@ function ChatbotHoursSection({ clientId }: { clientId: string }) {
           {/* Hours */}
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-2">Godziny</label>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <select
                 value={config.hoursFrom}
                 onChange={e => setConfig(c => ({ ...c, hoursFrom: e.target.value }))}
@@ -997,7 +997,7 @@ function AuditLogSection({ clientId }: { clientId: string }) {
           Brak zdarzeń spełniających kryteria.
         </div>
       ) : (
-        <div className="rounded-lg border border-white/[0.06] overflow-hidden">
+        <div className="rounded-lg border border-white/[0.06] overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-white/[0.06] bg-white/[0.02]">

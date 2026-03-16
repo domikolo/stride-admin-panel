@@ -362,7 +362,7 @@ export default function AppointmentsPage() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-start justify-between">
+      <div className="flex items-start justify-between flex-wrap gap-2">
         <div className="mb-2">
           <h1 className="text-lg font-semibold tracking-tight text-white">
             Spotkania
@@ -400,7 +400,7 @@ export default function AppointmentsPage() {
 
       {mainTab === 'spotkania' && (<>
         {/* Status Filters + View Toggle */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex gap-1 bg-muted p-1 rounded-lg border border-border w-fit">
             {(['all', 'verified', 'pending', 'cancelled'] as StatusFilter[]).map((status) => (
               <button
@@ -443,7 +443,7 @@ export default function AppointmentsPage() {
         {/* Content */}
         {view === 'table' ? (
         /* Table View */
-        <Card className="glass-card">
+        <Card className="glass-card overflow-x-auto">
           {filteredAppointments.length === 0 ? (
             <EmptyState
               icon={Calendar}
@@ -782,7 +782,7 @@ export default function AppointmentsPage() {
 
       {mainTab === 'statystyki' && stats && (<>
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatsCard title="Spotkania" value={stats.appointmentsCreated} icon={Calendar} iconColor="text-purple-400" description="Spotkania umówione w ostatnich 30 dniach" />
           <StatsCard title="CPA" value={`$${stats.cpaUsd?.toFixed(2) || '0.00'}`} icon={DollarSign} iconColor="text-emerald-400" description="Koszt za spotkanie (ostatnie 30 dni)" />
           <StatsCard title="Śr. czas konwersji" value={`${stats.avgTimeToConversionMin?.toFixed(1) || 0} min`} icon={Clock} iconColor="text-blue-400" description="Od pierwszej wiadomości do spotkania" />
