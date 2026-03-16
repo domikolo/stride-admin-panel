@@ -224,6 +224,8 @@ export interface LiveSession {
   firstMessagePreview: string;
   conversationNumber: number;
   takenOverBy?: string;
+  humanRequested?: boolean;
+  humanRequestedAt?: number;
 }
 
 export interface LiveMessage {

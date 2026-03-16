@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
+import toast from 'react-hot-toast';
 import {
   Radio,
   MessageSquare,
@@ -28,6 +29,7 @@ import {
   User,
   Bot,
   UserCheck,
+  BellRing,
   Circle,
   AlertTriangle,
   ShieldAlert,
@@ -169,6 +171,9 @@ export default function LivePage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Track sessions for which we already showed the human_requested toast
+  const humanRequestedToastedRef = useRef<Set<string>>(new Set());
 
   // Refs to avoid stale closures in WS event handlers
   const selectedSessionIdRef = useRef<string | null>(null);
@@ -373,7 +378,7 @@ export default function LivePage() {
           setSessions((prev) =>
             prev.map((s) =>
               s.sessionId === event.sessionId
-                ? { ...s, takenOverBy: event.takenOverBy || '' }
+                ? { ...s, takenOverBy: event.takenOverBy || '', humanRequested: false }
                 : s
             )
           );
@@ -397,6 +402,28 @@ export default function LivePage() {
               sentBy: 'system',
               conversationNumber: 1,
             }]);
+          }
+        })
+      );
+
+      cleanups.push(
+        wsClient.on('human_requested', (event: WSEvent) => {
+          const sid = event.sessionId as string;
+          if (!sid) return;
+          // Update session flag in state
+          setSessions((prev) =>
+            prev.map((s) =>
+              s.sessionId === sid ? { ...s, humanRequested: true, humanRequestedAt: Math.floor(Date.now() / 1000) } : s
+            )
+          );
+          // Toast — only once per session
+          if (!humanRequestedToastedRef.current.has(sid)) {
+            humanRequestedToastedRef.current.add(sid);
+            toast('Użytkownik prosi o konsultanta', {
+              icon: '🔔',
+              style: { background: '#1a1a1e', color: '#f87171', border: '1px solid rgba(239,68,68,0.3)' },
+              duration: 6000,
+            });
           }
         })
       );
@@ -573,15 +600,19 @@ export default function LivePage() {
                 const colors = getGapColor(sessionGaps.count);
                 const unread = unreadCounts[session.sessionId] || 0;
 
+                const isHumanPending = !!session.humanRequested && !session.takenOverBy;
+
                 return (
                   <button
                     key={`${session.sessionId}-${session.conversationNumber}`}
                     onClick={() => selectSession(session.sessionId)}
                     className={`w-full text-left p-4 hover:bg-white/[0.04] transition-colors border-l-2 ${selectedSessionId === session.sessionId
                         ? 'bg-blue-500/[0.08] border-l-blue-500'
-                        : sessionGaps.count > 0
-                          ? `${colors.bg} ${colors.border}`
-                          : 'border-l-transparent'
+                        : isHumanPending
+                          ? 'bg-red-500/[0.07] border-l-red-500 animate-pulse'
+                          : sessionGaps.count > 0
+                            ? `${colors.bg} ${colors.border}`
+                            : 'border-l-transparent'
                       }`}
                   >
                     <div className="flex items-center justify-between mb-1">
@@ -607,6 +638,12 @@ export default function LivePage() {
                       <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                         {session.messageCount} wiad.
                       </Badge>
+                      {isHumanPending && (
+                        <Badge className="text-[10px] px-1.5 py-0 bg-red-500/20 text-red-400 gap-1">
+                          <BellRing size={10} />
+                          Prosi o agenta
+                        </Badge>
+                      )}
                       {session.takenOverBy && (
                         <Badge className="text-[10px] px-1.5 py-0 bg-blue-500/20 text-blue-400">
                           <UserCheck size={10} className="mr-1" />
