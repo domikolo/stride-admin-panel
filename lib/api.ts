@@ -469,6 +469,11 @@ export const deleteContact = (clientId: string, profileId: string) =>
     `/clients/${clientId}/contacts/${profileId}`
   );
 
+export const gdprEraseContact = (clientId: string, profileId: string) =>
+  api.delete<{ status: string; deleted: Record<string, number> }>(
+    `/clients/${clientId}/contacts/${profileId}/gdpr-erase`
+  );
+
 export const getContactTimeline = (clientId: string, profileId: string) =>
   api.get<{ timeline: ContactTimelineEvent[] }>(
     `/clients/${clientId}/contacts/${profileId}/timeline`

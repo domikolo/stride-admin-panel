@@ -14,7 +14,7 @@ import { flashElement } from '@/hooks/useSearchHighlight';
 import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import {
-  getContact, updateContact, deleteContact,
+  getContact, updateContact, deleteContact, gdprEraseContact,
   updateContactStages, createAppointment,
   getReminders, createReminder, deleteReminder,
   getReminderRules, updateReminderRules,
@@ -33,7 +33,7 @@ import {
   Users, Mail, Phone, Calendar, MessageSquare,
   Copy, Check, X, Trash2, ExternalLink, Download,
   RefreshCw, List, Columns, ChevronUp, ChevronDown, Plus,
-  Bell, CalendarPlus, Clock, Repeat, Activity, Loader2, ArrowRight,
+  Bell, CalendarPlus, Clock, Repeat, Activity, Loader2, ArrowRight, ShieldAlert,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -874,10 +874,13 @@ function TagPill({ tag, onRemove }: { tag: string; onRemove: () => void }) {
 
 function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpdated, onDeleted, onAddStage, onDeleteStage, onAppointmentCreated }: DetailPanelProps) {
   const router = useRouter();
+  const { user } = useAuth();
+  const isOwner = user?.role === 'owner';
   const [contact, setContact] = useState<ContactProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmGdpr, setConfirmGdpr] = useState(false);
   const [editName, setEditName] = useState('');
   const [editNotes, setEditNotes] = useState('');
   const [editStatus, setEditStatus] = useState('new');
@@ -966,6 +969,20 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
     } catch (e) {
       console.error(e);
       toast.error('Nie udało się usunąć kontaktu');
+      setSaving(false);
+    }
+  };
+
+  const handleGdprErase = async () => {
+    setSaving(true);
+    try {
+      await gdprEraseContact(clientId, profileId);
+      onDeleted(profileId);
+      onClose();
+      toast.success('Dane usunięte zgodnie z RODO');
+    } catch (e) {
+      console.error(e);
+      toast.error('Nie udało się usunąć danych');
       setSaving(false);
     }
   };
@@ -1268,6 +1285,30 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
               </button>
             )}
           </div>
+
+          {/* GDPR Erase — owner only */}
+          {isOwner && (
+            <div className="pt-2 border-t border-white/[0.06]">
+              {confirmGdpr ? (
+                <div className="space-y-2 p-3 rounded-lg bg-orange-500/[0.08] border border-orange-500/20">
+                  <p className="text-sm text-orange-400 font-medium">Usuń wszystkie dane (RODO)</p>
+                  <p className="text-xs text-zinc-500">Trwale usuwa profil, historię rozmów i wizyty. Operacja nieodwracalna.</p>
+                  <div className="flex gap-2 pt-1">
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmGdpr(false)} className="text-zinc-400">Anuluj</Button>
+                    <Button size="sm" onClick={handleGdprErase} disabled={saving}
+                      className="bg-orange-500/20 text-orange-400 hover:bg-orange-500/30 border-0">
+                      {saving ? 'Usuwanie...' : 'Usuń trwale'}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmGdpr(true)}
+                  className="flex items-center gap-2 text-sm text-orange-500/60 hover:text-orange-400 transition-colors py-1">
+                  <ShieldAlert size={14} />Usuń dane (RODO)
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1730,11 +1771,11 @@ export default function ContactsPage() {
                     </TableHead>
                     <SortTh field="contactInfo" label="Kontakt" />
                     <SortTh field="status" label="Status" />
-                    <TableHead>Typ</TableHead>
-                    <TableHead>Tagi</TableHead>
-                    <TableHead>Źr.</TableHead>
-                    <SortTh field="firstSeen" label="Pierwszy kontakt" />
-                    <SortTh field="lastSeen" label="Ostatni kontakt" />
+                    <TableHead className="hidden sm:table-cell">Typ</TableHead>
+                    <TableHead className="hidden md:table-cell">Tagi</TableHead>
+                    <TableHead className="hidden lg:table-cell">Źr.</TableHead>
+                    <SortTh field="firstSeen" label="Pierwszy kontakt" className="hidden lg:table-cell" />
+                    <SortTh field="lastSeen" label="Ostatni kontakt" className="hidden sm:table-cell" />
                     <TableHead className="w-6" />
                   </TableRow>
                 </TableHeader>
@@ -1769,8 +1810,8 @@ export default function ContactsPage() {
                           {c.hasAppointment && <AppointmentBadge datetime={c.appointmentDatetime} status={c.appointmentStatus} />}
                         </div>
                       </TableCell>
-                      <TableCell><span className="text-xs text-zinc-400 capitalize">{c.contactType}</span></TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell"><span className="text-xs text-zinc-400 capitalize">{c.contactType}</span></TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <div className="flex flex-wrap gap-1">
                           {(c.tags || []).slice(0, 3).map(tag => (
                             <span key={tag} className="text-[10px] px-1.5 py-0.5 bg-violet-500/15 text-violet-400 rounded-full">{tag}</span>
@@ -1778,9 +1819,9 @@ export default function ContactsPage() {
                           {(c.tags?.length || 0) > 3 && <span className="text-[10px] text-zinc-600">+{(c.tags?.length || 0) - 3}</span>}
                         </div>
                       </TableCell>
-                      <TableCell><span className="text-sm text-zinc-400">{c.sourceCount}</span></TableCell>
-                      <TableCell><span className="text-sm text-zinc-400">{formatTs(c.firstSeen)}</span></TableCell>
-                      <TableCell><span className="text-sm text-zinc-400">{formatTs(c.lastSeen)}</span></TableCell>
+                      <TableCell className="hidden lg:table-cell"><span className="text-sm text-zinc-400">{c.sourceCount}</span></TableCell>
+                      <TableCell className="hidden lg:table-cell"><span className="text-sm text-zinc-400">{formatTs(c.firstSeen)}</span></TableCell>
+                      <TableCell className="hidden sm:table-cell"><span className="text-sm text-zinc-400">{formatTs(c.lastSeen)}</span></TableCell>
                       <TableCell>
                         <ChevronDown size={14} className={`transition-transform ${selectedId === c.profileId ? 'rotate-[-90deg] text-white' : 'text-zinc-700'}`} />
                       </TableCell>

@@ -467,7 +467,7 @@ export default function AppointmentsPage() {
                   </TableHead>
                   <TableHead>Kontakt</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Sesja</TableHead>
+                  <TableHead className="hidden sm:table-cell">Sesja</TableHead>
                   <TableHead className="w-10"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -519,7 +519,7 @@ export default function AppointmentsPage() {
                         {getStatusLabel(appt.status)}
                       </Badge>
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="hidden sm:table-cell">
                       <Button
                         variant="ghost"
                         size="sm"

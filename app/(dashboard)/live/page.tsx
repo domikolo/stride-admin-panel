@@ -36,6 +36,7 @@ import {
   Sparkles,
   X,
   ArrowRight,
+  ArrowLeft,
   Loader2,
   TrendingUp,
 } from 'lucide-react';
@@ -582,8 +583,8 @@ export default function LivePage() {
 
       {/* Main layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:h-[calc(100vh-160px)]">
-        {/* Sessions list */}
-        <Card className="glass-card overflow-y-auto min-h-[200px] lg:overflow-y-auto">
+        {/* Sessions list — hidden on mobile when conversation is selected */}
+        <Card className={`glass-card overflow-y-auto max-h-[40vh] lg:max-h-none lg:overflow-y-auto ${selectedSessionId ? 'hidden lg:block' : ''}`}>
           {sessions.length === 0 ? (
             <EmptyState
               icon={MessageSquare}
@@ -702,6 +703,13 @@ export default function LivePage() {
               {/* Conversation header */}
               <div className="p-4 border-b border-white/[0.04] flex items-center justify-between flex-shrink-0 flex-wrap gap-2">
                 <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setSelectedSessionId(null)}
+                    className="lg:hidden p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-white/[0.06] transition-colors"
+                    title="Wróć do listy"
+                  >
+                    <ArrowLeft size={16} />
+                  </button>
                   <div>
                     <h2 className="text-sm font-semibold text-white">
                       Rozmowa #{selectedSession?.conversationNumber}
