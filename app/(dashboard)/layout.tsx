@@ -15,6 +15,7 @@ import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 import SearchDialog from '@/components/layout/SearchDialog';
 import NotificationBell from '@/components/layout/NotificationBell';
 import PageTransition from '@/components/layout/PageTransition';
+import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Menu, Search } from 'lucide-react';
 
 function TabTitleSync() {
@@ -91,9 +92,11 @@ export default function DashboardLayout({
         <main className="flex-1 overflow-y-auto bg-background">
           <div className="p-3 md:p-4 lg:p-6">
             <div className="max-w-[1600px] mx-auto">
-              <PageTransition>
-                {children}
-              </PageTransition>
+              <ErrorBoundary>
+                <PageTransition>
+                  {children}
+                </PageTransition>
+              </ErrorBoundary>
             </div>
           </div>
         </main>
