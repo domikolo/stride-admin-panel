@@ -7,8 +7,25 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn as cognitoSignIn, signOut as cognitoSignOut } from '@/lib/auth';
-import { setTokens } from '@/lib/token';
+import { setTokens, getAccessToken } from '@/lib/token';
 import { AuthUser } from '@/lib/types';
+
+async function checkMfaRequired(user: AuthUser): Promise<boolean> {
+  if (user.role !== 'owner') return false;
+  try {
+    const token = getAccessToken();
+    if (!token) return false;
+    const res = await fetch('/api/auth/mfa-status', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ accessToken: token }),
+    });
+    const data = await res.json();
+    return !data.enabled;
+  } catch {
+    return false;
+  }
+}
 
 export interface NewPasswordPending {
   newPasswordPending: true;
@@ -70,8 +87,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         },
       };
     }
-    setUser(result.user);
-    router.push('/dashboard');
+    const u = result.user;
+    setUser(u);
+    const mfaRequired = await checkMfaRequired(u);
+    router.push(mfaRequired ? '/mfa-setup' : '/dashboard');
   };
 
   const signOut = async () => {
