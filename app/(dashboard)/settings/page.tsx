@@ -692,7 +692,7 @@ function CalendarIntegrationSection({ clientId }: { clientId: string }) {
 
 // ─── MFA Section (owner only) ─────────────────────────────────────────────────
 
-function MfaSection({ email }: { email: string }) {
+function MfaSection({ email, isOwner }: { email: string; isOwner: boolean }) {
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
 
@@ -789,15 +789,27 @@ function MfaSection({ email }: { email: string }) {
           <p className="text-sm text-zinc-500">
             Twoje konto jest chronione kodem TOTP z aplikacji uwierzytelniającej.
           </p>
-          <Button
-            onClick={handleDisable}
-            disabled={busy}
-            variant="outline"
-            className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 text-sm"
-          >
-            {busy ? <Loader2 size={14} className="animate-spin mr-2" /> : <ShieldOff size={14} className="mr-2" />}
-            Wyłącz MFA
-          </Button>
+          {isOwner ? (
+            <Button
+              onClick={handleStartSetup}
+              disabled={busy}
+              variant="outline"
+              className="border-white/[0.08] text-zinc-400 hover:text-white text-sm"
+            >
+              {busy ? <Loader2 size={14} className="animate-spin mr-2" /> : <ShieldCheck size={14} className="mr-2" />}
+              Dodaj kolejne urządzenie
+            </Button>
+          ) : (
+            <Button
+              onClick={handleDisable}
+              disabled={busy}
+              variant="outline"
+              className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 text-sm"
+            >
+              {busy ? <Loader2 size={14} className="animate-spin mr-2" /> : <ShieldOff size={14} className="mr-2" />}
+              Wyłącz MFA
+            </Button>
+          )}
         </div>
       ) : step === 'idle' ? (
         /* ── MFA nieaktywne ── */
@@ -1191,7 +1203,7 @@ export default function SettingsPage() {
             <CalendarIntegrationSection clientId={clientId ?? ''} />
 
             {/* MFA — owner only */}
-            {user?.role === 'owner' && <MfaSection email={user.email} />}
+            {user?.role === 'owner' && <MfaSection email={user.email} isOwner={true} />}
 
             {/* Change password */}
             <Card className="glass-card p-4 space-y-4">
