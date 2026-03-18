@@ -5,7 +5,7 @@
 'use client';
 
 import { useState, FormEvent, useRef, useEffect } from 'react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth, NewPasswordPending } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShieldCheck } from 'lucide-react';
@@ -22,9 +22,19 @@ export default function LoginPage() {
   const [totpCode, setTotpCode] = useState('');
   const totpRef = useRef<HTMLInputElement>(null);
 
+  // New password step
+  const [submitNewPassword, setSubmitNewPassword] = useState<NewPasswordPending['submitNewPassword'] | null>(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const newPasswordRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     if (submitCode) totpRef.current?.focus();
   }, [submitCode]);
+
+  useEffect(() => {
+    if (submitNewPassword) newPasswordRef.current?.focus();
+  }, [submitNewPassword]);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -32,8 +42,10 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const result = await signIn(email, password);
-      if (result?.mfaPending) {
+      if (result && 'mfaPending' in result) {
         setSubmitCode(() => result.submitCode);
+      } else if (result && 'newPasswordPending' in result) {
+        setSubmitNewPassword(() => result.submitNewPassword);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Nieprawidłowe dane logowania');
@@ -70,12 +82,66 @@ export default function LoginPage() {
             <CardDescription className="text-zinc-500 text-sm mt-1">
               {submitCode
                 ? 'Weryfikacja dwuetapowa'
+                : submitNewPassword
+                ? 'Ustaw nowe hasło'
                 : 'Zaloguj się do panelu administracyjnego'}
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent>
-          {!submitCode ? (
+          {submitNewPassword ? (
+            /* ── Krok 2b: wymuszona zmiana hasła ── */
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              if (newPassword !== newPasswordConfirm) { setError('Hasła nie są identyczne.'); return; }
+              setError('');
+              setLoading(true);
+              try { await submitNewPassword(newPassword); }
+              catch (err: unknown) { setError(err instanceof Error ? err.message : 'Błąd zmiany hasła.'); }
+              finally { setLoading(false); }
+            }} className="space-y-4">
+              <p className="text-sm text-zinc-400 text-center">
+                To Twoje pierwsze logowanie. Ustaw własne hasło aby kontynuować.
+              </p>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">Nowe hasło</label>
+                <input
+                  ref={newPasswordRef}
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150"
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-300 mb-2">Potwierdź hasło</label>
+                <input
+                  type="password"
+                  value={newPasswordConfirm}
+                  onChange={(e) => setNewPasswordConfirm(e.target.value)}
+                  className="w-full px-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500/30 transition-all duration-150"
+                  placeholder="••••••••"
+                  required
+                  minLength={8}
+                />
+              </div>
+              {error && (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 text-sm">
+                  {error}
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full bg-white text-black hover:bg-zinc-200 font-medium transition-colors"
+                disabled={loading || newPassword.length < 8}
+              >
+                {loading ? 'Zapisywanie...' : 'Ustaw hasło i zaloguj się'}
+              </Button>
+            </form>
+          ) : !submitCode ? (
             /* ── Krok 1: email + hasło ── */
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

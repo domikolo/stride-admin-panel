@@ -38,7 +38,8 @@ const userPool = new CognitoUserPool(poolData);
 
 export type SignInResult =
   | { user: AuthUser }
-  | { mfaPending: true; submitCode: (code: string) => Promise<{ user: AuthUser }> };
+  | { mfaPending: true; submitCode: (code: string) => Promise<{ user: AuthUser }> }
+  | { newPasswordPending: true; submitNewPassword: (newPassword: string) => Promise<{ user: AuthUser }> };
 
 // ─── Shared: extract user + store tokens after a successful session ────────────
 async function finaliseSession(session: CognitoUserSession): Promise<{ user: AuthUser }> {
@@ -88,6 +89,23 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
         catch (e) { reject(e); }
       },
       onFailure: reject,
+      newPasswordRequired: (userAttributes) => {
+        delete userAttributes.email_verified;
+        delete userAttributes.phone_number_verified;
+        resolve({
+          newPasswordPending: true,
+          submitNewPassword: (newPassword: string) =>
+            new Promise<{ user: AuthUser }>((res, rej) => {
+              cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, {
+                onSuccess: async (session) => {
+                  try { res(await finaliseSession(session)); }
+                  catch (e) { rej(e); }
+                },
+                onFailure: rej,
+              });
+            }),
+        });
+      },
       totpRequired: () => {
         resolve({
           mfaPending: true,
