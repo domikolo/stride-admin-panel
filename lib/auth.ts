@@ -89,14 +89,12 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
         catch (e) { reject(e); }
       },
       onFailure: reject,
-      newPasswordRequired: (userAttributes) => {
-        delete userAttributes.email_verified;
-        delete userAttributes.phone_number_verified;
+      newPasswordRequired: () => {
         resolve({
           newPasswordPending: true,
           submitNewPassword: (newPassword: string) =>
             new Promise<{ user: AuthUser }>((res, rej) => {
-              cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, {
+              cognitoUser.completeNewPasswordChallenge(newPassword, {}, {
                 onSuccess: async (session) => {
                   try { res(await finaliseSession(session)); }
                   catch (e) { rej(e); }
