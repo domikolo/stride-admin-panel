@@ -738,6 +738,7 @@ export interface EmailNotifEvents {
   new_contact: boolean;
   escalation: boolean;
   appointment_cancelled: boolean;
+  reminder: boolean;
 }
 
 export interface EmailPrefs {

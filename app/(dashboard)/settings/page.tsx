@@ -1062,6 +1062,7 @@ const EVENT_LABELS: { key: keyof EmailNotifEvents; label: string; desc: string }
   { key: 'new_contact',          label: 'Nowy kontakt / lead',       desc: 'Chatbot zebrał dane kontaktowe od potencjalnego klienta' },
   { key: 'escalation',           label: 'Klient prosi o agenta',     desc: 'Klient chce rozmawiać z człowiekiem — wymaga szybkiej reakcji' },
   { key: 'appointment_cancelled', label: 'Spotkanie odwołane',       desc: 'Admin odwołuje spotkanie z poziomu panelu' },
+  { key: 'reminder',             label: 'Przypomnienia',             desc: 'Ręczne i automatyczne przypomnienia ustawione w zakładce Kontakty' },
 ];
 
 function EmailNotifsSection({ clientId }: { clientId: string }) {
@@ -1077,6 +1078,7 @@ function EmailNotifsSection({ clientId }: { clientId: string }) {
     new_contact: true,
     escalation: true,
     appointment_cancelled: false,
+    reminder: true,
   });
   const [saving, setSaving] = useState(false);
   const [initialized, setInitialized] = useState(false);
