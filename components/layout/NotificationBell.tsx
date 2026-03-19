@@ -190,7 +190,7 @@ export default function NotificationBell({ clientId }: Props) {
   useEffect(() => {
     fetchNotif();
     // Poll always (hidden tab → browser push; visible tab → toast + bell)
-    const id = setInterval(() => fetchNotif(true), 30000);
+    const id = setInterval(() => fetchNotif(true), 10000);
     // Re-fetch immediately when tab becomes visible again
     const onVisible = () => { if (document.visibilityState === 'visible') fetchNotif(true); };
     document.addEventListener('visibilitychange', onVisible);
