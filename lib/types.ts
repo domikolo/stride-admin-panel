@@ -8,7 +8,8 @@ export type NotificationType =
   | 'appointment_verified'
   | 'appointment_cancelled'
   | 'knowledge_gap'
-  | 'reminder';
+  | 'reminder'
+  | 'escalation';
 
 export interface AppNotification {
   notificationId: string;
