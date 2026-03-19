@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import {
   Bell, BellRing, X, CalendarPlus, CalendarCheck, CalendarX,
-  UserPlus, Lightbulb, CheckCheck,
+  UserPlus, Lightbulb, CheckCheck, AlertTriangle,
 } from 'lucide-react';
 import { AppNotification } from '@/lib/types';
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api';
@@ -15,19 +15,21 @@ import { useBadges } from '@/hooks/useBadges';
 // ── Icon map ────────────────────────────────────────────────────────────────
 
 const ICON_MAP: Record<string, React.ReactNode> = {
-  UserPlus:      <UserPlus size={15} />,
-  CalendarPlus:  <CalendarPlus size={15} />,
-  CalendarCheck: <CalendarCheck size={15} />,
-  CalendarX:     <CalendarX size={15} />,
-  Lightbulb:     <Lightbulb size={15} />,
-  Bell:          <Bell size={15} />,
-  BellRing:      <BellRing size={15} />,
+  UserPlus:       <UserPlus size={15} />,
+  CalendarPlus:   <CalendarPlus size={15} />,
+  CalendarCheck:  <CalendarCheck size={15} />,
+  CalendarX:      <CalendarX size={15} />,
+  Lightbulb:      <Lightbulb size={15} />,
+  Bell:           <Bell size={15} />,
+  BellRing:       <BellRing size={15} />,
+  AlertTriangle:  <AlertTriangle size={15} />,
 };
 
 const ICON_COLOR: Record<string, string> = {
-  high:   'text-blue-400 bg-blue-500/10',
-  normal: 'text-zinc-400 bg-white/[0.06]',
-  low:    'text-zinc-500 bg-white/[0.04]',
+  high:      'text-blue-400 bg-blue-500/10',
+  normal:    'text-zinc-400 bg-white/[0.06]',
+  low:       'text-zinc-500 bg-white/[0.04]',
+  escalation:'text-orange-400 bg-orange-500/10',
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -35,6 +37,8 @@ const ICON_COLOR: Record<string, string> = {
 function getLink(n: AppNotification): string | null {
   if (n.resourceType === 'appointment') return n.resourceId ? `/appointments?hl=${n.resourceId}` : '/appointments';
   if (n.resourceType === 'contact')     return n.resourceId ? `/contacts?hl=${n.resourceId}` : '/contacts';
+  if (n.resourceType === 'session')     return '/live';
+  if (n.type === 'escalation')          return '/live';
   return null;
 }
 
@@ -339,7 +343,7 @@ export default function NotificationBell({ clientId }: Props) {
               >
                 <div className={`
                   w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5
-                  ${ICON_COLOR[n.priority] || ICON_COLOR.normal}
+                  ${n.type === 'escalation' ? ICON_COLOR.escalation : (ICON_COLOR[n.priority] || ICON_COLOR.normal)}
                 `}>
                   {ICON_MAP[n.icon] || ICON_MAP.Bell}
                 </div>
