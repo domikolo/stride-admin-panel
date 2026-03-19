@@ -10,7 +10,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useClientId } from '@/hooks/useClientId';
 import { changePassword } from '@/lib/auth';
 import { getAccessToken } from '@/lib/token';
-import { getAuditLog, getApiKeys, createApiKey, revokeApiKey, getChatbotSettings, updateChatbotSettings, ChatbotHours, getCalendarConfig, updateCalendarConfig, testCalendarConfig } from '@/lib/api';
+import { getAuditLog, getApiKeys, createApiKey, revokeApiKey, getChatbotSettings, updateChatbotSettings, ChatbotHours, getCalendarConfig, updateCalendarConfig, testCalendarConfig, getEmailPrefs, updateEmailPrefs, EmailPrefs, EmailNotifEvents } from '@/lib/api';
 import { AuditEvent, ApiKey } from '@/lib/types';
 import QRCode from 'qrcode';
 import toast from 'react-hot-toast';
@@ -18,7 +18,7 @@ import { useTheme } from 'next-themes';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock, CalendarDays, ChevronDown, ChevronRight, ExternalLink, CheckCircle2, XCircle } from 'lucide-react';
+import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock, CalendarDays, ChevronDown, ChevronRight, ExternalLink, CheckCircle2, XCircle, Bell } from 'lucide-react';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1054,6 +1054,129 @@ function AuditLogSection({ clientId }: { clientId: string }) {
   );
 }
 
+// ─── Email Notifications Section ──────────────────────────────────────────────
+
+const EVENT_LABELS: { key: keyof EmailNotifEvents; label: string; desc: string }[] = [
+  { key: 'new_appointment',      label: 'Nowe spotkanie',            desc: 'Klient rezerwuje termin przez chatbota (oczekuje na weryfikację)' },
+  { key: 'appointment_verified', label: 'Spotkanie potwierdzone',    desc: 'Klient zatwierdził spotkanie kodem weryfikacyjnym' },
+  { key: 'new_contact',          label: 'Nowy kontakt / lead',       desc: 'Chatbot zebrał dane kontaktowe od potencjalnego klienta' },
+  { key: 'escalation',           label: 'Klient prosi o agenta',     desc: 'Klient chce rozmawiać z człowiekiem — wymaga szybkiej reakcji' },
+  { key: 'appointment_cancelled', label: 'Spotkanie odwołane',       desc: 'Admin odwołuje spotkanie z poziomu panelu' },
+];
+
+function EmailNotifsSection({ clientId }: { clientId: string }) {
+  const { data, mutate, isLoading } = useSWR(
+    clientId ? `email-prefs-${clientId}` : null,
+    () => getEmailPrefs(clientId),
+  );
+
+  const [notifyEmail, setNotifyEmail] = useState('');
+  const [events, setEvents] = useState<EmailNotifEvents>({
+    new_appointment: true,
+    appointment_verified: true,
+    new_contact: true,
+    escalation: true,
+    appointment_cancelled: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  useEffect(() => {
+    if (data && !initialized) {
+      setNotifyEmail(data.notifyEmail ?? '');
+      setEvents({ ...events, ...data.events });
+      setInitialized(true);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
+
+  const toggle = (key: keyof EmailNotifEvents) =>
+    setEvents(prev => ({ ...prev, [key]: !prev[key] }));
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await updateEmailPrefs(clientId, { notify_email: notifyEmail, events });
+      mutate();
+      toast.success('Preferencje powiadomień zapisane');
+    } catch {
+      toast.error('Nie udało się zapisać preferencji');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (isLoading) return (
+    <Card className="glass-card p-4 flex items-center justify-center h-24">
+      <Loader2 size={20} className="animate-spin text-zinc-500" />
+    </Card>
+  );
+
+  return (
+    <Card className="glass-card p-4 space-y-4">
+      <div className="flex items-center gap-3">
+        <Bell size={16} className="text-zinc-400" />
+        <h2 className="text-sm font-semibold text-white">Powiadomienia email</h2>
+      </div>
+
+      <p className="text-xs text-zinc-500">
+        Wybierz, które zdarzenia mają wysyłać Ci maila. Maile są wysyłane z <span className="text-zinc-400 font-mono">noreply@stride-services.pl</span>.
+      </p>
+
+      {/* Notify email override */}
+      <div>
+        <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">
+          Email dla powiadomień
+        </label>
+        <input
+          type="email"
+          value={notifyEmail}
+          onChange={e => setNotifyEmail(e.target.value)}
+          placeholder="twoj@email.com"
+          className="w-full px-3 py-2 bg-white/[0.03] border border-white/[0.06] rounded-lg
+                     text-sm text-white placeholder-zinc-600 focus:outline-none
+                     focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/20"
+        />
+        <p className="text-xs text-zinc-600 mt-1">Domyślnie używany jest email Twojego konta.</p>
+      </div>
+
+      {/* Event checkboxes */}
+      <div className="space-y-2">
+        {EVENT_LABELS.map(({ key, label, desc }) => (
+          <button
+            key={key}
+            onClick={() => toggle(key)}
+            className="w-full flex items-start gap-3 p-3 rounded-lg border transition-colors text-left
+                       border-white/[0.06] hover:border-white/10 hover:bg-white/[0.02]"
+          >
+            <div className={`mt-0.5 w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+              events[key]
+                ? 'bg-blue-500 border-blue-500'
+                : 'border-zinc-600 bg-transparent'
+            }`}>
+              {events[key] && <Check size={10} className="text-white" strokeWidth={3} />}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-white">{label}</p>
+              <p className="text-xs text-zinc-500 mt-0.5">{desc}</p>
+            </div>
+          </button>
+        ))}
+      </div>
+
+      <Button
+        onClick={handleSave}
+        disabled={saving}
+        size="sm"
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+      >
+        {saving ? <Loader2 size={14} className="animate-spin mr-1.5" /> : null}
+        Zapisz preferencje
+      </Button>
+    </Card>
+  );
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -1167,6 +1290,9 @@ export default function SettingsPage() {
 
             {/* API Keys */}
             <ApiKeysSection clientId={clientId ?? ''} />
+
+            {/* Email Notifications */}
+            <EmailNotifsSection clientId={clientId ?? ''} />
 
             {/* Appearance */}
             <Card className="glass-card p-4 space-y-4">

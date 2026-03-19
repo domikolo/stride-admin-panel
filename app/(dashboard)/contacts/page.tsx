@@ -888,6 +888,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
   const [editTags, setEditTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [showCreateAppt, setShowCreateAppt] = useState(false);
+  const [emailOptIn, setEmailOptIn] = useState(true);
   const [timeline, setTimeline] = useState<ContactTimelineEvent[]>([]);
   const [timelineLoading, setTimelineLoading] = useState(false);
 
@@ -903,6 +904,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       setEditNotes(fromList.notes || '');
       setEditStatus(fromList.status);
       setEditTags(fromList.tags || []);
+      setEmailOptIn(fromList.emailOptIn ?? fromList.contactType === 'email');
       setLoading(false);
     } else {
       setLoading(true);
@@ -914,6 +916,7 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
       setEditNotes(c.notes || '');
       setEditStatus(c.status);
       setEditTags(c.tags || []);
+      setEmailOptIn(c.emailOptIn ?? c.contactType === 'email');
       setLoading(false);
     }).catch(() => setLoading(false));
     // Fetch activity timeline separately (enriched, lazy)
@@ -1129,6 +1132,34 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
               </Button>
             </div>
           </div>
+
+          {/* Email opt-in (only for email contacts) */}
+          {contact?.contactType === 'email' && (
+            <div className="pt-1 border-t border-white/[0.04]">
+              <button
+                onClick={async () => {
+                  const next = !emailOptIn;
+                  setEmailOptIn(next);
+                  try {
+                    await updateContact(clientId, profileId, { email_opt_in: next });
+                  } catch {
+                    setEmailOptIn(!next);
+                  }
+                }}
+                className="flex items-center gap-3 w-full text-left py-1"
+              >
+                <div className={`w-4 h-4 rounded border flex-shrink-0 flex items-center justify-center transition-colors ${
+                  emailOptIn ? 'bg-blue-500 border-blue-500' : 'border-zinc-600 bg-transparent'
+                }`}>
+                  {emailOptIn && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <div>
+                  <p className="text-sm text-white">Powiadomienia email</p>
+                  <p className="text-xs text-zinc-500">Potwierdzenia i odwołania spotkań</p>
+                </div>
+              </button>
+            </div>
+          )}
 
           {/* Book appointment */}
           <div className="pt-1 border-t border-white/[0.04]">

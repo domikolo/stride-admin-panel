@@ -322,6 +322,8 @@ export interface ContactProfile {
   sourceCount: number;
   sourceTypes?: string[];    // e.g. ['appointment', 'conversation'] — in list response
   sources?: ContactSource[]; // full list with session links — in get_detail only
+  // Email notification opt-in (for email contacts)
+  emailOptIn?: boolean;
   // Appointment badge (enriched in get_list)
   hasAppointment?: boolean;
   appointmentDatetime?: string | null;

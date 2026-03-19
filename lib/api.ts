@@ -457,7 +457,7 @@ export const getContact = (clientId: string, profileId: string) =>
 export const updateContact = (
   clientId: string,
   profileId: string,
-  data: { status?: string; notes?: string; display_name?: string; tags?: string[] }
+  data: { status?: string; notes?: string; display_name?: string; tags?: string[]; email_opt_in?: boolean }
 ) =>
   api.put<{ status: string; profileId: string }>(
     `/clients/${clientId}/contacts/${profileId}`,
@@ -729,3 +729,24 @@ export const getCalendarBusy = (clientId: string, month: string) =>
   api.get<{ busySlots: CalendarBusySlot[]; calendarEnabled: boolean; month: string }>(
     `/clients/${clientId}/calendar/busy?month=${month}`
   );
+
+// ─── Email Notification Preferences ──────────────────────────────
+
+export interface EmailNotifEvents {
+  new_appointment: boolean;
+  appointment_verified: boolean;
+  new_contact: boolean;
+  escalation: boolean;
+  appointment_cancelled: boolean;
+}
+
+export interface EmailPrefs {
+  notifyEmail: string;
+  events: EmailNotifEvents;
+}
+
+export const getEmailPrefs = (clientId: string) =>
+  api.get<EmailPrefs>(`/clients/${clientId}/email-prefs`);
+
+export const updateEmailPrefs = (clientId: string, prefs: { notify_email: string; events: Partial<EmailNotifEvents> }) =>
+  api.put<{ status: string }>(`/clients/${clientId}/email-prefs`, prefs);
