@@ -13,7 +13,6 @@ import { BadgesProvider, useBadges } from '@/hooks/useBadges';
 import Sidebar from '@/components/layout/Sidebar';
 import FloatingChatWrapper from '@/components/dashboard/FloatingChatWrapper';
 import SearchDialog from '@/components/layout/SearchDialog';
-import NotificationBell from '@/components/layout/NotificationBell';
 import PageTransition from '@/components/layout/PageTransition';
 import ErrorBoundary from '@/components/ui/ErrorBoundary';
 import { Menu, Search } from 'lucide-react';
@@ -60,8 +59,6 @@ export default function DashboardLayout({
 
   if (loading || !user) return null;
 
-  const notifClientId = user.clientId || 'stride-services';
-
   return (
     <BadgesProvider>
     <TabTitleSync />
@@ -85,7 +82,6 @@ export default function DashboardLayout({
             >
               <Search size={18} />
             </button>
-            <NotificationBell clientId={notifClientId} />
           </div>
         </div>
 
