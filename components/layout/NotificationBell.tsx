@@ -9,7 +9,7 @@ import {
   UserPlus, Lightbulb, CheckCheck, AlertTriangle,
 } from 'lucide-react';
 import { AppNotification } from '@/lib/types';
-import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from '@/lib/api';
+import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead, dismissNotification, clearAllNotifications } from '@/lib/api';
 import { useBadges } from '@/hooks/useBadges';
 
 // ── Icon map ────────────────────────────────────────────────────────────────
@@ -126,6 +126,7 @@ export default function NotificationBell({ clientId }: Props) {
   const btnRef      = useRef<HTMLButtonElement>(null);
   const panelRef    = useRef<HTMLDivElement>(null);
   const seenIdsRef  = useRef<Set<string> | null>(null); // null = first fetch not done yet
+  const fetchingRef = useRef(false); // guard against concurrent fetches
   const bellAnim    = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ringing, setRinging] = useState(false);
 
@@ -154,6 +155,8 @@ export default function NotificationBell({ clientId }: Props) {
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchNotif = useCallback(async (silent = false) => {
+    if (fetchingRef.current) return; // prevent concurrent fetches
+    fetchingRef.current = true;
     if (!silent) setLoading(true);
     try {
       const data = await getNotifications(clientId);
@@ -170,10 +173,7 @@ export default function NotificationBell({ clientId }: Props) {
         if (newOnes.length > 0) {
           ringBell();
           const first = newOnes[0];
-          toast(first.title + (first.body ? `\n${first.body}` : ''), {
-            icon: '🔔',
-            duration: 6000,
-          });
+          toast(first.title + (first.body ? `\n${first.body}` : ''), { duration: 6000 });
           // Browser push when tab is hidden
           if (document.visibilityState === 'hidden') {
             showBrowserPush(first);
@@ -188,6 +188,7 @@ export default function NotificationBell({ clientId }: Props) {
       setUnreadNotifCount(data.unreadCount);
       setHighPri(incoming.some(n => !n.read && n.priority === 'high'));
     } catch { /* ignore */ } finally {
+      fetchingRef.current = false;
       if (!silent) setLoading(false);
     }
   }, [clientId]);
@@ -197,14 +198,14 @@ export default function NotificationBell({ clientId }: Props) {
     try {
       const data = await getUnreadCount(clientId);
       const newCount = data.unreadCount;
+      let shouldFetch = false;
       setUnread(prev => {
-        if (newCount > prev) {
-          // New notifications arrived — full fetch for toast + data
-          fetchNotif(true);
-        }
+        if (newCount > prev) shouldFetch = true;
         setUnreadNotifCount(newCount);
         return newCount;
       });
+      // Call fetchNotif outside setState updater (updaters must be pure / side-effect-free)
+      if (shouldFetch) fetchNotif(true);
     } catch { /* ignore */ }
   }, [clientId, fetchNotif]);
 
@@ -270,6 +271,23 @@ export default function NotificationBell({ clientId }: Props) {
   const handleMarkAll = async () => {
     await markAllNotificationsRead(clientId).catch(() => {});
     setNotif(prev => prev.map(x => ({ ...x, read: true })));
+    setUnread(0);
+    setUnreadNotifCount(0);
+    setHighPri(false);
+  };
+
+  const handleDismiss = async (n: AppNotification, e: React.MouseEvent) => {
+    e.stopPropagation();
+    await dismissNotification(clientId, n.notificationId).catch(() => {});
+    setNotif(prev => prev.filter(x => x.notificationId !== n.notificationId));
+    if (!n.read) {
+      setUnread(prev => { const next = Math.max(0, prev - 1); setUnreadNotifCount(next); return next; });
+    }
+  };
+
+  const handleClearAll = async () => {
+    await clearAllNotifications(clientId).catch(() => {});
+    setNotif([]);
     setUnread(0);
     setUnreadNotifCount(0);
     setHighPri(false);
@@ -348,35 +366,43 @@ export default function NotificationBell({ clientId }: Props) {
               {label}
             </div>
             {items.map(n => (
-              <button
-                key={n.notificationId}
-                onClick={() => handleClick(n)}
-                className={`
-                  w-full text-left px-4 py-3 flex items-start gap-3
-                  border-b border-white/[0.04] last:border-0
-                  transition-colors hover:bg-white/[0.04]
-                  ${!n.read ? 'bg-blue-500/[0.03]' : ''}
-                `}
-              >
-                <div className={`
-                  w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5
-                  ${n.type === 'escalation' ? ICON_COLOR.escalation : (ICON_COLOR[n.priority] || ICON_COLOR.normal)}
-                `}>
-                  {ICON_MAP[n.icon] || ICON_MAP.Bell}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className={`text-[13px] leading-snug ${n.read ? 'text-zinc-400' : 'text-white font-medium'}`}>
-                    {n.title}
-                  </p>
-                  {n.body && (
-                    <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">{n.body}</p>
+              <div key={n.notificationId} className="relative group">
+                <button
+                  onClick={() => handleClick(n)}
+                  className={`
+                    w-full text-left px-4 py-3 flex items-start gap-3
+                    border-b border-white/[0.04] last:border-0
+                    transition-colors hover:bg-white/[0.04]
+                    ${!n.read ? 'bg-blue-500/[0.03]' : ''}
+                  `}
+                >
+                  <div className={`
+                    w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5
+                    ${n.type === 'escalation' ? ICON_COLOR.escalation : (ICON_COLOR[n.priority] || ICON_COLOR.normal)}
+                  `}>
+                    {ICON_MAP[n.icon] || ICON_MAP.Bell}
+                  </div>
+                  <div className="flex-1 min-w-0 pr-5">
+                    <p className={`text-[13px] leading-snug ${n.read ? 'text-zinc-400' : 'text-white font-medium'}`}>
+                      {n.title}
+                    </p>
+                    {n.body && (
+                      <p className="text-[11px] text-zinc-500 mt-0.5 line-clamp-2">{n.body}</p>
+                    )}
+                    <p className="text-[10px] text-zinc-600 mt-1">{relativeTime(n.createdAt)}</p>
+                  </div>
+                  {!n.read && (
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
                   )}
-                  <p className="text-[10px] text-zinc-600 mt-1">{relativeTime(n.createdAt)}</p>
-                </div>
-                {!n.read && (
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
-                )}
-              </button>
+                </button>
+                <button
+                  onClick={(e) => handleDismiss(n, e)}
+                  className="absolute top-2 right-2 p-1 rounded opacity-0 group-hover:opacity-100 text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.08] transition-all"
+                  title="Usuń powiadomienie"
+                >
+                  <X size={11} />
+                </button>
+              </div>
             ))}
           </div>
         ))}
@@ -384,8 +410,14 @@ export default function NotificationBell({ clientId }: Props) {
 
       {/* Footer */}
       {notifications.length > 0 && (
-        <div className="px-4 py-2.5 border-t border-border text-[11px] text-zinc-600 text-center">
-          Powiadomienia przechowywane przez 30 dni
+        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border">
+          <span className="text-[11px] text-zinc-600">Przechowywane 30 dni</span>
+          <button
+            onClick={handleClearAll}
+            className="text-[11px] text-zinc-500 hover:text-zinc-300 transition-colors"
+          >
+            Wyczyść historię
+          </button>
         </div>
       )}
     </div>

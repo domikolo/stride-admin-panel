@@ -613,6 +613,12 @@ export const markNotificationRead = (clientId: string, notificationId: string) =
 export const markAllNotificationsRead = (clientId: string) =>
   api.post<{ status: string; updated: number }>(`/clients/${clientId}/notifications/mark-all-read`, {});
 
+export const dismissNotification = (clientId: string, notificationId: string) =>
+  api.post<{ status: string }>(`/clients/${clientId}/notifications/${notificationId}/dismiss`, {});
+
+export const clearAllNotifications = (clientId: string) =>
+  api.post<{ status: string; count: number }>(`/clients/${clientId}/notifications/clear`, {});
+
 
 // ─── Appointments (manual creation) ─────────────────────────────
 
