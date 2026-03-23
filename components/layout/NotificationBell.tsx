@@ -123,12 +123,33 @@ export default function NotificationBell({ clientId }: Props) {
   const [hasHighPriority, setHighPri] = useState(false);
   const [pos, setPos]                 = useState<{ top: number; left: number; origin: string } | null>(null);
   const [mounted, setMounted]         = useState(false);
-  const btnRef      = useRef<HTMLButtonElement>(null);
-  const panelRef    = useRef<HTMLDivElement>(null);
-  const seenIdsRef  = useRef<Set<string> | null>(null); // null = first fetch not done yet
-  const fetchingRef = useRef(false); // guard against concurrent fetches
-  const bellAnim    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const btnRef        = useRef<HTMLButtonElement>(null);
+  const panelRef      = useRef<HTMLDivElement>(null);
+  const seenIdsRef    = useRef<Set<string> | null>(null); // null = first fetch not done yet
+  const fetchingRef   = useRef(false); // guard against concurrent fetches
+  const dismissedRef  = useRef<Set<string> | null>(null); // localStorage-backed dismissed IDs
+  const bellAnim      = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ringing, setRinging] = useState(false);
+
+  // ── localStorage-backed dismissed set ─────────────────────────────────────
+  const _lsKey = `notif_dismissed_${clientId}`;
+
+  function _getDismissed(): Set<string> {
+    if (!dismissedRef.current) {
+      try {
+        dismissedRef.current = new Set(JSON.parse(localStorage.getItem(_lsKey) ?? '[]'));
+      } catch {
+        dismissedRef.current = new Set();
+      }
+    }
+    return dismissedRef.current;
+  }
+
+  function _saveDismissed() {
+    try {
+      localStorage.setItem(_lsKey, JSON.stringify([..._getDismissed()]));
+    } catch {}
+  }
 
   useEffect(() => setMounted(true), []);
 
@@ -160,7 +181,10 @@ export default function NotificationBell({ clientId }: Props) {
     if (!silent) setLoading(true);
     try {
       const data = await getNotifications(clientId);
-      const incoming: AppNotification[] = data.notifications;
+      const dismissed = _getDismissed();
+      const incoming: AppNotification[] = data.notifications.filter(
+        n => !dismissed.has(n.notificationId)
+      );
 
       // First fetch: populate seen set silently (no alerts on page load)
       if (seenIdsRef.current === null) {
@@ -278,19 +302,24 @@ export default function NotificationBell({ clientId }: Props) {
 
   const handleDismiss = async (n: AppNotification, e: React.MouseEvent) => {
     e.stopPropagation();
-    await dismissNotification(clientId, n.notificationId).catch(() => {});
+    _getDismissed().add(n.notificationId);
+    _saveDismissed();
     setNotif(prev => prev.filter(x => x.notificationId !== n.notificationId));
     if (!n.read) {
       setUnread(prev => { const next = Math.max(0, prev - 1); setUnreadNotifCount(next); return next; });
     }
+    dismissNotification(clientId, n.notificationId).catch(() => {}); // backend sync (fire-and-forget)
   };
 
   const handleClearAll = async () => {
-    await clearAllNotifications(clientId).catch(() => {});
+    const d = _getDismissed();
+    notifications.forEach(n => d.add(n.notificationId));
+    _saveDismissed();
     setNotif([]);
     setUnread(0);
     setUnreadNotifCount(0);
     setHighPri(false);
+    clearAllNotifications(clientId).catch(() => {}); // backend sync (fire-and-forget)
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
