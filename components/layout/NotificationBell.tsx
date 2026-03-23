@@ -9,7 +9,7 @@ import {
   UserPlus, Lightbulb, CheckCheck, AlertTriangle,
 } from 'lucide-react';
 import { AppNotification } from '@/lib/types';
-import { getNotifications, markNotificationRead, markAllNotificationsRead } from '@/lib/api';
+import { getNotifications, getUnreadCount, markNotificationRead, markAllNotificationsRead } from '@/lib/api';
 import { useBadges } from '@/hooks/useBadges';
 
 // ── Icon map ────────────────────────────────────────────────────────────────
@@ -37,6 +37,7 @@ const ICON_COLOR: Record<string, string> = {
 function getLink(n: AppNotification): string | null {
   if (n.resourceType === 'appointment') return n.resourceId ? `/appointments?hl=${n.resourceId}` : '/appointments';
   if (n.resourceType === 'contact')     return n.resourceId ? `/contacts?hl=${n.resourceId}` : '/contacts';
+  if (n.resourceType === 'insights')    return '/insights';
   if (n.resourceType === 'session')     return '/live';
   if (n.type === 'escalation')          return '/live';
   return null;
@@ -191,10 +192,26 @@ export default function NotificationBell({ clientId }: Props) {
     }
   }, [clientId]);
 
+  // Lightweight poll — only fetches unread count; triggers full fetch on new notifications
+  const pollCount = useCallback(async () => {
+    try {
+      const data = await getUnreadCount(clientId);
+      const newCount = data.unreadCount;
+      setUnread(prev => {
+        if (newCount > prev) {
+          // New notifications arrived — full fetch for toast + data
+          fetchNotif(true);
+        }
+        setUnreadNotifCount(newCount);
+        return newCount;
+      });
+    } catch { /* ignore */ }
+  }, [clientId, fetchNotif]);
+
   useEffect(() => {
     fetchNotif();
-    // Poll always (hidden tab → browser push; visible tab → toast + bell)
-    const id = setInterval(() => fetchNotif(true), 10000);
+    // Lightweight poll (just count); full fetch triggered only when count increases
+    const id = setInterval(pollCount, 10000);
     // Re-fetch immediately when tab becomes visible again
     const onVisible = () => { if (document.visibilityState === 'visible') fetchNotif(true); };
     document.addEventListener('visibilitychange', onVisible);
@@ -202,7 +219,7 @@ export default function NotificationBell({ clientId }: Props) {
       clearInterval(id);
       document.removeEventListener('visibilitychange', onVisible);
     };
-  }, [fetchNotif]);
+  }, [fetchNotif, pollCount]);
 
   // ── Position — synchronous, before paint ───────────────────────────────────
   // useLayoutEffect fires after DOM mutation but before the browser paints,
