@@ -125,10 +125,11 @@ export default function NotificationBell({ clientId }: Props) {
   const [mounted, setMounted]         = useState(false);
   const btnRef        = useRef<HTMLButtonElement>(null);
   const panelRef      = useRef<HTMLDivElement>(null);
-  const seenIdsRef    = useRef<Set<string> | null>(null); // null = first fetch not done yet
-  const fetchingRef   = useRef(false); // guard against concurrent fetches
-  const dismissedRef  = useRef<Set<string> | null>(null); // localStorage-backed dismissed IDs
-  const bellAnim      = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenIdsRef          = useRef<Set<string> | null>(null); // null = first fetch not done yet
+  const fetchingRef         = useRef(false); // guard against concurrent fetches
+  const dismissedRef        = useRef<Set<string> | null>(null); // localStorage-backed dismissed IDs
+  const lastBackendCountRef = useRef(0); // last raw backend unread count (for new-arrival detection)
+  const bellAnim            = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [ringing, setRinging] = useState(false);
 
   // ── localStorage-backed dismissed set ─────────────────────────────────────
@@ -207,9 +208,11 @@ export default function NotificationBell({ clientId }: Props) {
         for (const n of incoming) seenIdsRef.current!.add(n.notificationId);
       }
 
+      const filteredUnread = incoming.filter(n => !n.read).length;
+      lastBackendCountRef.current = data.unreadCount; // sync for new-arrival detection
       setNotif(incoming);
-      setUnread(data.unreadCount);
-      setUnreadNotifCount(data.unreadCount);
+      setUnread(filteredUnread);
+      setUnreadNotifCount(filteredUnread);
       setHighPri(incoming.some(n => !n.read && n.priority === 'high'));
     } catch { /* ignore */ } finally {
       fetchingRef.current = false;
@@ -217,19 +220,14 @@ export default function NotificationBell({ clientId }: Props) {
     }
   }, [clientId]);
 
-  // Lightweight poll — only fetches unread count; triggers full fetch on new notifications
+  // Lightweight poll — only detects new arrivals; badge is set exclusively by fetchNotif
   const pollCount = useCallback(async () => {
     try {
       const data = await getUnreadCount(clientId);
-      const newCount = data.unreadCount;
-      let shouldFetch = false;
-      setUnread(prev => {
-        if (newCount > prev) shouldFetch = true;
-        setUnreadNotifCount(newCount);
-        return newCount;
-      });
-      // Call fetchNotif outside setState updater (updaters must be pure / side-effect-free)
-      if (shouldFetch) fetchNotif(true);
+      if (data.unreadCount > lastBackendCountRef.current) {
+        // New notifications arrived — full fetch will update badge with dismissed-filtered count
+        fetchNotif(true);
+      }
     } catch { /* ignore */ }
   }, [clientId, fetchNotif]);
 
