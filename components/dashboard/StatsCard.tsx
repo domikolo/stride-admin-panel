@@ -107,7 +107,7 @@ export default function StatsCard({
   );
 
   return (
-    <Card className="glass-card">
+    <Card className="glass-card h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <div className="flex items-center gap-2">
           <CardTitle className="text-xs font-medium text-zinc-500">{title}</CardTitle>
@@ -131,20 +131,22 @@ export default function StatsCard({
           <div>
             {valueElement}
 
-            {change !== undefined && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className={`flex items-center gap-1 text-sm mt-2 cursor-help ${trendColor}`}>
-                    <TrendIcon size={14} />
-                    <span>{change > 0 ? '+' : ''}{change}%</span>
-                    <span className="text-zinc-600 text-xs">vs poprzedni okres</span>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Zmiana procentowa vs poprzednie 30 dni</p>
-                </TooltipContent>
-              </Tooltip>
-            )}
+            <div className="h-6 mt-2">
+              {change !== undefined && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className={`flex items-center gap-1 text-sm cursor-help ${trendColor}`}>
+                      <TrendIcon size={14} />
+                      <span>{change > 0 ? '+' : ''}{change}%</span>
+                      <span className="text-zinc-600 text-xs">vs poprzedni okres</span>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Zmiana procentowa vs poprzednie 30 dni</p>
+                  </TooltipContent>
+                </Tooltip>
+              )}
+            </div>
 
           </div>
 

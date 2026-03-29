@@ -24,7 +24,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import toast from 'react-hot-toast';
 
 type FilterType = 'all' | 'today' | 'week' | 'month';
-type SortKey = 'date' | 'messages' | 'sessionId' | 'status';
+type SortKey = 'date' | 'messages' | 'status';
 type SortDirection = 'asc' | 'desc';
 type RatingFilter = 'all' | 'positive' | 'negative' | 'unrated';
 
@@ -413,9 +413,6 @@ export default function ConversationsPage() {
         case 'messages':
           comparison = a.metrics.totalMessages - b.metrics.totalMessages;
           break;
-        case 'sessionId':
-          comparison = a.sessionId.localeCompare(b.sessionId);
-          break;
         case 'status':
           // Custom order: In Progress > Test > Completed
           const statusOrder: Record<string, number> = { in_progress: 2, test: 1, completed: 0 };
@@ -596,17 +593,9 @@ export default function ConversationsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <SortableHeader
-                    label="ID Sesji"
-                    sortKey="sessionId"
-                    currentSort={sortKey}
-                    direction={sortDirection}
-                    onSort={handleSort}
-                    tooltip="Identyfikator urządzenia/sesji użytkownika. Jeśli w ramach jednej sesji odbyło się więcej rozmów, są one tutaj grupowane."
-                  />
-                  <TableHead className="w-24 hidden sm:table-cell">
-                    <HeaderTooltip tooltip="Numer rozmowy w serii. Widoczny tylko po rozwinięciu sesji. Jeśli sesja zawiera tylko jedną rozmowę, funkcja zwijania jest nieaktywna, co oznacza, że w sesji miała miejsce tylko jedna rozmowa.">
-                      Rozmowa #
+                  <TableHead>
+                    <HeaderTooltip tooltip="Identyfikator urządzenia/sesji użytkownika. Jeśli w ramach jednej sesji odbyło się więcej rozmów, są one tutaj grupowane.">
+                      ID Sesji
                     </HeaderTooltip>
                   </TableHead>
                   <SortableHeader
@@ -690,9 +679,6 @@ export default function ConversationsPage() {
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="text-zinc-600 font-mono text-xs text-center hidden sm:table-cell">
-                          —
-                        </TableCell>
                         <TableCell className="hidden md:table-cell">
                           <Badge variant={statusDisplay.variant} className={`gap-1 ${statusDisplay.className}`}>
                             <statusDisplay.icon size={12} />
@@ -769,9 +755,6 @@ export default function ConversationsPage() {
                               <div className="flex items-center pl-10">
                                 <div className="w-5 h-5 flex items-center justify-center border-l border-b border-zinc-700/50 rounded-bl-md mr-3"></div>
                               </div>
-                            </TableCell>
-                            <TableCell className="font-mono text-sm text-zinc-300 text-center font-bold hidden sm:table-cell">
-                              #{conv.conversationNumber || 1}
                             </TableCell>
                             <TableCell className="hidden md:table-cell"></TableCell> {/* No status for individual sub-convs in this view to keep it clean, or could add */}
                             <TableCell className="text-sm text-zinc-400 pl-4 hidden md:table-cell">

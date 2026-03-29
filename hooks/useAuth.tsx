@@ -65,6 +65,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       .finally(() => setLoading(false));
   }, []);
 
+  const getReturnTo = () => {
+    if (typeof window === 'undefined') return '/dashboard';
+    const saved = sessionStorage.getItem('returnTo');
+    sessionStorage.removeItem('returnTo');
+    return saved || '/dashboard';
+  };
+
   const signIn = async (email: string, password: string): Promise<MfaPending | NewPasswordPending | void> => {
     const result = await cognitoSignIn(email, password);
     if ('mfaPending' in result) {
@@ -73,7 +80,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         submitCode: async (code: string) => {
           const { user } = await result.submitCode(code);
           setUser(user);
-          router.push('/dashboard');
+          router.push(getReturnTo());
         },
       };
     }
@@ -83,14 +90,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         submitNewPassword: async (newPassword: string) => {
           const { user } = await result.submitNewPassword(newPassword);
           setUser(user);
-          router.push('/dashboard');
+          router.push(getReturnTo());
         },
       };
     }
     const u = result.user;
     setUser(u);
     const mfaRequired = await checkMfaRequired(u);
-    router.push(mfaRequired ? '/mfa-setup' : '/dashboard');
+    router.push(mfaRequired ? '/mfa-setup' : getReturnTo());
   };
 
   const signOut = async () => {

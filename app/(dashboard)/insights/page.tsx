@@ -18,7 +18,6 @@ import { Topic, Gap, ResolvedGap, Report } from '@/lib/types';
 import toast from 'react-hot-toast';
 import TrendingTopicCard from '@/components/insights/TrendingTopicCard';
 import GapCard from '@/components/insights/GapCard';
-import SmartInsightCard from '@/components/insights/SmartInsightCard';
 import TopMoverCard from '@/components/insights/TopMoverCard';
 import WeeklyCategoryChart from '@/components/insights/WeeklyCategoryChart';
 import StatsCard from '@/components/dashboard/StatsCard';
@@ -32,6 +31,7 @@ import {
   Calendar, Users, Phone, Mail, Trash2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
 
@@ -88,6 +88,8 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
   const [customEnd, setCustomEnd] = useState('');
   const [customGenerating, setCustomGenerating] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'weekly' | 'monthly' | 'custom'>('all');
+  const [newlyGeneratedId, setNewlyGeneratedId] = useState<string | null>(null);
+  const [reportToDelete, setReportToDelete] = useState<string | null>(null);
 
   const {
     data,
@@ -107,14 +109,16 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
     });
   };
 
-  const handleDelete = async (reportId: string) => {
-    if (!clientId || !confirm('Usunąć ten raport?')) return;
+  const handleDelete = async () => {
+    if (!clientId || !reportToDelete) return;
     try {
-      await deleteReport(clientId, reportId);
+      await deleteReport(clientId, reportToDelete);
       await mutate();
       toast.success('Raport usunięty');
     } catch {
       toast.error('Nie udało się usunąć raportu');
+    } finally {
+      setReportToDelete(null);
     }
   };
 
@@ -122,9 +126,10 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
     if (!clientId || !customStart || !customEnd) return;
     setCustomGenerating(true);
     try {
-      await generateReport(clientId, 'custom', customStart, customEnd);
+      const result = await generateReport(clientId, 'custom', customStart, customEnd);
       await mutate();
       toast.success('Raport niestandardowy wygenerowany');
+      if (result?.reportId) setNewlyGeneratedId(result.reportId);
       setCustomOpen(false);
       setCustomStart('');
       setCustomEnd('');
@@ -243,15 +248,16 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
         </Card>
       ) : (
         <div className="space-y-3">
-          {reports.map(report => {
+          {reports.map((report, idx) => {
             const isOpen = expandedIds.has(report.reportId);
             const generatedDate = report.generatedAt ? new Date(report.generatedAt) : null;
             const { stats } = report;
+            const isNew = report.reportId === newlyGeneratedId || (newlyGeneratedId === null && idx === 0 && reports.length > 0 && generatedDate && (Date.now() - generatedDate.getTime()) < 60_000);
 
             return (
               <Card
                 key={report.reportId}
-                className="glass-card overflow-hidden"
+                className={`glass-card overflow-hidden transition-all ${isNew ? 'ring-1 ring-indigo-500/40 shadow-[0_0_16px_rgba(99,102,241,0.12)]' : ''}`}
               >
                 {/* Card header — always visible */}
                 <div className="px-5 py-2.5 flex items-start gap-4">
@@ -263,7 +269,10 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
                       <FileText size={17} className="text-indigo-400" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white truncate">{report.title}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-white truncate">{report.title}</p>
+                        {isNew && <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-indigo-500/20 text-indigo-400 border border-indigo-500/20">Nowy</span>}
+                      </div>
                       {generatedDate && (
                         <p className="text-xs text-zinc-500 mt-0.5">
                           Wygenerowano {formatDistanceToNow(generatedDate, { addSuffix: true, locale: pl })}
@@ -299,7 +308,7 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
                       <ReportDownloadButton report={report} clientId={clientId} />
                       {isOwner && (
                         <button
-                          onClick={() => handleDelete(report.reportId)}
+                          onClick={() => setReportToDelete(report.reportId)}
                           className="flex items-center justify-center w-7 h-7 rounded-lg text-zinc-600 hover:text-red-400 hover:bg-red-500/10 transition-colors"
                           title="Usuń raport"
                         >
@@ -374,6 +383,16 @@ function ReportsTab({ clientId, isOwner }: ReportsTabProps) {
           })}
         </div>
       )}
+
+      <ConfirmDialog
+        open={reportToDelete !== null}
+        title="Usunąć ten raport?"
+        description="Operacja jest nieodwracalna."
+        confirmLabel="Usuń"
+        destructive
+        onConfirm={handleDelete}
+        onCancel={() => setReportToDelete(null)}
+      />
     </div>
   );
 }
@@ -502,9 +521,6 @@ export default function InsightsPage() {
   const isLoading = periodLoading[activePeriod];
   const currentRefreshedAt = refreshedAt[activePeriod];
   const activeGaps = current ? current.gaps.filter(gap => !resolvedGaps.includes(gap.topicName)) : [];
-  const topBuyingTopic = current
-    ? [...current.topics].sort((a, b) => (b.intentBreakdown?.buying || 0) - (a.intentBreakdown?.buying || 0))[0]
-    : null;
 
   const renderPeriodContent = (data: PeriodData | null, periodKey: string) => {
     if (!data) return null;
@@ -543,13 +559,6 @@ export default function InsightsPage() {
 
     return (
       <div className="space-y-4">
-        {isDaily && data.topics.length > 0 && data.topics[0].smartInsight && (
-          <SmartInsightCard
-            insight={data.topics[0].smartInsight}
-            topicName={data.topics[0].topicName}
-          />
-        )}
-
         {isDaily ? (
           <>
             <motion.div
@@ -569,7 +578,6 @@ export default function InsightsPage() {
                     examples={topic.questionExamples}
                     questionSources={topic.questionSources}
                     trend={topic.trend}
-                    intentBreakdown={topic.intentBreakdown}
                     isGap={false}
                   />
                 </motion.div>
@@ -614,7 +622,6 @@ export default function InsightsPage() {
                     examples={topic.questionExamples}
                     questionSources={topic.questionSources}
                     trend={topic.trend}
-                    intentBreakdown={topic.intentBreakdown}
                     isGap={false}
                   />
                 </motion.div>
@@ -780,21 +787,6 @@ export default function InsightsPage() {
               />
             </div>
 
-            {topBuyingTopic && topBuyingTopic.intentBreakdown?.buying > 30 && (
-              <div className="flex items-center gap-3 p-4 glass-card border-emerald-500/20 mb-6">
-                <div className="w-9 h-9 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0">
-                  <DollarSign size={18} className="text-emerald-400" />
-                </div>
-                <div>
-                  <p className="text-sm text-white font-medium">
-                    Hot Lead: &quot;{topBuyingTopic.topicName}&quot;
-                  </p>
-                  <p className="text-xs text-zinc-500">
-                    {topBuyingTopic.intentBreakdown.buying.toFixed(0)}% pytających wyraża zamiar zakupu
-                  </p>
-                </div>
-              </div>
-            )}
 
             <TabsContent value="daily" className="mt-0">
               {periodLoading.daily && !periodData.daily ? (

@@ -19,6 +19,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Settings, User, Lock, LogOut, Eye, EyeOff, ShieldCheck, ShieldOff, Loader2, Sun, Moon, Monitor, BookOpen, Layers, ClipboardList, Key, Plus, Trash2, Copy, Check, Clock, CalendarDays, ChevronDown, ChevronRight, ExternalLink, CheckCircle2, XCircle, Bell } from 'lucide-react';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,6 +49,7 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
   const [showForm, setShowForm]       = useState(false);
   const [newKey, setNewKey]           = useState<ApiKey | null>(null);
   const [copied, setCopied]           = useState(false);
+  const [revokingKey, setRevokingKey] = useState<{ keyId: string; name: string } | null>(null);
 
   const keys: ApiKey[] = (data?.keys ?? []).filter(k => k.status === 'active');
 
@@ -67,14 +69,20 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
     }
   };
 
-  const handleRevoke = async (keyId: string, name: string) => {
-    if (!confirm(`Odwołać klucz "${name}"? Zapytania używające tego klucza przestaną działać natychmiast.`)) return;
+  const handleRevoke = (keyId: string, name: string) => {
+    setRevokingKey({ keyId, name });
+  };
+
+  const handleRevokeConfirm = async () => {
+    if (!revokingKey) return;
     try {
-      await revokeApiKey(clientId, keyId);
+      await revokeApiKey(clientId, revokingKey.keyId);
       toast.success('Klucz odwołany');
       mutate();
     } catch (err: any) {
       toast.error(err.message || 'Błąd przy odwoływaniu klucza');
+    } finally {
+      setRevokingKey(null);
     }
   };
 
@@ -220,6 +228,16 @@ function ApiKeysSection({ clientId }: { clientId: string }) {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={revokingKey !== null}
+        title={`Odwołać klucz "${revokingKey?.name}"?`}
+        description="Zapytania używające tego klucza przestaną działać natychmiast."
+        confirmLabel="Odwołaj"
+        destructive
+        onConfirm={handleRevokeConfirm}
+        onCancel={() => setRevokingKey(null)}
+      />
     </Card>
   );
 }
@@ -582,8 +600,11 @@ function CalendarIntegrationSection({ clientId }: { clientId: string }) {
           {/* ICS URL input */}
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wider block mb-1.5">
-              Adres ICS kalendarza
+              Adres iCal kalendarza (ICS)
             </label>
+            <p className="text-xs text-zinc-600 mb-2">
+              Link iCal do Twojego kalendarza (Google Calendar: Ustawienia kalendarza → Integracja z kalendarzem → Adres iCal). Używany do wykrywania zajętości przy umawianiu spotkań.
+            </p>
             <div className="flex gap-2">
               <input
                 type="text"
@@ -703,6 +724,7 @@ function MfaSection({ email, isOwner }: { email: string; isOwner: boolean }) {
   const [verifyCode, setVerifyCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [verifyError, setVerifyError] = useState('');
+  const [showDisableMfaConfirm, setShowDisableMfaConfirm] = useState(false);
 
   useEffect(() => {
     const token = getAccessToken();
@@ -751,7 +773,6 @@ function MfaSection({ email, isOwner }: { email: string; isOwner: boolean }) {
   };
 
   const handleDisable = async () => {
-    if (!confirm('Czy na pewno chcesz wyłączyć weryfikację dwuetapową?')) return;
     setBusy(true);
     try {
       const token = getAccessToken();
@@ -801,7 +822,7 @@ function MfaSection({ email, isOwner }: { email: string; isOwner: boolean }) {
             </Button>
           ) : (
             <Button
-              onClick={handleDisable}
+              onClick={() => setShowDisableMfaConfirm(true)}
               disabled={busy}
               variant="outline"
               className="border-red-500/30 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50 text-sm"
@@ -894,6 +915,16 @@ function MfaSection({ email, isOwner }: { email: string; isOwner: boolean }) {
           </div>
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={showDisableMfaConfirm}
+        title="Wyłączyć weryfikację dwuetapową?"
+        description="Twoje konto będzie chronione tylko hasłem. Możesz ponownie włączyć MFA w dowolnym momencie."
+        confirmLabel="Wyłącz MFA"
+        destructive
+        onConfirm={() => { setShowDisableMfaConfirm(false); handleDisable(); }}
+        onCancel={() => setShowDisableMfaConfirm(false)}
+      />
     </Card>
   );
 }

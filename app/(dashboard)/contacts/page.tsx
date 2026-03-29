@@ -26,6 +26,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import EmptyState from '@/components/ui/empty-state';
+import ConfirmDialog from '@/components/ui/confirm-dialog';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
@@ -33,7 +34,7 @@ import {
   Users, Mail, Phone, Calendar, MessageSquare,
   Copy, Check, X, Trash2, ExternalLink, Download,
   RefreshCw, List, Columns, ChevronUp, ChevronDown, Plus,
-  Bell, CalendarPlus, Clock, Repeat, Activity, Loader2, ArrowRight, ShieldAlert,
+  Bell, CalendarPlus, Clock, Repeat, Activity, Loader2, ArrowRight, ShieldAlert, ArrowUpDown, ArrowDownUp,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -221,6 +222,7 @@ function CreateAppointmentModal({
             <input
               type="datetime-local"
               value={dt}
+              min={new Date().toISOString().slice(0, 16)}
               onChange={e => setDt(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]"
             />
@@ -402,7 +404,7 @@ function AddReminderWithPickerModal({
           </div>
           <div>
             <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Data i godzina *</label>
-            <input type="datetime-local" value={dt} onChange={e => setDt(e.target.value)}
+            <input type="datetime-local" value={dt} step={300} onChange={e => setDt(e.target.value)}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors [color-scheme:dark]" />
           </div>
           <div>
@@ -431,7 +433,8 @@ function AddReminderWithPickerModal({
             <div>
               <label className="text-xs text-zinc-500 uppercase tracking-wide block mb-1.5">Co ile dni</label>
               <input type="number" min={1} max={365} value={intervalDays}
-                onChange={e => setIntervalDays(Math.max(1, parseInt(e.target.value) || 7))}
+                onChange={e => setIntervalDays(Number(e.target.value))}
+                onBlur={e => { if (!e.target.value || Number(e.target.value) < 1) setIntervalDays(1); }}
                 className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/20 transition-colors" />
             </div>
           )}
@@ -575,7 +578,9 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
   const [showAddReminder, setShowAddReminder] = useState(false);
   const [showAddRule, setShowAddRule] = useState(false);
   const [reminderFilter, setReminderFilter] = useState<'pending' | 'fired' | ''>('pending');
+  const [reminderSortAsc, setReminderSortAsc] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDeleteReminderId, setConfirmDeleteReminderId] = useState<string | null>(null);
   const [savingRules, setSavingRules] = useState(false);
 
   const contactsMap = useMemo(() => {
@@ -635,11 +640,12 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
     finally { setSavingRules(false); }
   };
 
-  const pending = reminders.filter(r => r.status === 'pending').sort((a, b) => a.fireAt - b.fireAt);
-  const fired   = reminders.filter(r => r.status === 'fired').sort((a, b) => b.fireAt - a.fireAt);
+  const sortFn = (a: { fireAt: number }, b: { fireAt: number }) => reminderSortAsc ? a.fireAt - b.fireAt : b.fireAt - a.fireAt;
+  const pending = reminders.filter(r => r.status === 'pending').sort(sortFn);
+  const fired   = reminders.filter(r => r.status === 'fired').sort(sortFn);
   const displayed = reminderFilter === 'pending' ? pending
     : reminderFilter === 'fired' ? fired
-    : [...pending, ...fired].sort((a, b) => a.fireAt - b.fireAt);
+    : [...pending, ...fired].sort(sortFn);
 
   const activeRulesCount = rules.filter(r => r.enabled).length;
 
@@ -677,6 +683,10 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
             </div>
           </div>
           <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setReminderSortAsc(v => !v)} className="text-zinc-400 hover:text-white gap-1.5" title="Zmień kolejność sortowania">
+              {reminderSortAsc ? <ArrowUpDown size={13} /> : <ArrowDownUp size={13} />}
+              {reminderSortAsc ? 'Najwcześniej' : 'Najpóźniej'}
+            </Button>
             <Button variant="ghost" size="sm" onClick={loadReminders} className="text-zinc-400 hover:text-white gap-1.5">
               <RefreshCw size={13} />Odśwież
             </Button>
@@ -752,7 +762,7 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
                       )}
                     </TableCell>
                     <TableCell>
-                      <button onClick={() => handleDeleteReminder(r.reminderId)} disabled={deleting === r.reminderId}
+                      <button onClick={() => setConfirmDeleteReminderId(r.reminderId)} disabled={deleting === r.reminderId}
                         className="text-zinc-600 hover:text-red-400 transition-colors p-1 rounded">
                         <X size={13} />
                       </button>
@@ -842,6 +852,18 @@ function RemindersTab({ clientId, contacts }: { clientId: string; contacts: Cont
           onCreated={updated => { setRules(updated); setShowAddRule(false); }}
         />
       )}
+
+      <ConfirmDialog
+        open={confirmDeleteReminderId !== null}
+        title="Usunąć przypomnienie?"
+        confirmLabel="Usuń"
+        destructive
+        onConfirm={() => {
+          if (confirmDeleteReminderId) handleDeleteReminder(confirmDeleteReminderId);
+          setConfirmDeleteReminderId(null);
+        }}
+        onCancel={() => setConfirmDeleteReminderId(null)}
+      />
     </div>
   );
 }
@@ -1310,10 +1332,13 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
                 </div>
               </div>
             ) : (
-              <button onClick={() => setConfirmDelete(true)}
-                className="flex items-center gap-2 text-sm text-red-500/70 hover:text-red-400 transition-colors py-1">
-                <Trash2 size={14} />Usuń kontakt
-              </button>
+              <div>
+                <button onClick={() => setConfirmDelete(true)}
+                  className="flex items-center gap-2 text-sm text-red-500/70 hover:text-red-400 transition-colors py-1">
+                  <Trash2 size={14} />Usuń kontakt
+                </button>
+                <p className="text-[11px] text-zinc-600 ml-6">Usuwa profil i rekordy CRM. Historia rozmów w Dynamodb pozostaje (TTL 90d).</p>
+              </div>
             )}
           </div>
 
@@ -1333,10 +1358,13 @@ function DetailPanel({ profileId, clientId, allStages, contacts, onClose, onUpda
                   </div>
                 </div>
               ) : (
-                <button onClick={() => setConfirmGdpr(true)}
-                  className="flex items-center gap-2 text-sm text-orange-500/60 hover:text-orange-400 transition-colors py-1">
-                  <ShieldAlert size={14} />Usuń dane (RODO)
-                </button>
+                <div>
+                  <button onClick={() => setConfirmGdpr(true)}
+                    className="flex items-center gap-2 text-sm text-orange-500/60 hover:text-orange-400 transition-colors py-1">
+                    <ShieldAlert size={14} />Usuń dane (RODO)
+                  </button>
+                  <p className="text-[11px] text-zinc-600 ml-6">Trwałe usunięcie profilu, rozmów i wizyt — na żądanie klienta (art. 17 RODO).</p>
+                </div>
               )}
             </div>
           )}
@@ -1805,8 +1833,8 @@ export default function ContactsPage() {
                     <TableHead className="hidden sm:table-cell">Typ</TableHead>
                     <TableHead className="hidden md:table-cell">Tagi</TableHead>
                     <TableHead className="hidden lg:table-cell">Źr.</TableHead>
-                    <SortTh field="firstSeen" label="Pierwszy kontakt" className="hidden lg:table-cell" />
-                    <SortTh field="lastSeen" label="Ostatni kontakt" className="hidden sm:table-cell" />
+                    <SortTh field="firstSeen" label="Pierwszy kontakt" className="hidden md:table-cell" />
+                    <SortTh field="lastSeen" label="Ostatni kontakt" />
                     <TableHead className="w-6" />
                   </TableRow>
                 </TableHeader>
@@ -1824,14 +1852,14 @@ export default function ContactsPage() {
                           onChange={() => toggleBulkSelect(c.profileId)}
                         />
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="max-w-[220px]">
                         <div className="flex items-center gap-2.5">
                           <div className="w-8 h-8 rounded-full bg-white/[0.04] border border-white/[0.06] flex items-center justify-center flex-shrink-0">
                             <ContactIcon type={c.contactType} />
                           </div>
                           <div className="min-w-0">
-                            {c.displayName && <p className="text-sm text-white font-medium truncate">{c.displayName}</p>}
-                            <p className={`text-sm truncate ${c.displayName ? 'text-zinc-400' : 'text-white'}`}>{c.contactInfo}</p>
+                            {c.displayName && <p className="text-sm text-white font-medium truncate" title={c.displayName}>{c.displayName}</p>}
+                            <p className={`text-sm truncate ${c.displayName ? 'text-zinc-400' : 'text-white'}`} title={c.contactInfo}>{c.contactInfo}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -1851,8 +1879,8 @@ export default function ContactsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell"><span className="text-sm text-zinc-400">{c.sourceCount}</span></TableCell>
-                      <TableCell className="hidden lg:table-cell"><span className="text-sm text-zinc-400">{formatTs(c.firstSeen)}</span></TableCell>
-                      <TableCell className="hidden sm:table-cell"><span className="text-sm text-zinc-400">{formatTs(c.lastSeen)}</span></TableCell>
+                      <TableCell className="hidden md:table-cell"><span className="text-sm text-zinc-400">{formatTs(c.firstSeen)}</span></TableCell>
+                      <TableCell><span className="text-sm text-zinc-400">{formatTs(c.lastSeen)}</span></TableCell>
                       <TableCell>
                         <ChevronDown size={14} className={`transition-transform ${selectedId === c.profileId ? 'rotate-[-90deg] text-white' : 'text-zinc-700'}`} />
                       </TableCell>

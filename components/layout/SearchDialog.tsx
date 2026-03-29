@@ -383,9 +383,15 @@ export default function SearchDialog({ open, onClose }: SearchDialogProps) {
                           <Icon size={15} className={`flex-shrink-0 ${colorClass}`} />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm truncate text-foreground">{item.label}</p>
-                            {!isNav && (item as DataResult).sublabel && (
+                            {!isNav && (
                               <p className="text-[11px] text-muted-foreground truncate">
-                                {(item as DataResult).sublabel}
+                                {item.kind === 'conversation'
+                                  ? <>
+                                      <span className="font-mono">{(item as DataResult).targetId.slice(0, 16)}…</span>
+                                      {(item as DataResult).sublabel && <span> · {(item as DataResult).sublabel}</span>}
+                                    </>
+                                  : (item as DataResult).sublabel
+                                }
                               </p>
                             )}
                           </div>

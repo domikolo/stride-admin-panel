@@ -56,6 +56,8 @@ export default function DashboardPage() {
     clientId ? `/clients/${clientId}/recent-activity?limit=10` : null, fetcher
   );
 
+  const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+
   // Briefing keeps its own sessionStorage cache
   const [briefing, setBriefing] = useState<DailyBriefing | null>(null);
   const [briefingLoading, setBriefingLoading] = useState(false);
@@ -92,6 +94,7 @@ export default function DashboardPage() {
     mutateTopics();
     mutateGaps();
     mutateActivity();
+    setLastRefreshedAt(new Date());
   };
 
   const dailyStats = dailyData?.dailyStats ?? [];
@@ -174,9 +177,9 @@ export default function DashboardPage() {
           </h1>
           <p className="text-sm text-zinc-500 mt-1">
             Przegląd aktywności i statystyk
-            {stats && (
+            {lastRefreshedAt && (
               <span className="ml-2">
-                · Zaktualizowano {formatDistanceToNow(new Date(), { addSuffix: true, locale: pl })}
+                · Zaktualizowano {formatDistanceToNow(lastRefreshedAt, { addSuffix: true, locale: pl })}
               </span>
             )}
           </p>
@@ -208,7 +211,7 @@ export default function DashboardPage() {
         initial="hidden"
         animate="visible"
       >
-        <motion.div variants={cardItemVariants}>
+        <motion.div variants={cardItemVariants} className="h-full">
           <StatsCard
             title="Rozmowy"
             value={stats?.conversationsCount || 0}
@@ -221,7 +224,7 @@ export default function DashboardPage() {
             trend={convTrend}
           />
         </motion.div>
-        <motion.div variants={cardItemVariants}>
+        <motion.div variants={cardItemVariants} className="h-full">
           <StatsCard
             title="Calkowity Koszt"
             value={`$${stats?.totalCostUsd.toFixed(2) || '0.00'}`}
@@ -230,7 +233,7 @@ export default function DashboardPage() {
             description="Koszt AI w ostatnich 30 dniach"
           />
         </motion.div>
-        <motion.div variants={cardItemVariants}>
+        <motion.div variants={cardItemVariants} className="h-full">
           <StatsCard
             title="Luki w KB"
             value={gapsCount}
@@ -240,7 +243,7 @@ export default function DashboardPage() {
             valueHref="/insights?period=monthly"
           />
         </motion.div>
-        <motion.div variants={cardItemVariants}>
+        <motion.div variants={cardItemVariants} className="h-full">
           <StatsCard
             title="Satysfakcja"
             value={stats?.satisfactionRate != null ? `${stats.satisfactionRate}%` : '—'}

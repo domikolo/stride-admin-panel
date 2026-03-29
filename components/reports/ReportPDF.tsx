@@ -195,7 +195,7 @@ export default function ReportPDF({ report, clientId, logoUrl, iconUrl }: Props)
           }
           <View style={s.headerRight}>
             <Text style={s.headerRightLabel}>Raport chatbota</Text>
-            <Text style={s.headerRightSite}>stride-services.pl</Text>
+            <Text style={s.headerRightSite}>panel.stride-services.pl</Text>
           </View>
         </View>
 
@@ -261,7 +261,7 @@ export default function ReportPDF({ report, clientId, logoUrl, iconUrl }: Props)
 
         {/* Footer */}
         <View style={s.footer} fixed>
-          <Text style={s.footerText}>Wygenerowano przez Stride Services · stride-services.pl</Text>
+          <Text style={s.footerText}>Wygenerowano przez Stride Services · panel.stride-services.pl</Text>
           {iconUrl ? <Image src={iconUrl} style={s.footerIcon} /> : null}
         </View>
 

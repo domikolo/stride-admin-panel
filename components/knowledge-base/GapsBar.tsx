@@ -24,6 +24,7 @@ export default function GapsBar({ gaps, onFixGap }: GapsBarProps) {
           <span className="text-sm text-yellow-400 font-medium">
             {gaps.length} {gaps.length === 1 ? 'luka' : gaps.length < 5 ? 'luki' : 'luk'} do naprawienia
           </span>
+          <span className="text-xs text-zinc-500">(ostatnie 7 dni)</span>
         </div>
         <Link
           href="/insights"

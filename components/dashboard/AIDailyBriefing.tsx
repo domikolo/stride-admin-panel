@@ -11,9 +11,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DailyBriefing } from '@/lib/types';
 import TypewriterText from '@/components/ui/TypewriterText';
-import { RefreshCw, HelpCircle } from 'lucide-react';
+import { RefreshCw, HelpCircle, Copy, Check } from 'lucide-react';
 import { format } from 'date-fns';
 import { pl } from 'date-fns/locale';
+import { useState } from 'react';
 
 interface AIDailyBriefingProps {
     briefing: DailyBriefing | null;
@@ -24,7 +25,16 @@ interface AIDailyBriefingProps {
 }
 
 export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshing, isNew = false }: AIDailyBriefingProps) {
+    const [copied, setCopied] = useState(false);
     const { resolvedTheme } = useTheme();
+
+    const handleCopy = () => {
+        if (!briefing) return;
+        navigator.clipboard.writeText(briefing.briefing).then(() => {
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        });
+    };
     const isDark = resolvedTheme !== 'light';
     const iconLogoSrc = isDark ? '/icon-logo-biale.png' : '/icon-logo-czarne.png';
 
@@ -95,18 +105,29 @@ export default function AIDailyBriefing({ briefing, loading, onRefresh, refreshi
                         </p>
                     </div>
                 </div>
-                {onRefresh && (
+                <div className="flex items-center gap-1">
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={onRefresh}
-                        disabled={refreshing}
+                        onClick={handleCopy}
                         className="text-zinc-500 hover:text-zinc-300 h-8 text-xs gap-1.5"
                     >
-                        <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
-                        Odswiez
+                        {copied ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                        {copied ? 'Skopiowano' : 'Kopiuj'}
                     </Button>
-                )}
+                    {onRefresh && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRefresh}
+                            disabled={refreshing}
+                            className="text-zinc-500 hover:text-zinc-300 h-8 text-xs gap-1.5"
+                        >
+                            <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+                            Odśwież
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="inset-panel p-4">

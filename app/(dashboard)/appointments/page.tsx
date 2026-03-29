@@ -473,18 +473,26 @@ export default function AppointmentsPage() {
               </TableHeader>
               <TableBody>
                 {filteredAppointments.map((appt) => (
-                  <TableRow key={appt.appointmentId} data-appt-id={appt.appointmentId} className="hover:bg-white/5">
+                  <TableRow
+                    key={appt.appointmentId}
+                    data-appt-id={appt.appointmentId}
+                    className="hover:bg-white/5 cursor-pointer"
+                    onClick={(e) => openEditModal(appt, e)}
+                  >
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center relative">
                           <Clock size={18} className="text-zinc-400" />
+                          {appt.notes && (
+                            <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-blue-400" title="Ma notatkę" />
+                          )}
                         </div>
                         <div>
                           <div className="font-medium text-white">
                             {format(new Date(appt.datetime), 'MMM d, yyyy')}
                           </div>
                           <div className="text-sm text-zinc-400">
-                            {format(new Date(appt.datetime), 'h:mm a')}
+                            {format(new Date(appt.datetime), 'HH:mm')}
                           </div>
                         </div>
                       </div>
@@ -520,18 +528,22 @@ export default function AppointmentsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => router.push(`/conversations/${appt.sessionId}`)}
-                        className="text-zinc-400 hover:text-white gap-1"
-                      >
-                        Zobacz czat
-                        <ExternalLink size={14} />
-                      </Button>
+                      {appt.sessionId ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); router.push(`/conversations/${appt.sessionId}`); }}
+                          className="text-zinc-400 hover:text-white gap-1"
+                        >
+                          Zobacz czat
+                          <ExternalLink size={14} />
+                        </Button>
+                      ) : (
+                        <span className="text-xs text-zinc-600 px-2">Ręczne</span>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={(e) => openEditModal(appt, e)}
                           className="p-1.5 rounded-md text-zinc-600 hover:text-zinc-300 hover:bg-white/[0.06] transition-colors"

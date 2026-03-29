@@ -25,6 +25,8 @@ function renderMarkdown(text: string): React.ReactElement {
   const lines = text.split('\n');
   const elements: React.ReactElement[] = [];
   let currentList: { type: 'ul' | 'ol'; items: string[] } | null = null;
+  let tableRows: string[][] = [];
+  let tableHeader: string[] | null = null;
   let key = 0;
 
   const flushList = () => {
@@ -48,8 +50,58 @@ function renderMarkdown(text: string): React.ReactElement {
     currentList = null;
   };
 
+  const parseTableRow = (line: string): string[] =>
+    line.split('|').map(c => c.trim()).filter((_, i, a) => i > 0 && i < a.length - 1);
+
+  const flushTable = () => {
+    if (!tableHeader) return;
+    elements.push(
+      <div key={key++} className="overflow-x-auto my-2">
+        <table className="w-full text-sm border-collapse">
+          <thead>
+            <tr>
+              {tableHeader.map((h, i) => (
+                <th key={i} className="px-3 py-1.5 text-left text-xs font-semibold text-zinc-400 border border-white/[0.08] bg-white/[0.04]"
+                  dangerouslySetInnerHTML={{ __html: inlineMd(h) }} />
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map((row, ri) => (
+              <tr key={ri} className="border-b border-white/[0.04]">
+                {row.map((cell, ci) => (
+                  <td key={ci} className="px-3 py-1.5 text-zinc-300 border border-white/[0.06]"
+                    dangerouslySetInnerHTML={{ __html: inlineMd(cell) }} />
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+    tableHeader = null;
+    tableRows = [];
+  };
+
   for (const line of lines) {
     const trimmed = line.trim();
+
+    // Table row detection
+    if (/^\|.+\|$/.test(trimmed)) {
+      const cells = parseTableRow(trimmed);
+      // Separator row (| --- | --- |)
+      if (cells.every(c => /^[-:]+$/.test(c))) continue;
+      if (!tableHeader) {
+        // First row is header
+        tableHeader = cells;
+      } else {
+        tableRows.push(cells);
+      }
+      continue;
+    }
+
+    // Flush table if no longer in table
+    if (tableHeader) { flushList(); flushTable(); }
 
     // Bullet list
     if (/^[-*]\s+/.test(trimmed)) {
@@ -82,6 +134,7 @@ function renderMarkdown(text: string): React.ReactElement {
   }
 
   flushList();
+  flushTable();
   return <>{elements}</>;
 }
 

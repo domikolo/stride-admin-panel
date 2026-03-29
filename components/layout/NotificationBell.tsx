@@ -280,9 +280,9 @@ export default function NotificationBell({ clientId }: Props) {
 
   // ── Actions ────────────────────────────────────────────────────────────────
 
-  const handleClick = async (n: AppNotification) => {
+  const handleClick = (n: AppNotification) => {
     if (!n.read) {
-      await markNotificationRead(clientId, n.notificationId).catch(() => {});
+      markNotificationRead(clientId, n.notificationId).catch(() => {}); // fire-and-forget
       setNotif(prev => prev.map(x => x.notificationId === n.notificationId ? { ...x, read: true } : x));
       setUnread(prev => { const next = Math.max(0, prev - 1); setUnreadNotifCount(next); return next; });
     }
@@ -457,7 +457,12 @@ export default function NotificationBell({ clientId }: Props) {
     if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission().catch(() => {});
     }
-    setOpen(prev => !prev);
+    const opening = !open;
+    setOpen(opening);
+    // Mark all as read when opening the panel — clears the badge immediately
+    if (opening && unreadCount > 0) {
+      handleMarkAll();
+    }
   }
 
   return (
@@ -475,9 +480,9 @@ export default function NotificationBell({ clientId }: Props) {
         )}
         {unreadCount > 0 && (
           <span className={`
-            absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1
-            rounded-full text-[10px] font-bold leading-4 text-center
-            bg-blue-500 text-white
+            absolute -top-1 -right-1 min-w-[16px] h-4 px-1
+            rounded-full text-[10px] font-semibold leading-4 text-center tabular-nums
+            bg-blue-500/90 text-white ring-1 ring-black/20
             ${hasHighPriority ? 'animate-pulse' : ''}
           `}>
             {unreadCount > 99 ? '99+' : unreadCount}

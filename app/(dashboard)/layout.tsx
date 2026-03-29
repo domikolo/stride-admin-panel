@@ -53,6 +53,10 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (!loading && !user) {
+      if (typeof window !== 'undefined') {
+        const path = window.location.pathname + window.location.search;
+        if (path !== '/login') sessionStorage.setItem('returnTo', path);
+      }
       router.replace('/login');
     }
   }, [loading, user, router]);

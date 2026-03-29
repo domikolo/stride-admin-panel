@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, Sparkles, AlertTriangle } from 'lucide-react';
 import QuestionsModal from './QuestionsModal';
 
 interface TrendingTopicCardProps {
@@ -19,11 +19,6 @@ interface TrendingTopicCardProps {
     questionSources?: Record<string, { sessionId: string; conversationNumber: number }>;
     trend: 'up' | 'down' | 'stable' | 'new';
     trendPercent?: number;
-    intentBreakdown: {
-        buying: number;
-        comparing: number;
-        infoSeeking: number;
-    };
     isGap: boolean;
     gapReason?: string;
 }
@@ -42,7 +37,6 @@ export default function TrendingTopicCard({
     examples,
     questionSources,
     trend,
-    intentBreakdown,
     isGap,
     gapReason,
 }: TrendingTopicCardProps) {
@@ -122,14 +116,6 @@ export default function TrendingTopicCard({
                             </button>
                         )}
                     </div>
-
-                    {/* Buying intent */}
-                    {intentBreakdown.buying > 30 && (
-                        <div className="flex items-center gap-2 text-[11px] p-2 bg-emerald-500/[0.06] border border-emerald-500/15 rounded-lg">
-                            <DollarSign size={12} className="text-emerald-400 shrink-0" />
-                            <span className="text-emerald-400">{intentBreakdown.buying.toFixed(0)}% zamiar zakupu</span>
-                        </div>
-                    )}
 
                     {/* Gap warning */}
                     {isGap && gapReason && (

@@ -14,6 +14,7 @@ import { getIdToken } from '@/lib/token';
 import { wsClient, WSEvent } from '@/lib/websocket';
 import { LiveSession, LiveMessage, LeadScore, LeadScoreTier } from '@/lib/types';
 import { useBadges } from '@/hooks/useBadges';
+import { inlineMd } from '@/lib/markdown';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -155,6 +156,7 @@ export default function LivePage() {
   const [takenOverBy, setTakenOverBy] = useState<string>('');
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const [connected, setConnected] = useState(false);
   const [unreadCounts, setUnreadCounts] = useState<Record<string, number>>({});
   const [suggestion, setSuggestion] = useState<string | null>(null);
@@ -338,6 +340,7 @@ export default function LivePage() {
           if (event.messages) {
             const msgs = event.messages as LiveMessage[];
             setMessages(msgs);
+            setLoadingMessages(false);
             setTakenOverBy(event.takenOverBy || '');
             if (event.sessionId) {
               setSessionMessages(prev => ({ ...prev, [event.sessionId as string]: msgs }));
@@ -457,6 +460,7 @@ export default function LivePage() {
     }
     setSelectedSessionId(sessionId);
     setMessages([]);
+    setLoadingMessages(true);
     setTakenOverBy('');
     setUnreadCounts(prev => ({ ...prev, [sessionId]: 0 }));
     setSuggestion(null);
@@ -765,9 +769,18 @@ export default function LivePage() {
 
               {/* Messages */}
               <div className="flex-1 overflow-y-auto p-4 space-y-3">
-                {messages.length === 0 && (
+                {loadingMessages ? (
+                  <div className="space-y-3 pt-2">
+                    {[1,2,3].map(i => (
+                      <div key={i} className={`flex gap-2 ${i % 2 === 0 ? 'flex-row-reverse' : ''}`}>
+                        <Skeleton className="w-4 h-4 rounded-full flex-shrink-0 mt-1" />
+                        <Skeleton className={`h-10 rounded-xl ${i % 2 === 0 ? 'w-2/3' : 'w-3/4'}`} />
+                      </div>
+                    ))}
+                  </div>
+                ) : messages.length === 0 ? (
                   <p className="text-center text-zinc-500 text-sm py-8">Brak wiadomości</p>
-                )}
+                ) : null}
                 {messages.map((msg, i) => {
                   // System messages render as a centered divider
                   if ((msg.role as string) === 'system') {
@@ -824,7 +837,7 @@ export default function LivePage() {
                                   : 'bg-white/[0.04] rounded-tl-sm text-zinc-300'
                             }`}
                         >
-                          {msg.text}
+                          <span dangerouslySetInnerHTML={{ __html: inlineMd(msg.text) }} />
                         </div>
                         <div className={`flex items-center gap-1.5 mt-1 ${isUser ? 'justify-end' : ''}`}>
                           <span className="text-[10px] text-zinc-600">{formatMessageTime(msg.timestamp)}</span>
