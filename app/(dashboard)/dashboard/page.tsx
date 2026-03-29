@@ -53,7 +53,7 @@ export default function DashboardPage() {
     clientId ? `/clients/${clientId}/trending-topics?timeframe=month&include_gaps=true` : null, fetcher
   );
   const { data: activityData, mutate: mutateActivity } = useSWR<{ activities: Activity[] }>(
-    clientId ? `/clients/${clientId}/recent-activity?limit=10` : null, fetcher
+    clientId ? `/clients/${clientId}/recent-activity?limit=5` : null, fetcher
   );
 
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);

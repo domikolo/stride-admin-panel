@@ -108,18 +108,20 @@ export default function RecentActivityFeed({ activities, loading }: RecentActivi
                             <div className="flex items-center justify-between gap-2">
                                 <span className="text-sm text-white font-medium truncate">
                                     {activity.type === 'conversation' ? (
-                                        <>Rozmowa{activity.conversationNumber && activity.conversationNumber > 1 ? ` #${activity.conversationNumber}` : ''}</>
+                                        activity.keywords
+                                            ? activity.keywords
+                                            : <span className="font-mono text-zinc-400 text-xs">{activity.id.slice(0, 16)}…</span>
                                     ) : (
-                                        <>{activity.contactName || 'Spotkanie'}</>
+                                        activity.contactName || 'Spotkanie'
                                     )}
                                 </span>
                                 <span className="text-[11px] text-zinc-600 flex-shrink-0">
                                     {formatTimestamp(activity.timestamp)}
                                 </span>
                             </div>
-                            <p className="text-xs text-zinc-400 truncate mt-0.5">
+                            <p className="text-xs text-zinc-500 truncate mt-0.5">
                                 {activity.type === 'conversation' ? (
-                                    activity.keywords || `${activity.messageCount || 0} wiadomości`
+                                    <span>{activity.messageCount || 0} wiad.{activity.conversationNumber && activity.conversationNumber > 1 ? ` · #${activity.conversationNumber}` : ''}</span>
                                 ) : (
                                     <span className={`inline-flex items-center gap-1.5 ${activity.status === 'verified' ? 'text-emerald-400' :
                                         activity.status === 'pending' ? 'text-amber-400' : 'text-zinc-400'
