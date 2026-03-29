@@ -7,7 +7,7 @@ import DOMPurify from 'dompurify';
 
 /**
  * Convert inline markdown to sanitized HTML.
- * Supports: **bold**, *italic*, `code`, [[conv:...]] links.
+ * Supports: **bold**, *italic*, `code`, [[conv:...]] links, newlines → <br>.
  */
 export function inlineMd(text: string): string {
   const html = text
@@ -17,10 +17,11 @@ export function inlineMd(text: string): string {
     .replace(
       /\[\[conv:([^:]+):(\d+):([^\]]+)\]\]/g,
       '<a data-conv-link="true" href="/conversations/$1?conversation_number=$2" class="text-blue-400 hover:text-blue-300 underline underline-offset-2 cursor-pointer">$3</a>'
-    );
+    )
+    .replace(/\n/g, '<br>');
 
   return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ['strong', 'em', 'code', 'a'],
+    ALLOWED_TAGS: ['strong', 'em', 'code', 'a', 'br'],
     ALLOWED_ATTR: ['class', 'href', 'data-conv-link'],
   });
 }
